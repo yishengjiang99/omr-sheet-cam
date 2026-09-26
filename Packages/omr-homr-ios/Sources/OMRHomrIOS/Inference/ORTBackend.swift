@@ -4,7 +4,7 @@ import Foundation
 //
 // Conformers:
 // - `ORTCSession` (ORT C API) on Linux (`CONNXRuntime`) AND iOS / macOS (`CONNXRuntimeApple`).
-// - `ORTObjCSession` (onnxruntime-objc): DEPRECATED, cannot bind float16; kept behind `#if` for now.
+// (The onnxruntime-objc `ORTObjCSession` was removed: the ObjC API cannot bind float16.)
 //
 // Backends move RAW bytes only (little-endian, row-major, element type as tagged). They never
 // convert dtypes: the single fp16 → fp32 cast lives in `EncoderContext.castToFP32ForDecoder()`.

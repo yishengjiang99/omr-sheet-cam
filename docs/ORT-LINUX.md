@@ -2,7 +2,7 @@
 
 `ORTCSession` backs `ORTSessionBackend` (`Packages/omr-homr-ios/Sources/OMRHomrIOS/Inference/ORTBackend.swift`)
 on Linux (this document) and, since 2026-09-26, on iOS / macOS too (see "Apple (C API)" below).
-`ORTObjCSession` (onnxruntime-objc) is deprecated: the ObjC API has no Float16 element type.
+The onnxruntime-objc `ORTObjCSession` was removed (the ObjC API has no Float16 element type).
 
 | Piece | Path |
 |-------|------|

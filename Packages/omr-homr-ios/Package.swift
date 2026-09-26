@@ -8,9 +8,10 @@ import PackageDescription
 /// `onnxruntime.xcframework` that microsoft/onnxruntime-swift-package-manager ships
 /// (pod-archive-onnxruntime-c-<ver>.zip; headers include `onnxruntime_c_api.h` and
 /// `coreml_provider_factory.h`). The package's only product (`onnxruntime`, the objc bindings)
-/// is what pulls that binary target in; the local `CONNXRuntimeApple` C target re-exports the C
-/// headers to Swift. `ORTObjCSession` (objc bindings) is deprecated: onnxruntime-objc has no
-/// Float16 element type, so it cannot feed the pinned fp16 encoder / SegNet.
+/// is what pulls that binary target in (its ObjC bindings are not used; the product is kept only
+/// because it is the sole way to link the xcframework); the local `CONNXRuntimeApple` C target
+/// re-exports the C headers to Swift. The old onnxruntime-objc `ORTObjCSession` was removed
+/// (no Float16 element type, so it could not feed the pinned fp16 encoder / SegNet).
 /// Declared only when the manifest is evaluated on an Apple host (Apple-only binary xcframework,
 /// so Linux resolution never fetches it). On Linux the backend is `ORTCSession` over the
 /// `CONNXRuntime` system library (see the block at the end of this file).

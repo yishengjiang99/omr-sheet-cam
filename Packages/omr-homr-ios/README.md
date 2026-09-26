@@ -33,7 +33,7 @@ Fidelity pass on the staff-only decode loop — **no ONNX weights**, **no UI/geo
 | Writer-only Layer B | `WriterOnlyFixtureTests` vs repo-root `fixtures/` (7 synthetics complete) |
 | Tokens → MIDI + `noteLayout` (Layer C) | `OMRHomrIOS.renderTokens` — one shared note list; `midi-fallback` (no boxes) until attention lands |
 | ONNX models | `scripts/fetch-models` → repo-root `models/` (pinned in `models.lock`, not committed) |
-| ORT backends | `ORTCSession` (ORT C API) on Linux (`CONNXRuntime`, ort.lock 1.30.0, CPU only) and Apple (`CONNXRuntimeApple` over the SPM xcframework 1.24.2; `.coreML` for encoder/SegNet; Apple compile unverified, pending macOS CI). `ORTObjCSession` is deprecated (no fp16 in the ObjC API). |
+| ORT backends | `ORTCSession` (ORT C API) on Linux (`CONNXRuntime`, ort.lock 1.30.0, CPU only) and Apple (`CONNXRuntimeApple` over the SPM xcframework 1.24.2; `.coreML` for encoder/SegNet; iOS simulator Gate-1 12/12 on CI run 36263874805). The onnxruntime-objc `ORTObjCSession` was removed (no fp16 in the ObjC API). |
 | SegNet / full-page geometry / App UI | Out of scope (do not start) |
 
 ### Remaining blockers
