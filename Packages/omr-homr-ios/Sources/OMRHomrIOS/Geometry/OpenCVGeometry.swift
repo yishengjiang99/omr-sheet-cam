@@ -279,31 +279,39 @@ enum CVGeometry {
         func code(_ p: (x: Int64, y: Int64)) -> Int {
             (p.x < 0 ? 1 : 0) + (p.x > right ? 2 : 0) + (p.y < 0 ? 4 : 0) + (p.y > bottom ? 8 : 0)
         }
+        /// `(int64)((double)num * (double)mul / (double)den)`, cv::clipLine's step (split for the iOS type checker).
+        func clipStep(_ num: Int64, _ mul: Int64, _ den: Int64) -> Int64 {
+            let n: Double = Double(num)
+            let m: Double = Double(mul)
+            let d: Double = Double(den)
+            let q: Double = n * m / d
+            return Int64(q)
+        }
         var c1 = code(pt1), c2 = code(pt2)
         if (c1 & c2) == 0 && (c1 | c2) != 0 {
             var a: Int64
             if c1 & 12 != 0 {
                 a = c1 < 8 ? 0 : bottom
-                pt1.x += Int64(Double(a - pt1.y) * Double(pt2.x - pt1.x) / Double(pt2.y - pt1.y))
+                pt1.x += clipStep(a - pt1.y, pt2.x - pt1.x, pt2.y - pt1.y)
                 pt1.y = a
                 c1 = (pt1.x < 0 ? 1 : 0) + (pt1.x > right ? 2 : 0)
             }
             if c2 & 12 != 0 {
                 a = c2 < 8 ? 0 : bottom
-                pt2.x += Int64(Double(a - pt2.y) * Double(pt2.x - pt1.x) / Double(pt2.y - pt1.y))
+                pt2.x += clipStep(a - pt2.y, pt2.x - pt1.x, pt2.y - pt1.y)
                 pt2.y = a
                 c2 = (pt2.x < 0 ? 1 : 0) + (pt2.x > right ? 2 : 0)
             }
             if (c1 & c2) == 0 && (c1 | c2) != 0 {
                 if c1 != 0 {
                     a = c1 == 1 ? 0 : right
-                    pt1.y += Int64(Double(a - pt1.x) * Double(pt2.y - pt1.y) / Double(pt2.x - pt1.x))
+                    pt1.y += clipStep(a - pt1.x, pt2.y - pt1.y, pt2.x - pt1.x)
                     pt1.x = a
                     c1 = 0
                 }
                 if c2 != 0 {
                     a = c2 == 1 ? 0 : right
-                    pt2.y += Int64(Double(a - pt2.x) * Double(pt2.y - pt1.y) / Double(pt2.x - pt1.x))
+                    pt2.y += clipStep(a - pt2.x, pt2.y - pt1.y, pt2.x - pt1.x)
                     pt2.x = a
                     c2 = 0
                 }
@@ -470,7 +478,12 @@ struct Subdiv2D {
         splice(se, getEdge(b, Self.nextAroundLeft))
     }
     private static func triangleArea(_ a: CVGeometry.Point2f, _ b: CVGeometry.Point2f, _ c: CVGeometry.Point2f) -> Double {
-        (Double(b.x) - Double(a.x)) * (Double(c.y) - Double(a.y)) - (Double(b.y) - Double(a.y)) * (Double(c.x) - Double(a.x))
+        let ax: Double = Double(a.x), ay: Double = Double(a.y)
+        let bx: Double = Double(b.x), by: Double = Double(b.y)
+        let cx: Double = Double(c.x), cy: Double = Double(c.y)
+        let lhs: Double = (bx - ax) * (cy - ay)
+        let rhs: Double = (by - ay) * (cx - ax)
+        return lhs - rhs
     }
     private func isRightOf(_ p: CVGeometry.Point2f, _ e: Int) -> Int {
         let a = Self.triangleArea(p, vtx[edgeDst(e)].pt, vtx[edgeOrg(e)].pt)
@@ -557,10 +570,16 @@ struct Subdiv2D {
 
     private static func isPtInCircle3(_ pt: CVGeometry.Point2f, _ a: CVGeometry.Point2f, _ b: CVGeometry.Point2f, _ c: CVGeometry.Point2f) -> Int {
         let eps = Double(Float.ulpOfOne) * 0.125
-        var val = (Double(a.x) * Double(a.x) + Double(a.y) * Double(a.y)) * triangleArea(b, c, pt)
-        val -= (Double(b.x) * Double(b.x) + Double(b.y) * Double(b.y)) * triangleArea(a, c, pt)
-        val += (Double(c.x) * Double(c.x) + Double(c.y) * Double(c.y)) * triangleArea(a, b, pt)
-        val -= (Double(pt.x) * Double(pt.x) + Double(pt.y) * Double(pt.y)) * triangleArea(a, b, c)
+        func norm2(_ p: CVGeometry.Point2f) -> Double {
+            let x: Double = Double(p.x), y: Double = Double(p.y)
+            let xx: Double = x * x
+            let yy: Double = y * y
+            return xx + yy
+        }
+        var val: Double = norm2(a) * triangleArea(b, c, pt)
+        val -= norm2(b) * triangleArea(a, c, pt)
+        val += norm2(c) * triangleArea(a, b, pt)
+        val -= norm2(pt) * triangleArea(a, b, c)
         return val > eps ? 1 : val < -eps ? -1 : 0
     }
 

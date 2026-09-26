@@ -62,7 +62,9 @@ public struct StaffTensor: Sendable {
             start = 10
         case 2, 3:
             guard b.count > 12 else { throw LoadError.notNPY("truncated header") }
-            headerLen = Int(b[8]) | Int(b[9]) << 8 | Int(b[10]) << 16 | Int(b[11]) << 24
+            let h0: Int = Int(b[8]) | (Int(b[9]) << 8)
+            let h1: Int = (Int(b[10]) << 16) | (Int(b[11]) << 24)
+            headerLen = h0 | h1
             start = 12
         default:
             throw LoadError.unsupportedNPY("version \(major)")

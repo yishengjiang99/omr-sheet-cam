@@ -430,9 +430,15 @@ extension StaffPrepare {
         guard b.count > 10, b[0] == 0x93, String(decoding: b[1..<6], as: UTF8.self) == "NUMPY" else {
             throw StaffTensor.LoadError.notNPY("missing \\x93NUMPY magic")
         }
-        let (headerLen, start) = b[6] == 1
-            ? (Int(b[8]) | Int(b[9]) << 8, 10)
-            : (Int(b[8]) | Int(b[9]) << 8 | Int(b[10]) << 16 | Int(b[11]) << 24, 12)
+        let lo: Int = Int(b[8]) | (Int(b[9]) << 8)
+        let headerLen: Int, start: Int
+        if b[6] == 1 {
+            headerLen = lo; start = 10
+        } else {
+            guard b.count >= 12 else { throw StaffTensor.LoadError.notNPY("truncated header") }
+            let hi: Int = (Int(b[10]) << 16) | (Int(b[11]) << 24)
+            headerLen = lo | hi; start = 12
+        }
         guard b.count >= start + headerLen else { throw StaffTensor.LoadError.notNPY("truncated header") }
         let compact = String(decoding: b[start..<(start + headerLen)], as: UTF8.self).replacingOccurrences(of: " ", with: "")
         guard compact.contains("'descr':'|u1'"), compact.contains("'fortran_order':False"),

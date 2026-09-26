@@ -24,7 +24,11 @@ public struct PNGImage: Sendable {
             var out = [UInt8](repeating: 0, count: n)
             for i in 0..<n {
                 let o = i * channels
-                out[i] = UInt8((Int(pixels[o]) * 9798 + Int(pixels[o + 1]) * 19235 + Int(pixels[o + 2]) * 3735 + 16384) >> 15)
+                let r: Int = Int(pixels[o]) * 9798
+                let g: Int = Int(pixels[o + 1]) * 19235
+                let b: Int = Int(pixels[o + 2]) * 3735
+                let sum: Int = r + g + b + 16384
+                out[i] = UInt8(sum >> 15)
             }
             return out
         }
@@ -62,7 +66,13 @@ public enum PNGDecoder {
         var idat: [UInt8] = []
         var palette: [UInt8] = []
         var trns: [UInt8] = []
-        func be32(_ i: Int) -> Int { Int(b[i]) << 24 | Int(b[i + 1]) << 16 | Int(b[i + 2]) << 8 | Int(b[i + 3]) }
+        func be32(_ i: Int) -> Int {
+            let b0: Int = Int(b[i]) << 24
+            let b1: Int = Int(b[i + 1]) << 16
+            let b2: Int = Int(b[i + 2]) << 8
+            let b3: Int = Int(b[i + 3])
+            return b0 | b1 | b2 | b3
+        }
         while p + 8 <= b.count {
             let len = be32(p)
             let type = String(decoding: b[(p + 4)..<(p + 8)], as: UTF8.self)
@@ -251,7 +261,11 @@ enum Inflate {
         bits.alignByte()
         let p = bits.pos
         if p + 4 <= d.count {
-            let want = UInt32(d[p]) << 24 | UInt32(d[p + 1]) << 16 | UInt32(d[p + 2]) << 8 | UInt32(d[p + 3])
+            let w0: UInt32 = UInt32(d[p]) << 24
+            let w1: UInt32 = UInt32(d[p + 1]) << 16
+            let w2: UInt32 = UInt32(d[p + 2]) << 8
+            let w3: UInt32 = UInt32(d[p + 3])
+            let want: UInt32 = w0 | w1 | w2 | w3
             var a: UInt32 = 1, b: UInt32 = 0
             for chunk in stride(from: 0, to: out.count, by: 5552) {
                 for i in chunk..<min(chunk + 5552, out.count) { a += UInt32(out[i]); b += a }

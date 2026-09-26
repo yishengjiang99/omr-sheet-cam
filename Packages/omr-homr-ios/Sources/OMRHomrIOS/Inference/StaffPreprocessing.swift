@@ -68,8 +68,10 @@ public enum StaffPreprocessing {
 
     /// `ConvertToArray`: `((px / 255) - 0.7931) / 0.1738` computed in float64 (numpy), then cast to fp32.
     /// A 256-entry table, so every pixel maps to the bit-identical float numpy produces.
-    public static let normalizationTable: [Float] = (0..<256).map { p in
-        Float((Double(p) / 255.0 - 0.7931) / 0.1738)
+    public static let normalizationTable: [Float] = (0..<256).map { (p: Int) -> Float in
+        let unit: Double = Double(p) / 255.0
+        let z: Double = (unit - 0.7931) / 0.1738
+        return Float(z)
     }
 
     /// cv2.cvtColor(COLOR_BGR2GRAY / RGB2GRAY) for 8-bit: `(R*9798 + G*19235 + B*3735 + 16384) >> 15`
@@ -84,8 +86,11 @@ public enum StaffPreprocessing {
         let ri = bgr ? 2 : 0, bi = bgr ? 0 : 2
         for i in 0..<n {
             let o = i * channels
-            let v = Int(pixels[o + ri]) * 9798 + Int(pixels[o + 1]) * 19235 + Int(pixels[o + bi]) * 3735 + 16384
-            out[i] = UInt8(v >> 15)
+            let r: Int = Int(pixels[o + ri]) * 9798
+            let g: Int = Int(pixels[o + 1]) * 19235
+            let b: Int = Int(pixels[o + bi]) * 3735
+            let sum: Int = r + g + b + 16384
+            out[i] = UInt8(sum >> 15)
         }
         return out
     }

@@ -506,7 +506,10 @@ if positional.first == "decode-staff" {
         out("PASS exact match")
         exit(0)
     }
-    if let i = (0..<min(got.count, want.count)).first(where: { got[$0] != want[$0] }) ?? (got.count != want.count ? min(got.count, want.count) : nil) {
+    let common: Int = min(got.count, want.count)
+    let firstDiff: Int? = (0..<common).first(where: { got[$0] != want[$0] })
+    let lengthDiff: Int? = got.count != want.count ? common : nil
+    if let i = firstDiff ?? lengthDiff {
         let g = i < got.count ? "\(got[i])" : "<end>"
         let w = i < want.count ? "\(want[i])" : "<end>"
         out("first mismatch at symbol \(i): got \(g) want \(w)")
