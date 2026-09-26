@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Pure (events in, text out) so it is unit-tested. Reads the payload conventions written by the
 /// app's call sites: `kind` = `session` / `summary` / `failed` (warmup), `result` / `error`
-/// (gate1), `run` (recognition); `capture` = capture file name.
+/// (gate1), `run` / `page_parse` (recognition); `capture` = capture file name.
 enum PromptBuilder {
     struct Input {
         var device: DeviceInfo
@@ -103,6 +103,15 @@ enum PromptBuilder {
             out.append("- none")
         }
 
+        // Page parse (PageRecognitionService `page_parse` events)
+        out.append("")
+        out.append("## Page parse (latest)")
+        if let pp = ev.last(where: { $0.category == .recognition && $0.payload?["kind"] == "page_parse" }) {
+            out.append(contentsOf: pageParseLines(pp.payload ?? [:], clip))
+        } else {
+            out.append("- none")
+        }
+
         // Feedback
         var fb: OMRFeedback? = nil
         if let f = input.feedback, !f.isEmpty {
@@ -132,6 +141,28 @@ enum PromptBuilder {
         if problems.count > lim.errors { out.append("- … and \(problems.count - lim.errors) more") }
 
         return out.joined(separator: "\n") + "\n"
+    }
+
+    /// `page_parse` payload → prompt lines (outcome, timing, image, staffs, warnings, memory, stages, error).
+    static func pageParseLines(_ q: [String: String], _ clip: (String) -> String) -> [String] {
+        func v(_ k: String) -> String { q[k].flatMap { $0.isEmpty ? nil : $0 } ?? "?" }
+        var out: [String] = []
+        out.append("- \(v("outcome")) · \(v("ms")) ms (decode \(v("decode_ms")), parse \(v("parse_ms"))) · image \(v("image")) · staffCount \(v("staff_count")) · warnings \(v("warnings_count"))")
+        if let src = q["source_format"] {
+            out.append(clip("- input: \(src), EXIF orientation \(v("exif_orientation")), \(v("input_bytes")) B"))
+        }
+        var mem = "- memory (phys_footprint): before \(v("footprint_before_mb")) MB, after \(v("footprint_after_mb")) MB, peak \(v("peak_mb")) MB (\(v("peak_source")), \(v("samples")) samples"
+        if let l = q["ledger_peak_mb"] { mem += ", lifetime ledger peak \(l) MB" }
+        mem += ")"
+        if let a = q["available_mb"] { mem += " · available \(a) MB" }
+        out.append(clip(mem))
+        var sess = "- session: \(v("session"))"
+        if let b = q["session_build_ms"] { sess += " (\(b) ms)" }
+        out.append(sess)
+        if let st = q["stages"], !st.isEmpty { out.append("- stages ms: \(clip(st))") }
+        if let w = q["warnings"], !w.isEmpty { out.append("- warnings: \(clip(w))") }
+        if let e = q["error"], !e.isEmpty { out.append("- error: \(clip(e))") }
+        return out
     }
 
     private static func feedbackLines(_ f: OMRFeedback, _ lim: Limits) -> [String] {

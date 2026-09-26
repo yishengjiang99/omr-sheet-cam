@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Captured / picked page: saves it to Documents/captures, runs `AppServices.recognition`
-/// (stub → "Recognition coming soon"), then shows the visual compare + accuracy feedback. A
+/// (full-page `PageRecognitionService`), then shows the visual compare + accuracy feedback, or
+/// "Couldn't read this page" with Try again. A
 /// recognized scan's MIDI is saved to the playlist right away, and a pinned, highlighted Play
 /// button (always visible above the home indicator) opens the Player on it. Every step is
 /// recorded in `DiagnosticsLog`.
@@ -19,6 +20,9 @@ struct ResultScreen: View {
     /// Playlist entry for this scan once saved (auto on success, retried by the Play button).
     @State private var playlistEntry: PlaylistEntry?
     @State private var playlistError: String?
+    /// Saved capture bytes (reused by Try again) and the attempt counter that re-runs `.task`.
+    @State private var input: Data?
+    @State private var attempt = 0
 
     /// Capture file name used to tie log events + feedback together.
     private var captureName: String { savedURL?.lastPathComponent ?? "unsaved-\(photo.id.uuidString.prefix(8))" }
@@ -43,6 +47,8 @@ struct ResultScreen: View {
                 switch outcome {
                 case nil:
                     HStack { ProgressView(); Text("Reading…") }
+                    Text("Finding staffs and notes on the page. This takes a few seconds.")
+                        .font(.footnote).foregroundStyle(.secondary)
                 case .comingSoon:
                     Label("Recognition coming soon", systemImage: "hourglass")
                     Text("Full-page reading is being built. Your photo is saved for later. Try Diagnostics → Compare Gate-1 staff to preview the compare view.")
@@ -55,8 +61,16 @@ struct ResultScreen: View {
                         Text(playlistError).font(.footnote).foregroundStyle(.red)
                     }
                 case let .failed(msg):
-                    Label("Could not read this page", systemImage: "exclamationmark.triangle")
-                    Text(msg).font(.footnote).foregroundStyle(.secondary)
+                    Label("Couldn't read this page", systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                        .accessibilityIdentifier("result.error")
+                    Text("Make sure the whole page is in frame, flat and well lit, then try again.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                    Button { retry() } label: { Label("Try again", systemImage: "arrow.clockwise") }
+                        .accessibilityIdentifier("result.retry")
+                    DisclosureGroup("Details") {
+                        Text(msg).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                    }
                 }
                 Button("Play sample") { playSample() }
                 if let sampleError { Text(sampleError).font(.footnote).foregroundStyle(.red) }
@@ -82,7 +96,7 @@ struct ResultScreen: View {
         .navigationTitle("Result")
         .navigationBarTitleDisplayMode(.inline)
         .toast($toast)
-        .task(id: photo.id) { await process() }
+        .task(id: attempt) { await process() }
     }
 
     private var pixelSize: String {
@@ -91,8 +105,26 @@ struct ResultScreen: View {
         return "\(Int(img.size.width * img.scale))x\(Int(img.size.height * img.scale))"
     }
 
+    private func retry() {
+        DiagnosticsLog.shared.record(.info, .recognition, "\(captureName): try again", payload: ["kind": "retry", "capture": captureName])
+        outcome = nil
+        attempt += 1
+    }
+
     private func process() async {
         guard outcome == nil else { return }
+        let jpeg: Data
+        if let input {
+            jpeg = input
+        } else {
+            jpeg = await saveCapture()
+            input = jpeg
+        }
+        await recognize(jpeg)
+    }
+
+    /// Saves the upright JPEG to Documents/captures; returns its bytes (in-memory JPEG if saving failed).
+    private func saveCapture() async -> Data {
         let log = DiagnosticsLog.shared
         let image = photo.image
         let source = photo.source.rawValue
@@ -115,7 +147,10 @@ struct ResultScreen: View {
             log.record(error: e, category: .capture, context: "capture save failed", payload: ["pixels": pixelSize, "source": source])
         }
         feedback.captureName = captureName
+        return jpeg
+    }
 
+    private func recognize(_ jpeg: Data) async {
         let t0 = DispatchTime.now()
         let result = await service.recognize(imageData: jpeg)
         let ms = Double(DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds) / 1_000_000

@@ -47,6 +47,11 @@
 		A10000000000000000000008 /* OMRHomrIOS in Frameworks */ = {isa = PBXBuildFile; productRef = P10000000000000000000002 /* OMRHomrIOS */; };
 		4F06444BBF09D87CE872BDB8 /* MIDINoteExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149722DE288FA9C01620E0D8 /* MIDINoteExtractor.swift */; };
 		21EBA7280EC15355707ED56C /* PlaybackSmokeFixtureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */; };
+		7A0000000000000000000001 /* Gray8Image.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000001 /* Gray8Image.swift */; };
+		7A0000000000000000000002 /* MemoryStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000002 /* MemoryStats.swift */; };
+		7A0000000000000000000003 /* PageRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000003 /* PageRecognitionService.swift */; };
+		7A0000000000000000000004 /* Gray8ImageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000004 /* Gray8ImageTests.swift */; };
+		7A0000000000000000000005 /* PageRecognitionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000005 /* PageRecognitionServiceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -101,6 +106,11 @@
 		B10000000000000000000011 /* OMRSheetCamTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OMRSheetCamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		149722DE288FA9C01620E0D8 /* MIDINoteExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDINoteExtractor.swift; sourceTree = "<group>"; };
 		C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackSmokeFixtureTests.swift; sourceTree = "<group>"; };
+		7B0000000000000000000001 /* Gray8Image.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gray8Image.swift; sourceTree = "<group>"; };
+		7B0000000000000000000002 /* MemoryStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryStats.swift; sourceTree = "<group>"; };
+		7B0000000000000000000003 /* PageRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageRecognitionService.swift; sourceTree = "<group>"; };
+		7B0000000000000000000004 /* Gray8ImageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gray8ImageTests.swift; sourceTree = "<group>"; };
+		7B0000000000000000000005 /* PageRecognitionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageRecognitionServiceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -132,6 +142,7 @@
 				CB0000000000000000000004 /* CameraPreviewView.swift */,
 				CB0000000000000000000005 /* CameraScreen.swift */,
 				CB0000000000000000000006 /* ResultScreen.swift */,
+				7B0000000000000000000001 /* Gray8Image.swift */,
 			);
 			path = Capture;
 			sourceTree = "<group>";
@@ -146,6 +157,7 @@
 				CB000000000000000000000E /* OMRFeedback.swift */,
 				CB000000000000000000000F /* OMRCompareView.swift */,
 				CB0000000000000000000010 /* Gate1CompareScreen.swift */,
+				7B0000000000000000000002 /* MemoryStats.swift */,
 			);
 			path = Diagnostics;
 			sourceTree = "<group>";
@@ -212,6 +224,7 @@
 			children = (
 				B10000000000000000000004 /* ModelWarmup.swift */,
 				B1000000000000000000000B /* Gate1Runner.swift */,
+				7B0000000000000000000003 /* PageRecognitionService.swift */,
 			);
 			path = Inference;
 			sourceTree = "<group>";
@@ -228,6 +241,8 @@
 				C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */,
 				5E0000000000000000000004 /* SF2PlayerAppTests.swift */,
 				5E0000000000000000000008 /* PlaylistStoreTests.swift */,
+				7B0000000000000000000005 /* PageRecognitionServiceTests.swift */,
+				7B0000000000000000000004 /* Gray8ImageTests.swift */,
 				B10000000000000000000008 /* Fixtures */,
 			);
 			path = Tests;
@@ -422,6 +437,9 @@
 				CA000000000000000000000F /* OMRCompareView.swift in Sources */,
 				CA0000000000000000000010 /* Gate1CompareScreen.swift in Sources */,
 				4F06444BBF09D87CE872BDB8 /* MIDINoteExtractor.swift in Sources */,
+				7A0000000000000000000003 /* PageRecognitionService.swift in Sources */,
+				7A0000000000000000000002 /* MemoryStats.swift in Sources */,
+				7A0000000000000000000001 /* Gray8Image.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -438,6 +456,8 @@
 				21EBA7280EC15355707ED56C /* PlaybackSmokeFixtureTests.swift in Sources */,
 				5F0000000000000000000004 /* SF2PlayerAppTests.swift in Sources */,
 				5F0000000000000000000009 /* PlaylistStoreTests.swift in Sources */,
+				7A0000000000000000000005 /* PageRecognitionServiceTests.swift in Sources */,
+				7A0000000000000000000004 /* Gray8ImageTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

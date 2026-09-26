@@ -27,7 +27,7 @@ final class ModelWarmup: ObservableObject {
 
     @Published private(set) var state: State = .idle
     @Published private(set) var report: WarmupReport?
-    /// Warm sessions, kept alive for the parse path once it lands.
+    /// Warm sessions, reused by `PageRecognitionService` and Gate-1.
     private(set) var models: WarmedModels?
     private var task: Task<WarmupReport?, Never>?
 
@@ -72,6 +72,20 @@ final class ModelWarmup: ObservableObject {
         _ = await start(modelsDir: modelsDir).value
         if let models, state == .ready { return models }
         throw WarmupError.notReady(debugLine)
+    }
+
+    /// Memory warning: forget the warm sessions so ORT / CoreML memory is freed once nothing else
+    /// holds them; the next `readyModels()` warms up again. No-op while a warmup is running.
+    func releaseModels() {
+        guard state != .warming else { return }
+        let had = models != nil
+        models = nil
+        task = nil
+        state = .idle
+        if had {
+            DiagnosticsLog.shared.record(.warn, .warmup, "released warm sessions (memory warning)",
+                                         payload: ["kind": "released", "footprint_mb": String(format: "%.1f", ModelWarmup.physFootprintMB())])
+        }
     }
 
     private var isFailed: Bool {

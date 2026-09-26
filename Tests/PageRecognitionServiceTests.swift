@@ -1,0 +1,324 @@
+import Foundation
+import OMRHomrIOS
+import UIKit
+import XCTest
+@testable import OMRSheetCam
+
+/// `PageRecognitionService`: error paths, outcome mapping, session reuse / serialization, memory
+/// warning drop, `page_parse` diagnostics + prompt section, and (when models are available) a real
+/// full-page parse of the C-scale fixture page.
+final class PageRecognitionServiceTests: XCTestCase {
+    private struct Boom: Error, CustomStringConvertible { var description: String { "boom: models unavailable" } }
+
+    /// Fake page session: fixed result or error, counts calls and the max concurrent parses.
+    private final class FakeParser: PageParser, @unchecked Sendable {
+        let result: ParseSheetMusicResult?
+        let delay: TimeInterval
+        private let lock = NSLock()
+        private var active = 0
+        private(set) var calls = 0
+        private(set) var maxActive = 0
+        private(set) var lastSize: (Int, Int, Int)?
+
+        init(result: ParseSheetMusicResult?, delay: TimeInterval = 0) {
+            self.result = result
+            self.delay = delay
+        }
+
+        func parse(gray8: Data, width: Int, height: Int) throws -> PageParseOutput {
+            lock.lock(); active += 1; calls += 1; maxActive = max(maxActive, active); lastSize = (gray8.count, width, height); lock.unlock()
+            defer { lock.lock(); active -= 1; lock.unlock() }
+            XCTAssertFalse(Thread.isMainThread, "parse must run off the main thread")
+            if delay > 0 { Thread.sleep(forTimeInterval: delay) }
+            guard let result else { throw Boom() }
+            return PageParseOutput(result: result, stages: [.init(name: "segnet", ms: 12), .init(name: "decode", ms: 34)])
+        }
+    }
+
+    private final class Counter: @unchecked Sendable {
+        private let lock = NSLock()
+        private var n = 0
+        func bump() { lock.lock(); n += 1; lock.unlock() }
+        var value: Int { lock.lock(); defer { lock.unlock() }; return n }
+    }
+
+    private static func goodResult(staffCount: Int = 1, notes: Int = 2) -> ParseSheetMusicResult {
+        ParseSheetMusicResult(
+            midi: Data("MThd".utf8) + Data([0, 0, 0, 6, 0, 1, 0, 2, 1, 0xE0]),
+            noteLayout: (0..<notes).map { NoteLayout(symbolIndex: $0, midiNote: 60 + $0, onsetTicks: $0 * 480, durationTicks: 480, pageRect: .null, staffIndex: 0, noteIndex: $0) },
+            layoutSource: .midiFallback, staffCount: staffCount,
+            warnings: ["layout: midi-fallback (no attention boxes; pageRect is .null)"]
+        )
+    }
+
+    /// Small valid PNG (content irrelevant for fakes).
+    private static func pngData(width: Int = 31, height: Int = 17) -> Data {
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: format).image { ctx in
+            UIColor.white.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        }.pngData()!
+    }
+
+    private func makeService(
+        factory: @escaping PageRecognitionService.SessionFactory, log: DiagnosticsLog,
+        center: NotificationCenter = NotificationCenter(), released: Counter = Counter()
+    ) -> PageRecognitionService {
+        PageRecognitionService(
+            factory: factory, releaseShared: { released.bump() }, log: log, notificationCenter: center, sampleInterval: 0.01
+        )
+    }
+
+    private func pageEvents(_ log: DiagnosticsLog) -> [DiagnosticsEvent] {
+        log.events.filter { $0.category == .recognition && $0.payload?["kind"] == "page_parse" }
+    }
+
+    // MARK: - Error paths
+
+    func testSessionFactoryErrorGivesFailedOutcomeAndLogsError() async throws {
+        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
+        let service = makeService(factory: { throw Boom() }, log: log)
+        let outcome = await service.recognize(imageData: Self.pngData())
+        guard case let .failed(msg) = outcome else { return XCTFail("expected .failed, got \(outcome)") }
+        XCTAssertTrue(msg.contains("boom"), msg)
+        let e = try XCTUnwrap(pageEvents(log).last)
+        XCTAssertEqual(e.level, .error)
+        XCTAssertEqual(e.payload?["outcome"], "failed")
+        XCTAssertEqual(e.payload?["error"], "boom: models unavailable")
+        XCTAssertEqual(e.payload?["image"], "31x17", "image decoded before the session is needed")
+        XCTAssertNotNil(e.payload?["footprint_before_mb"])
+        XCTAssertNotNil(e.payload?["peak_mb"])
+        let built = await service.engine.buildCount
+        XCTAssertEqual(built, 0)
+    }
+
+    func testUndecodableImageFailsWithoutBuildingSession() async throws {
+        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
+        let fake = FakeParser(result: Self.goodResult())
+        let service = makeService(factory: { fake }, log: log)
+        let outcome = await service.recognize(imageData: Data([0xFF, 0xD8, 0x00]))
+        guard case .failed = outcome else { return XCTFail("expected .failed, got \(outcome)") }
+        let built = await service.engine.buildCount
+        XCTAssertEqual(built, 0)
+        XCTAssertEqual(fake.calls, 0)
+        XCTAssertNotNil(pageEvents(log).last?.payload?["error_type"])
+    }
+
+    func testParserErrorGivesFailed() async {
+        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
+        let fake = FakeParser(result: nil)
+        let outcome = await makeService(factory: { fake }, log: log).recognize(imageData: Self.pngData())
+        XCTAssertEqual(outcome, .failed("boom: models unavailable"))
+        XCTAssertEqual(pageEvents(log).last?.level, .error)
+    }
+
+    func testOutcomeMapping() {
+        guard case .failed = PageRecognitionService.outcome(for: Self.goodResult(staffCount: 0), ms: 1) else {
+            return XCTFail("staffCount 0 must fail")
+        }
+        guard case .failed = PageRecognitionService.outcome(for: Self.goodResult(notes: 0), ms: 1) else {
+            return XCTFail("no notes must fail")
+        }
+        var empty = Self.goodResult()
+        empty.midi = Data()
+        guard case .failed = PageRecognitionService.outcome(for: empty, ms: 1) else { return XCTFail("empty MIDI must fail") }
+        guard case let .recognized(d) = PageRecognitionService.outcome(for: Self.goodResult(), ms: 42) else {
+            return XCTFail("good result must be recognized")
+        }
+        XCTAssertEqual(d.staffCount, 1)
+        XCTAssertEqual(d.notes.count, 2)
+        XCTAssertEqual(d.ms, 42)
+        XCTAssertFalse(d.hasBoxes, "null pageRect → no highlight boxes")
+        XCTAssertTrue(d.notes.allSatisfy { $0.rect == nil })
+    }
+
+    // MARK: - Session reuse, serialization, memory warning
+
+    func testSessionBuiltOnceReusedAndParsesSerialized() async throws {
+        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
+        let fake = FakeParser(result: Self.goodResult(), delay: 0.05)
+        let builds = Counter()
+        let service = makeService(factory: { builds.bump(); return fake }, log: log)
+        let png = Self.pngData()
+        let outcomes = await withTaskGroup(of: RecognitionOutcome.self) { group -> [RecognitionOutcome] in
+            for _ in 0..<3 { group.addTask { await service.recognize(imageData: png) } }
+            var all: [RecognitionOutcome] = []
+            for await o in group { all.append(o) }
+            return all
+        }
+        XCTAssertEqual(outcomes.map(\.name), ["recognized", "recognized", "recognized"])
+        XCTAssertEqual(builds.value, 1, "session must be created once and reused")
+        XCTAssertEqual(fake.calls, 3)
+        XCTAssertEqual(fake.maxActive, 1, "parses must run one at a time")
+        XCTAssertEqual(fake.lastSize.map { [$0.0, $0.1, $0.2] }, [31 * 17, 31, 17])
+        XCTAssertEqual(pageEvents(log).compactMap { $0.payload?["session"] }, ["built", "reused", "reused"])
+    }
+
+    func testMemoryWarningDropsSessionAndNextParseRebuilds() async throws {
+        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
+        let center = NotificationCenter()
+        let released = Counter()
+        let fake = FakeParser(result: Self.goodResult())
+        let builds = Counter()
+        let service = makeService(factory: { builds.bump(); return fake }, log: log, center: center, released: released)
+        _ = await service.recognize(imageData: Self.pngData())
+        var has = await service.engine.hasSession
+        XCTAssertTrue(has)
+
+        center.post(name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
+        for _ in 0..<200 where has {
+            try await Task.sleep(nanoseconds: 10_000_000)
+            has = await service.engine.hasSession
+        }
+        XCTAssertFalse(has, "memory warning must drop the session")
+        XCTAssertEqual(released.value, 1, "warm sessions released too")
+        XCTAssertTrue(log.events.contains { $0.payload?["kind"] == "page_session_drop" })
+
+        _ = await service.recognize(imageData: Self.pngData())
+        XCTAssertEqual(builds.value, 2)
+        XCTAssertEqual(pageEvents(log).last?.payload?["session"], "rebuilt after memory warning")
+    }
+
+    // MARK: - Diagnostics
+
+    func testPageParseDiagnosticsFieldsAndPromptSection() async throws {
+        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
+        let fake = FakeParser(result: Self.goodResult(), delay: 0.05)
+        let outcome = await makeService(factory: { fake }, log: log).recognize(imageData: Self.pngData())
+        XCTAssertEqual(outcome.name, "recognized")
+        let e = try XCTUnwrap(pageEvents(log).last)
+        let p = try XCTUnwrap(e.payload)
+        for key in ["ms", "decode_ms", "parse_ms", "image_w", "image_h", "staff_count", "warnings_count",
+                    "footprint_before_mb", "footprint_after_mb", "peak_mb", "peak_source", "sampled_peak_mb", "samples", "stages"] {
+            XCTAssertNotNil(p[key], "missing \(key) in \(p)")
+        }
+        XCTAssertEqual(p["image_w"], "31")
+        XCTAssertEqual(p["image_h"], "17")
+        XCTAssertEqual(p["staff_count"], "1")
+        XCTAssertEqual(p["warnings_count"], "1")
+        XCTAssertEqual(p["stages"], "segnet=12 decode=34")
+        XCTAssertGreaterThan(Double(p["peak_mb"] ?? "0") ?? 0, 0)
+        XCTAssertGreaterThanOrEqual(Double(p["peak_mb"] ?? "0") ?? 0, Double(p["footprint_before_mb"] ?? "0") ?? 0)
+        XCTAssertGreaterThanOrEqual(Int(p["samples"] ?? "0") ?? 0, 2, "sampled during the parse")
+        print("PageParse diag: \(e.message)")
+
+        let device = DeviceInfo(model: "iPhone16,1", os: "iOS 18.0", appVersion: "1.0", build: "6", ortVersion: "1.24.2")
+        let text = PromptBuilder.build(.init(device: device, events: log.events))
+        print("---- prompt ----\n\(text)---- end ----")
+        XCTAssertTrue(text.contains("## Page parse (latest)\n- recognized · "), text)
+        XCTAssertTrue(text.contains("image 31x17 · staffCount 1 · warnings 1"), text)
+        XCTAssertTrue(text.contains("memory (phys_footprint): before "), text)
+        XCTAssertTrue(text.contains("stages ms: segnet=12 decode=34"), text)
+        XCTAssertLessThanOrEqual(text.utf8.count, 4096)
+        let empty = PromptBuilder.build(.init(device: device, events: []))
+        XCTAssertTrue(empty.contains("## Page parse (latest)\n- none"))
+    }
+
+    func testAppUsesPageRecognition() {
+        XCTAssertTrue(AppServices.recognition is PageRecognitionService)
+    }
+
+    // MARK: - Real models (simulator CI): app path vs homr oracle pages
+
+    /// `fixtures/oracle.pages/<id>/stages.json` (homr 7d97c3c): input image, staffs, voices.
+    struct OraclePage {
+        var id: String
+        var input: URL
+        var expectedStaffCount: Int
+        var expectedPitches: [Int]
+    }
+
+    private struct Stages: Decodable {
+        struct Staff: Decodable { var is_grandstaff: Bool }
+        var fixture: String
+        var input_image: String
+        var staffs: [Staff]
+        var voices: [[OracleSymbolFields]]
+    }
+
+    static func oraclePages() throws -> [OraclePage] {
+        let root = Gate1StaffTokenMatchTests.repoRoot
+        let dir = root.appendingPathComponent("fixtures/oracle.pages")
+        let ids = ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []).sorted()
+        return try ids.compactMap { id -> OraclePage? in
+            let url = dir.appendingPathComponent(id).appendingPathComponent("stages.json")
+            guard let data = try? Data(contentsOf: url) else { return nil }
+            let st = try JSONDecoder().decode(Stages.self, from: data)
+            // ParseSheetMusicResult.staffCount = SMF staff tracks: one per voice, two for a grand-staff voice.
+            let staffCount = st.voices.count + st.staffs.filter(\.is_grandstaff).count
+            let pitches = st.voices.flatMap { v in
+                RecognizedNote.fromSymbols(v.map { EncodedSymbol(oracleFields: $0) }).compactMap(\.midiNote)
+            }.sorted()
+            return OraclePage(id: st.fixture, input: root.appendingPathComponent(st.input_image),
+                              expectedStaffCount: staffCount, expectedPitches: pitches)
+        }
+    }
+
+    /// Skips (like Gate-1) when the pinned models are not reachable.
+    private func requireModels() throws -> URL {
+        do {
+            let dir = try ModelWarmup.resolveModelsDir(nil)
+            _ = try PageModels.files(in: dir)
+            return dir
+        } catch {
+            throw XCTSkip("pinned models not available (\(error)); run scripts/fetch-models or set OMR_MODELS_DIR")
+        }
+    }
+
+    private func realService(_ log: DiagnosticsLog) -> PageRecognitionService {
+        PageRecognitionService(factory: PageRecognitionService.warmedSession, releaseShared: {}, log: log,
+                               notificationCenter: NotificationCenter())
+    }
+
+    /// C-scale page (`fixtures/mono.c_major_scale/input.png`) through the app path: ImageIO →
+    /// `Gray8Image` → `PageInferenceSession` on the warmed sessions. homr: 1 staff, C4…C5.
+    func testCScalePageFullParseOnWarmedSessions() async throws {
+        let png = Gate1StaffTokenMatchTests.repoRoot.appendingPathComponent("fixtures/mono.c_major_scale/input.png")
+        guard let data = try? Data(contentsOf: png) else { throw XCTSkip("fixture page missing: \(png.path)") }
+        let dir = try requireModels()
+        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
+        let outcome = await realService(log).recognize(imageData: data)
+        let e = pageEvents(log).last
+        print("PageParse mono.c_major_scale: \(e?.message ?? "no event") | \(e?.payload ?? [:])")
+        guard case let .recognized(d) = outcome else { return XCTFail("expected recognized, got \(outcome) (models \(dir.path))") }
+        XCTAssertEqual(d.staffCount, 1)
+        XCTAssertFalse(d.midi.isEmpty)
+        XCTAssertEqual(Array(d.midi.prefix(4)), Array("MThd".utf8))
+        XCTAssertEqual(d.notes.compactMap(\.midiNote), [60, 62, 64, 65, 67, 69, 71, 72], "homr C-scale pitches")
+        XCTAssertFalse(d.hasBoxes, "noteLayout has no page positions yet")
+        XCTAssertEqual(e?.payload?["staff_count"], "1")
+        XCTAssertEqual(e?.payload?["source_format"]?.hasPrefix("gray 8bpc 1654x2339"), true, e?.payload?["source_format"] ?? "")
+    }
+
+    /// Every other homr oracle page through the app path. Hard: recognized + staffCount == homr.
+    /// Pitch multiset vs homr's voices is reported per page (printed summary) and asserted too.
+    func testOraclePagesMatchHomrOnAppPath() async throws {
+        let pages = try Self.oraclePages().filter { $0.id != "mono.c_major_scale" }
+        guard !pages.isEmpty else { throw XCTSkip("no fixtures/oracle.pages/*/stages.json") }
+        _ = try requireModels()
+        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
+        let service = realService(log)
+        var summary: [String] = []
+        for page in pages {
+            guard let data = try? Data(contentsOf: page.input) else {
+                XCTFail("\(page.id): input missing \(page.input.path)"); continue
+            }
+            let outcome = await service.recognize(imageData: data)
+            let p = pageEvents(log).last?.payload ?? [:]
+            let diag = "ms \(p["ms"] ?? "?") · \(p["image"] ?? "?") · peak \(p["peak_mb"] ?? "?") MB · stages \(p["stages"] ?? "-")"
+            guard case let .recognized(d) = outcome else {
+                summary.append("\(page.id): FAILED \(outcome) · \(diag)")
+                XCTFail("\(page.id): expected recognized, got \(outcome) | \(p)")
+                continue
+            }
+            let got = d.notes.compactMap(\.midiNote).sorted()
+            let staffOK = d.staffCount == page.expectedStaffCount
+            let pitchOK = got == page.expectedPitches
+            summary.append("\(page.id): staffCount \(d.staffCount)/\(page.expectedStaffCount) \(staffOK ? "ok" : "MISMATCH") · notes \(got.count)/\(page.expectedPitches.count) pitches \(pitchOK ? "ok" : "MISMATCH got \(got) want \(page.expectedPitches)") · \(diag)")
+            XCTAssertEqual(d.staffCount, page.expectedStaffCount, "\(page.id) staffCount")
+            XCTAssertEqual(got, page.expectedPitches, "\(page.id) pitches (sorted) vs homr voices")
+            XCTAssertFalse(d.midi.isEmpty, page.id)
+        }
+        summary.forEach { print("OraclePages: \($0)") }
+    }
+}
