@@ -23,6 +23,12 @@ Gate-1 fixture `oracle.c_scale_staff` (from `mono.c_major_scale`): 12 symbols; s
 commit + model emits the count above). Encoder fp16 vs homr's stock fp32 encoder
 was cross-checked on the same canvases and gave identical symbols.
 
+> **Note on "22/22":** `oracle.c_scale_staff` is our own LilyPond render of the C-major scale,
+> decoded by homr `7d97c3c` to **12 symbols**. The "22/22" in the original brief refers to
+> Yisheng's own C-scale image in `homr-research` on their Mac. That image is not in this repo
+> yet and will be added when their Mac is online. Until then the Gate-1 target is these
+> 12 symbols.
+
 ## Diffs vs hand-authored GT
 
 ### mono.c_major_scale
