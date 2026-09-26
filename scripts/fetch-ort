@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+# scripts/fetch-ort — download the pinned official ONNX Runtime Linux CPU release,
+# verify it against ort.lock (repo root, models.lock format), and install headers + libonnxruntime.so into
+# third_party/onnxruntime/ (gitignored).
+#
+# Used by the Linux ORT C-API path in Packages/omr-homr-ios (system library `CONNXRuntime`,
+# `ORTCSession`). The iOS build keeps onnxruntime-objc + CoreML and does not need this.
+#
+# Usage:
+#   scripts/fetch-ort                 # host arch (x86_64 | aarch64)
+#   scripts/fetch-ort --arch aarch64  # explicit arch
+#   scripts/fetch-ort --force         # re-download + reinstall
+#   scripts/fetch-ort --print-flags   # print the manual `swift build` flags and exit
+#
+# Env: ORT_LOCK (default <repo>/ort.lock), ORT_DEST (default <repo>/third_party/onnxruntime),
+#      ORT_CACHE (default <repo>/third_party/.cache)
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LOCK="${ORT_LOCK:-$ROOT/ort.lock}"
+DEST="${ORT_DEST:-$ROOT/third_party/onnxruntime}"
+CACHE="${ORT_CACHE:-$ROOT/third_party/.cache}"
+
+arch="$(uname -m)"
+force=0
+print_flags=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --arch) arch="$2"; shift 2 ;;
+    --force) force=1; shift ;;
+    --print-flags) print_flags=1; shift ;;
+    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+    *) echo "fetch-ort: unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
+
+print_swift_flags() {
+  cat <<FLAGS
+# Package.swift auto-detects $DEST on Linux (override: OMR_ORT_C=0|1, OMR_ORT_ROOT=<dir>).
+# Manual equivalent, e.g. for a package that only has the CONNXRuntime modulemap:
+swift build -Xcc -I$DEST/include -Xlinker -L$DEST/lib -Xlinker -rpath -Xlinker $DEST/lib
+# or via pkg-config:
+PKG_CONFIG_PATH=$DEST/lib/pkgconfig swift build -Xlinker -rpath -Xlinker $DEST/lib
+FLAGS
+}
+if [[ $print_flags == 1 ]]; then print_swift_flags; exit 0; fi
+
+case "$arch" in
+  x86_64|amd64) ort_arch=x64 ;;
+  aarch64|arm64) ort_arch=aarch64 ;;
+  *) echo "fetch-ort: unsupported arch '$arch' (need x86_64 or aarch64)" >&2; exit 2 ;;
+esac
+if [[ "$(uname -s)" != "Linux" ]]; then
+  echo "fetch-ort: note: host is $(uname -s); this fetches the Linux build (iOS/macOS use onnxruntime-objc)." >&2
+fi
+
+[[ -f "$LOCK" ]] || { echo "fetch-ort: missing $LOCK" >&2; exit 1; }
+# ort.lock uses the models.lock format: <sha256>  <filename>  <url>
+sha="" asset="" url=""
+while read -r l_sha l_name l_url l_extra || [[ -n "${l_sha:-}" ]]; do
+  case "${l_sha:-}" in ''|'#'*) continue ;; esac
+  if [[ -z "${l_name:-}" || -z "${l_url:-}" || -n "${l_extra:-}" || ! "$l_sha" =~ ^[0-9a-f]{64}$ ]]; then
+    echo "fetch-ort: malformed line in $LOCK: $l_sha $l_name $l_url $l_extra" >&2; exit 1
+  fi
+  if [[ "$l_name" =~ ^onnxruntime-linux-${ort_arch}-([0-9]+\.[0-9]+\.[0-9]+)\.tgz$ ]]; then
+    sha="$l_sha" asset="$l_name" url="$l_url" version="${BASH_REMATCH[1]}"
+  fi
+done < "$LOCK"
+if [[ -z "$sha" ]]; then
+  echo "fetch-ort: no onnxruntime-linux-${ort_arch}-<ver>.tgz entry in $LOCK" >&2; exit 1
+fi
+
+stamp="$DEST/.ort-stamp"
+want_stamp="$version $ort_arch $sha"
+if [[ $force == 0 && -f "$stamp" && "$(cat "$stamp")" == "$want_stamp" && -f "$DEST/include/onnxruntime_c_api.h" ]]; then
+  echo "fetch-ort: onnxruntime $version ($ort_arch) already installed at $DEST"
+  exit 0
+fi
+
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'
+  else shasum -a 256 "$1" | awk '{print $1}'; fi
+}
+
+mkdir -p "$CACHE"
+tgz="$CACHE/$asset"
+if [[ $force == 1 || ! -f "$tgz" || "$(sha256_of "$tgz")" != "$sha" ]]; then
+  echo "fetch-ort: downloading $url"
+  curl -fsSL --retry 3 --retry-delay 2 -o "$tgz.part" "$url"
+  mv "$tgz.part" "$tgz"
+fi
+got="$(sha256_of "$tgz")"
+if [[ "$got" != "$sha" ]]; then
+  echo "fetch-ort: SHA-256 mismatch for $asset" >&2
+  echo "  expected $sha" >&2
+  echo "  got      $got" >&2
+  rm -f "$tgz"
+  exit 1
+fi
+echo "fetch-ort: sha256 OK $sha  $asset"
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+tar -xzf "$tgz" -C "$tmp"
+src="$tmp/onnxruntime-linux-${ort_arch}-${version}"
+[[ -f "$src/include/onnxruntime_c_api.h" && -f "$src/lib/libonnxruntime.so.$version" ]] || {
+  echo "fetch-ort: unexpected tarball layout in $asset" >&2; exit 1; }
+
+rm -rf "$DEST"
+mkdir -p "$DEST/lib/pkgconfig"
+cp -R "$src/include" "$DEST/include"
+# Keep the SONAME chain: libonnxruntime.so -> .so.1 -> .so.<version>
+cp -P "$src"/lib/libonnxruntime.so* "$DEST/lib/"
+for f in LICENSE ThirdPartyNotices.txt VERSION_NUMBER GIT_COMMIT_ID README.md; do
+  [[ -f "$src/$f" ]] && cp "$src/$f" "$DEST/"
+done
+# Relocated pkg-config file (the shipped one points at the upstream build prefix).
+cat > "$DEST/lib/pkgconfig/libonnxruntime.pc" <<PC
+prefix=$DEST
+includedir=\${prefix}/include
+libdir=\${prefix}/lib
+
+Name: onnxruntime
+Description: ONNX runtime (official Linux CPU release, fetched by scripts/fetch-ort)
+URL: https://github.com/microsoft/onnxruntime
+Version: $version
+Libs: -L\${libdir} -lonnxruntime
+Cflags: -I\${includedir}
+PC
+echo "$want_stamp" > "$stamp"
+
+echo "fetch-ort: installed onnxruntime $version ($ort_arch) -> $DEST"
+print_swift_flags
