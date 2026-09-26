@@ -78,3 +78,99 @@ Fixture schema + C-scale + the seven synthetic IDs above + writer-only test.
 Do not add UI tests before those pass.
 
 Report token edit distance and MIDI edit distance on every page test.
+
+## Addendum: agent / CLI TDD loop
+
+```
+============================================================
+ADDENDUM — AGENT / CLI TDD LOOP
+============================================================
+
+The plan above is executable by a coding agent on the command line
+ONLY after fixtures and a non-interactive compare CLI exist.
+Do not ask the agent to photograph pages, open MuseScore, play audio,
+or "see if it sounds right."
+
+Agents can loop on anything that is:
+- files in git (or one deterministic fetch script)
+- one command
+- pass/fail via exit code
+- diffs on stdout
+- no camera, no GUI, no human listening
+
+----------------------------------------------------------
+CLI-ABLE VS NOT
+----------------------------------------------------------
+
+Yes (TDD every edit or every inference change):
+- Writer-only: expected.tokens.json → MIDI → diff expected.notes.csv
+- Encoder/decoder on a checked-in staff PNG vs committed oracle tokens
+- Geometry on synthetic PNG vs known staffCount / dewarp shape
+- Full-page synthetic PNG → MIDI note list
+- Already-downloaded Camera-PrIMuS / OLiMPiC / homr-datasets files
+
+No (not part of the agent loop):
+- Print and photograph camera.deskew
+- Listen to playback
+- Layout IoU / highlight UX as a ship gate
+- Hunting new sheet music mid-run
+
+Playback smoke, if present, is a headless parser:
+parse_midi(bytes).notes == expected.notes
+Do not require a browser or iOS simulator for unit green.
+
+----------------------------------------------------------
+WHAT TO ADD BEFORE AN AGENT CAN LOOP
+----------------------------------------------------------
+
+1. Check in a minimal fixture pack (or a one-shot fetch):
+   - C-scale staff PNG used for the 22/22 oracle
+   - expected.tokens.json from that run (commit the tokens; do not
+     require live Python homr on every unit run)
+   - expected.notes.csv
+   - the seven synthetic IDs (mono.*, poly.chord, clefs.bass,
+     piano.grand) as small rendered PNGs + GT
+   Agents will not browse PrIMuS during a TDD turn.
+
+2. One entrypoint, platform-agnostic in name:
+
+   omr-test fixtures/<id>
+   omr-test --tier exact_tokens --no-onnx
+   omr-test --tier exact_tokens
+   omr-test --tier midi_distance --fetch
+
+   Exit 0 = that fixture's match_tier passed.
+   Print token edit distance and MIDI edit distance every time.
+
+3. Pin weights + tokenizer JSON on disk for ONNX tests.
+   Mark ONNX tests slow. Writer-only tests must be instant.
+
+4. Compare MIDI as CSV/JSON note lists, not SMF-byte equality
+   and not a notation GUI.
+
+----------------------------------------------------------
+AGENT TDD LOOP
+----------------------------------------------------------
+
+Red: add or extend fixtures/<id>/expected.notes.csv (and tokens
+     if match_tier is exact_tokens).
+Run: omr-test fixtures/<id>   # expect non-zero
+Implement the writer / geometry / decode path.
+Run: omr-test fixtures/<id>   # expect 0
+Repeat. Do not add UI work until exact_tokens fixtures pass.
+
+Recommended cadence:
+  every edit     → omr-test --tier exact_tokens --no-onnx
+  inference edit → omr-test --tier exact_tokens
+  explicit/night → omr-test --tier midi_distance --fetch
+
+exact_tokens  → fail build on any token or MIDI mismatch
+exact_midi    → fail on MIDI mismatch only
+midi_distance → fail only above meta.yaml threshold
+snapshot      → upload artifacts, never fail CI
+
+First agent task: implement omr-test + C-scale + writer-only
+fixtures so `omr-test --tier exact_tokens --no-onnx` is green,
+then make `omr-test fixtures/mono.c_major_scale` green with ONNX.
+Stop if the command is not runnable; do not improvise a camera lab.
+```
