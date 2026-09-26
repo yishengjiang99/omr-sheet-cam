@@ -199,25 +199,33 @@ jobs:
           du -sh "$APP"
           plutil -p "$APP/Info.plist"
 
-      - name: Drop embedded static frameworks (ITMS-90208)
+      - name: Fix embedded frameworks (ITMS-90208)
         run: |
           set -euo pipefail
-          # onnxruntime.xcframework (SPM binary target, pod-archive-onnxruntime-c) is a STATIC framework:
-          # its code is already linked into the app binary, but Xcode still copies it into
-          # Frameworks/, and ASC rejects the delivery with ITMS-90208. Remove static frameworks only.
+          # Build 1/2 were rejected: "ITMS-90208 OMRSheetCam.app/Frameworks/onnxruntime.framework does not
+          # support the minimum OS Version specified in the Info.plist". The SPM-built onnxruntime.framework
+          # (dynamic) carries a MinimumOSVersion that disagrees with its Mach-O LC_BUILD_VERSION minos.
+          # Align every embedded framework's MinimumOSVersion with the app's; drop static ones.
+          # exportArchive re-signs everything afterwards.
           APP="$ARCHIVE_PATH/Products/Applications/OMRSheetCam.app"
+          APP_MIN=$(plutil -extract MinimumOSVersion raw "$APP/Info.plist")
+          echo "app MinimumOSVersion=$APP_MIN"
           shopt -s nullglob
           for fw in "$APP"/Frameworks/*.framework; do
-            bin="$fw/$(basename "$fw" .framework)"
+            name=$(basename "$fw" .framework); bin="$fw/$name"; plist="$fw/Info.plist"
             desc=$(file -b "$bin" || true)
-            echo "$(basename "$fw"): $desc"
+            echo "== $name: $desc"
+            xcrun vtool -show-build "$bin" 2>/dev/null | grep -E 'platform|minos|sdk' || true
+            echo "plist MinimumOSVersion: $(plutil -extract MinimumOSVersion raw "$plist" 2>/dev/null || echo MISSING)"
             if echo "$desc" | grep -qi 'ar archive'; then
-              echo "::notice::removing static framework $(basename "$fw") from the archive"
-              rm -rf "$fw"
+              echo "::notice::removing static framework $name"; rm -rf "$fw"; continue
             fi
+            BIN_MIN=$(xcrun vtool -show-build "$bin" 2>/dev/null | awk '/minos/ {print $2; exit}')
+            WANT="$APP_MIN"
+            if [ -n "$BIN_MIN" ] && [ "$(printf '%s\n%s\n' "$BIN_MIN" "$APP_MIN" | sort -V | tail -1)" = "$BIN_MIN" ]; then WANT="$BIN_MIN"; fi
+            plutil -replace MinimumOSVersion -string "$WANT" "$plist"
+            echo "set $name MinimumOSVersion=$WANT (binary minos=${BIN_MIN:-?})"
           done
-          if [ -d "$APP/Frameworks" ] && [ -z "$(ls -A "$APP/Frameworks")" ]; then rmdir "$APP/Frameworks"; fi
-          ls -la "$APP" "$APP/Frameworks" 2>/dev/null || true
 
       - name: Upload archive log
         if: always()
