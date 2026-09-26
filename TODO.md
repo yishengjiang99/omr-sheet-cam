@@ -34,3 +34,4 @@ Priority is **implementation first**. Keep test tooling to what's needed to prov
 - [x] homr oracle for the C-scale staff (12 symbols) plus `ORACLE_REPORT.md`
 - [x] `ORTSessionBackend` protocol, Encoder/Decoder sessions wired to it, `ORTObjCSession` for iOS
 - [x] Thin `omr-test` runner + `scripts/omr-test`
+- [x] **Core**: Gate-1 entry `StaffTensor` (`loadNPY`: npy v1/v2/v3, `<f4`/`<f2`/`<f8`, C order) + `StaffInferenceSession(encoder:decoder:vocabulary:)` + `decodeStaff(tensor:)` (51/51 tests on Linux)

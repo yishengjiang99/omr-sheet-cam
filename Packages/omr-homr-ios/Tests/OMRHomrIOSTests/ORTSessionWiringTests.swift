@@ -163,4 +163,71 @@ final class ORTSessionWiringTests: XCTestCase {
         XCTAssertEqual(EncoderSession.float16Bits(fromFloat32Bits: Float(1e6).bitPattern), 0x7C00)
         XCTAssertEqual(EncoderSession.float16Bits(fromFloat32Bits: Float(1.0).bitPattern), 0x3C00)
     }
+
+    func testStaffTensorLoadsOracleNPY() throws {
+        let url = try WriterOnlyFixtureTests.fixturesRoot()
+            .appendingPathComponent("oracle.c_scale_staff/staff.npy")
+        let t = try StaffTensor.loadNPY(url)
+        XCTAssertEqual(t.shape, [1, 1, 256, 1280])
+        XCTAssertEqual(t.values.count, 327_680)
+        // White canvas pixel = (1 - 0.7931) / 0.1738 ≈ 1.1904
+        XCTAssertEqual(t.values[0], (1 - 0.7931) / 0.1738, accuracy: 1e-4)
+        XCTAssertEqual(t.float32LEData.count, 327_680 * 4)
+        XCTAssertThrowsError(try StaffTensor(values: [0], shape: [1, 1, 1, 1]))
+        XCTAssertThrowsError(try StaffTensor(values: [0], shape: [1, 1, 256, 1280]))
+    }
+
+    /// Synthetic `.npy` (v1 or v2 header) with `n` elements of `descr`, value i*0.5 at index i.
+    private func writeNPY(descr: String, elem: Int, v2: Bool, fortran: Bool = false) throws -> URL {
+        let n = StaffInputSpec.elementCount
+        var header = "{'descr': '\(descr)', 'fortran_order': \(fortran ? "True" : "False"), 'shape': (1, 1, 256, 1280), }"
+        let pre = v2 ? 12 : 10
+        while (pre + header.utf8.count + 1) % 64 != 0 { header += " " }
+        header += "\n"
+        var d = Data([0x93] + Array("NUMPY".utf8) + [v2 ? 2 : 1, 0])
+        let hl = header.utf8.count
+        d.append(contentsOf: v2 ? [UInt8(hl & 0xFF), UInt8(hl >> 8), 0, 0] : [UInt8(hl & 0xFF), UInt8(hl >> 8)])
+        d.append(contentsOf: Array(header.utf8))
+        for i in 0..<n {
+            let x = Double(i % 64) * 0.5
+            switch elem {
+            case 2: withUnsafeBytes(of: EncoderSession.float16Bits(fromFloat32Bits: Float(x).bitPattern).littleEndian) { d.append(contentsOf: $0) }
+            case 8: withUnsafeBytes(of: x.bitPattern.littleEndian) { d.append(contentsOf: $0) }
+            default: withUnsafeBytes(of: Float(x).bitPattern.littleEndian) { d.append(contentsOf: $0) }
+            }
+        }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("st-\(descr.dropFirst())-\(v2)-\(fortran).npy")
+        try d.write(to: url)
+        return url
+    }
+
+    func testStaffTensorNPYDtypesAndHeaders() throws {
+        for (descr, elem) in [("<f4", 4), ("<f2", 2), ("<f8", 8)] {
+            for v2 in [false, true] {
+                let t = try StaffTensor.loadNPY(writeNPY(descr: descr, elem: elem, v2: v2))
+                XCTAssertEqual(t.shape, [1, 1, 256, 1280], "\(descr) v2=\(v2)")
+                XCTAssertEqual(t.values[3], 1.5, "\(descr) v2=\(v2)")
+                XCTAssertEqual(t.values[63], 31.5, "\(descr) v2=\(v2)")
+                XCTAssertEqual(t.values[327_679], 31.5, "\(descr) v2=\(v2)")
+            }
+        }
+        XCTAssertThrowsError(try StaffTensor.loadNPY(writeNPY(descr: ">f4", elem: 4, v2: false)))
+        XCTAssertThrowsError(try StaffTensor.loadNPY(writeNPY(descr: "<f4", elem: 4, v2: false, fortran: true)))
+    }
+
+    func testGate1EntryDecodesThroughScriptedBackends() throws {
+        let v = try vocab()
+        let quarter = try XCTUnwrap(v.rhythm.keys.sorted().first { $0.hasPrefix("note_") })
+        ScriptedBackend.nextRhythms = [v.rhythm[quarter]!]
+        let enc = try ScriptedBackend(modelURL: URL(fileURLWithPath: "/m/encoder_fp16.onnx"), provider: .cpu)
+        let dec = try ScriptedBackend(modelURL: URL(fileURLWithPath: "/m/decoder.onnx"), provider: .cpu)
+        let session = try StaffInferenceSession(encoder: enc, decoder: dec, vocabulary: v)
+        let tensor = try StaffTensor(values: [Float](repeating: 0, count: 327_680), shape: [1, 1, 256, 1280])
+        let symbols = try session.decodeStaff(tensor: tensor)
+        XCTAssertEqual(symbols.map(\.rhythm), [quarter])
+        XCTAssertEqual(enc.calls.first?["input"]?.type, .float16)
+        XCTAssertEqual(dec.calls.first?["context"]?.type, .float32, "fp16 context cast before decoder")
+        XCTAssertEqual(dec.calls.first?["context"]?.shape, [1, 4, 512])
+        XCTAssertEqual(dec.calls.count, 2)
+    }
 }
