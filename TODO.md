@@ -38,7 +38,13 @@ Priority is **implementation first**. Keep test tooling to what's needed to prov
 - [x] **TestFlight**: build 3 (1.0, commit `a4c2e06`) VALID and in internal testing (group Internal Testers, yisheng.jiang@gmail.com invited). `ios-testflight.yml` bundles models via `scripts/fetch-models`, fails unless ASC processing is VALID. Listing + screenshots pushed to ASC (`docs/asc/`). Open: publish support/privacy pages (`docs/asc/web/`), then run `docs/asc/push_listing.py`.
 
 ## Later (build order 3–5, blocked until Gate 1 passes)
-- [ ] Geometry and SegNet tiling in the AGPL package
+- [ ] **Core**: Page pipeline port (build order 3; homr 7d97c3c `detect_staffs_in_image` + `parse_staffs`), page → SegNet → staffs → per-staff decode → SMF + noteLayout.
+  - [x] **Core**: Oracle `fixtures/oracle.pages/<fixture>/` for all 8 fixtures + `synthetic.page_on_table` (12 MP photo-like input where `autocrop` really crops): `resized.png`, `preprocessed.png` (CLAHE), `segnet.png` (merged class map), `stages.json` (autocrop, noise filter, symbol boxes, staffs, grand-staff grouping, per-staff geometry, tokens), c-scale `tiles.json` (two SegNet tiles). `tools/oracle/export_page_pipeline.py` (homr's own functions; SegNet fp16 CPU, encoder fp16, decoder fp32). Every page is 1 staff row; piano.grand = one grand staff (homr behaviour, kept).
+  - [ ] **Core**: Milestone 1: page preprocessing (autocrop, PIL bicubic resize, CLAHE) + SegNet tiling/merge in Swift, exact vs oracle; per-class mismatch counts.
+  - [ ] **Core**: Milestone 2: symbol boxes + staff detection + brace/grand-staff → `StaffGeometry`.
+  - [ ] **Core**: Milestone 3: `parseSheetMusicWithLayout` page path (PNG URL/Data + raw `gray8:width:height:` overload, one shared path; downscale before large allocations) + `omr-test parse-page`.
+  - [ ] **Core**: Milestone 4 gate: C-scale page end-to-end 1 staff, 12/12 tokens, valid SMF; edit distances vs homr on the other fixtures.
+  - [ ] **iOS**: swap `StubRecognitionService` for the page path once milestone 3 lands (feed the upright capture as `gray8`).
 - [ ] Capture UI and player UI
 - [ ] Parity against oracle and web fixtures, including the `ORACLE_REPORT.md` misreads (`piano.grand` read as one staff, the `clefs.bass` F clef)
 - [ ] `camera.deskew` input image
