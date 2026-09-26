@@ -8,10 +8,15 @@
 //       StaffTensor → StaffInferenceSession.decodeStaff (encoder fp16 → cast → decoder fp32 CPU);
 //       prints raw rhythm/pitch/lift/articulation per symbol + token edit distance vs
 //       expected.tokens.json (default: next to the input). 0 = exact match, 1 = mismatch.
-//       A .png input is preprocessed in Swift first (StaffTensor.fromStaffImage, homr canvas + ConvertToArray).
+//       A .png input is preprocessed in Swift first (StaffTensor.fromStaffImage, homr canvas + ConvertToArray);
+//       with --geometry <json> the .png is a full page and goes through StaffTensor.fromPage
+//       (prepare_staff_image crop + dewarp, then the canvas).
 //   omr-test preprocess-staff <staff.png> [--compare staff.npy] [--out staff.npy]
 //       PNG → cv2-equivalent grayscale → StaffTensor.fromStaffImage; prints shape and, with --compare,
 //       max/mean abs diff and count(|diff| > 1e-3). 0 = max abs diff <= one gray level (~1/(255*0.1738)).
+//   omr-test prepare-staff <page.png> --geometry <geometry.json> [--compare prepared.npy] [--out prepared.npy]
+//       homr prepare_staff_image (crop + dewarp, StaffPrepare) on a grayscale page with explicit staff
+//       geometry; with --compare prints max abs diff (gray levels) and count(|diff| > 1). 0 = identical.
 //
 // Exit codes: 0 all selected fixtures passed (SKIP does not fail) · 1 a fixture failed ·
 //             2 usage / input error · 3 ONNX path not runnable on this platform yet.
@@ -47,8 +52,9 @@ func exitNotRunnable(_ detail: String) -> Never {
 let usage = """
 usage: omr-test --no-onnx [--fixtures DIR] [--tier TIER] [fixtures/<id> | <id> ...]
        omr-test [--fixtures DIR] [--models DIR] [fixtures/<id> ...]       (ONNX path)
-       omr-test decode-staff <staff.npy|staff.f32|staff.png> [--models DIR] [--expected FILE] [--json]
+       omr-test decode-staff <staff.npy|staff.f32|staff.png | page.png --geometry JSON> [--models DIR] [--expected FILE] [--json]
        omr-test preprocess-staff <staff.png> [--compare staff.npy] [--out staff.npy]
+       omr-test prepare-staff <page.png> --geometry <geometry.json> [--compare prepared.npy] [--out prepared.npy]
 exit: 0 pass · 1 fail · 2 usage/input error · 3 ONNX path not runnable on this platform yet
 """
 
@@ -63,6 +69,7 @@ var jsonOut = false
 var expectedOverride: String?
 var compareNPY: String?
 var outNPY: String?
+var geometryJSON: String?
 var positional: [String] = []
 while !args.isEmpty {
     let a = args.removeFirst()
@@ -84,6 +91,9 @@ while !args.isEmpty {
     case "--out":
         guard !args.isEmpty else { exitUsage("--out needs a .npy path") }
         outNPY = args.removeFirst()
+    case "--geometry":
+        guard !args.isEmpty else { exitUsage("--geometry needs a .json file") }
+        geometryJSON = args.removeFirst()
     case "--tier":
         guard !args.isEmpty else { exitUsage("--tier needs a value") }
         tierFilter = args.removeFirst()
@@ -395,9 +405,66 @@ if positional.first == "preprocess-staff" {
     exit(1)
 }
 
+if positional.first == "prepare-staff" {
+    guard positional.count == 2 else { exitUsage("prepare-staff needs exactly one page .png") }
+    guard let geo = geometryJSON else { exitUsage("prepare-staff needs --geometry <json>") }
+    let url = URL(fileURLWithPath: positional[1], relativeTo: cwd)
+    let page: PNGImage
+    do { page = try PNGDecoder.decode(contentsOf: url) } catch { exitUsage("\(positional[1]): \(error)") }
+    let geometry: StaffGeometry
+    do { geometry = try StaffPrepare.loadGeometry(URL(fileURLWithPath: geo, relativeTo: cwd)) } catch { exitUsage("\(geo): \(error)") }
+    let t0 = Date()
+    let r: StaffPrepare.Result
+    do {
+        r = try StaffPrepare.prepareStaffImage(page: page.grayscale(), width: page.width, height: page.height, geometry: geometry)
+    } catch { err("omr-test: prepare-staff failed: \(error)"); exit(1) }
+    let ms = Date().timeIntervalSince(t0) * 1000
+    out("prepare-staff: \(url.standardizedFileURL.path) (\(page.width)x\(page.height))")
+    out("prepared: \(r.width)x\(r.height) uint8, canvas size \(r.canvasWidth)x\(r.canvasHeight) (\(String(format: "%.1f", ms)) ms)")
+    if let o = outNPY {
+        var header = "{'descr': '|u1', 'fortran_order': False, 'shape': (\(r.height), \(r.width)), }"
+        header += String(repeating: " ", count: (64 - (10 + header.utf8.count + 1) % 64) % 64) + "\n"
+        var d = Data([0x93]) + Data("NUMPY".utf8) + Data([1, 0])
+        d.append(contentsOf: [UInt8(header.utf8.count & 0xFF), UInt8(header.utf8.count >> 8)])
+        d.append(Data(header.utf8)); d.append(contentsOf: r.pixels)
+        do { try d.write(to: URL(fileURLWithPath: o, relativeTo: cwd)) } catch { exitUsage("--out \(o): \(error)") }
+        out("wrote: \(o)")
+    }
+    guard let cmp = compareNPY else { exit(0) }
+    let ref: (pixels: [UInt8], width: Int, height: Int)
+    do { ref = try StaffPrepare.loadGrayNPY(URL(fileURLWithPath: cmp, relativeTo: cwd)) } catch { exitUsage("\(cmp): \(error)") }
+    out("compare: \(cmp) \(ref.width)x\(ref.height)")
+    guard ref.width == r.width, ref.height == r.height else {
+        out("FAIL shape mismatch: got \(r.width)x\(r.height), expected \(ref.width)x\(ref.height)")
+        exit(1)
+    }
+    var maxDiff = 0, over1 = 0, nonzero = 0
+    for i in 0..<ref.pixels.count {
+        let d = abs(Int(ref.pixels[i]) - Int(r.pixels[i]))
+        maxDiff = max(maxDiff, d)
+        if d > 1 { over1 += 1 }
+        if d > 0 { nonzero += 1 }
+    }
+    out("max_abs_diff=\(maxDiff) count_gt_1=\(over1) count_ne=\(nonzero) / \(ref.pixels.count) (uint8 gray levels)")
+    if maxDiff == 0 { out("PASS identical"); exit(0) }
+    out("FAIL differs")
+    exit(1)
+}
+
 if positional.first == "decode-staff" {
     guard positional.count == 2 else { exitUsage("decode-staff needs exactly one input file") }
-    let tensor = loadStaffTensor(positional[1])
+    let tensor: StaffTensor
+    if let geo = geometryJSON {
+        guard positional[1].lowercased().hasSuffix(".png") else { exitUsage("decode-staff --geometry needs a page .png") }
+        let page: PNGImage
+        do { page = try PNGDecoder.decode(contentsOf: URL(fileURLWithPath: positional[1], relativeTo: cwd)) } catch { exitUsage("\(positional[1]): \(error)") }
+        do {
+            let g = try StaffPrepare.loadGeometry(URL(fileURLWithPath: geo, relativeTo: cwd))
+            tensor = try StaffTensor.fromPage(grayscale: page.grayscale(), width: page.width, height: page.height, geometry: g)
+        } catch { exitUsage("\(positional[1]) --geometry \(geo): \(error)") }
+    } else {
+        tensor = loadStaffTensor(positional[1])
+    }
     // Oracle: --expected FILE, else expected.tokens.json next to the input tensor.
     let inputURL = URL(fileURLWithPath: positional[1], relativeTo: cwd).standardizedFileURL
     let expectedURL = expectedOverride.map { URL(fileURLWithPath: $0, relativeTo: cwd).standardizedFileURL }
