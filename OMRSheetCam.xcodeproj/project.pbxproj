@@ -10,10 +10,11 @@
 		A10000000000000000000001 /* OMRSheetCamApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* OMRSheetCamApp.swift */; };
 		A10000000000000000000002 /* Gate1RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* Gate1RootView.swift */; };
 		A10000000000000000000003 /* SimpleMIDIPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* SimpleMIDIPlayer.swift */; };
-		A10000000000000000000004 /* SessionWarmup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* SessionWarmup.swift */; };
+		A10000000000000000000004 /* ModelWarmup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* ModelWarmup.swift */; };
 		A10000000000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* Assets.xcassets */; };
 		A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */; };
 		A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */; };
+		A1000000000000000000000A /* ModelWarmupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000A /* ModelWarmupTests.swift */; };
 		A10000000000000000000008 /* OMRHomrIOS in Frameworks */ = {isa = PBXBuildFile; productRef = P10000000000000000000002 /* OMRHomrIOS */; };
 		4F06444BBF09D87CE872BDB8 /* MIDINoteExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149722DE288FA9C01620E0D8 /* MIDINoteExtractor.swift */; };
 		21EBA7280EC15355707ED56C /* PlaybackSmokeFixtureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */; };
@@ -33,10 +34,11 @@
 		B10000000000000000000001 /* OMRSheetCamApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OMRSheetCamApp.swift; sourceTree = "<group>"; };
 		B10000000000000000000002 /* Gate1RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gate1RootView.swift; sourceTree = "<group>"; };
 		B10000000000000000000003 /* SimpleMIDIPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleMIDIPlayer.swift; sourceTree = "<group>"; };
-		B10000000000000000000004 /* SessionWarmup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWarmup.swift; sourceTree = "<group>"; };
+		B10000000000000000000004 /* ModelWarmup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelWarmup.swift; sourceTree = "<group>"; };
 		B10000000000000000000005 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gate1StaffTokenMatchTests.swift; sourceTree = "<group>"; };
 		B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDIPlayerSmokeTests.swift; sourceTree = "<group>"; };
+		B1000000000000000000000A /* ModelWarmupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelWarmupTests.swift; sourceTree = "<group>"; };
 		B10000000000000000000008 /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fixtures; sourceTree = "<group>"; };
 		B10000000000000000000010 /* OMRSheetCam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OMRSheetCam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000000000000000000011 /* OMRSheetCamTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OMRSheetCamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -104,7 +106,7 @@
 		G10000000000000000000005 /* Inference */ = {
 			isa = PBXGroup;
 			children = (
-				B10000000000000000000004 /* SessionWarmup.swift */,
+				B10000000000000000000004 /* ModelWarmup.swift */,
 			);
 			path = Inference;
 			sourceTree = "<group>";
@@ -114,6 +116,7 @@
 			children = (
 				B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */,
 				B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */,
+				B1000000000000000000000A /* ModelWarmupTests.swift */,
 				C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */,
 				B10000000000000000000008 /* Fixtures */,
 			);
@@ -234,6 +237,7 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
+				"$(SRCROOT)/models.lock",
 			);
 			name = "Bundle ONNX models";
 			outputFileListPaths = (
@@ -242,7 +246,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Copies homr ONNX weights fetched by scripts/fetch-models (gitignored models/) into\n# <App>.app/models/. No-op when models/ is absent so local builds still work.\n# Set OMR_REQUIRE_MODELS=1 (CI TestFlight) to fail the build if they are missing.\nset -eu\nSRC=\"${SRCROOT}/models\"\nDST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/models\"\nif ls \"$SRC\"/*.onnx >/dev/null 2>&1; then\n  mkdir -p \"$DST\"\n  cp -f \"$SRC\"/*.onnx \"$DST\"/\n  echo \"Bundled ONNX models: $(ls \"$DST\")\"\nelif [ \"${OMR_REQUIRE_MODELS:-0}\" = \"1\" ]; then\n  echo \"error: models/*.onnx missing; run scripts/fetch-models\" >&2\n  exit 1\nelse\n  echo \"warning: models/ not found; app built without ONNX weights (run scripts/fetch-models)\"\nfi\n";
+			shellScript = "# Copies the pinned homr ONNX models (models.lock: SegNet fp16, Encoder fp16, Decoder fp32; fetched by\n# scripts/fetch-models into gitignored models/) into <App>.app/models/. Never committed to git.\n# Missing models FAIL the build, except test-only builds where OMR_MODELS_DIR or\n# TEST_RUNNER_OMR_MODELS_DIR supplies them at run time (warning, nothing bundled).\n# OMR_REQUIRE_MODELS=1 (TestFlight archive) always fails on missing models.\nset -eu\nSRC=\"${SRCROOT}/models\"\nLOCK=\"${SRCROOT}/models.lock\"\nDST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/models\"\nnames=$(grep -Ev '^[[:space:]]*(#|$)' \"$LOCK\" | awk '{print $2}')\n[ -n \"$names\" ] || { echo \"error: no models listed in $LOCK\" >&2; exit 1; }\nmissing=\"\"\nfor n in $names; do [ -f \"$SRC/$n\" ] || missing=\"$missing $n\"; done\nif [ -n \"$missing\" ]; then\n  RUNTIME_DIR=\"${OMR_MODELS_DIR:-${TEST_RUNNER_OMR_MODELS_DIR:-}}\"\n  if [ \"${OMR_REQUIRE_MODELS:-0}\" != \"1\" ] && [ -n \"$RUNTIME_DIR\" ]; then\n    echo \"warning: models not bundled (missing:$missing); test-only build, models from $RUNTIME_DIR at run time\"\n    exit 0\n  fi\n  echo \"error: ONNX models missing in $SRC:$missing. Run scripts/fetch-models (pinned in models.lock). Test-only builds may set OMR_MODELS_DIR instead.\" >&2\n  exit 1\nfi\nmkdir -p \"$DST\"\nfor n in $names; do\n  if [ ! -f \"$DST/$n\" ] || [ \"$SRC/$n\" -nt \"$DST/$n\" ] || ! cmp -s \"$SRC/$n\" \"$DST/$n\"; then cp -p \"$SRC/$n\" \"$DST/$n\"; fi\ndone\nfor f in \"$DST\"/*; do\n  b=$(basename \"$f\")\n  case \" $(echo $names) \" in *\" $b \"*) ;; *) rm -rf \"$f\" ;; esac\ndone\necho \"Bundled ONNX models ($(du -sh \"$DST\" | cut -f1)): $(echo $names)\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -255,7 +259,7 @@
 				A10000000000000000000001 /* OMRSheetCamApp.swift in Sources */,
 				A10000000000000000000002 /* Gate1RootView.swift in Sources */,
 				A10000000000000000000003 /* SimpleMIDIPlayer.swift in Sources */,
-				A10000000000000000000004 /* SessionWarmup.swift in Sources */,
+				A10000000000000000000004 /* ModelWarmup.swift in Sources */,
 				4F06444BBF09D87CE872BDB8 /* MIDINoteExtractor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -266,6 +270,7 @@
 			files = (
 				A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */,
 				A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */,
+				A1000000000000000000000A /* ModelWarmupTests.swift in Sources */,
 				21EBA7280EC15355707ED56C /* PlaybackSmokeFixtureTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

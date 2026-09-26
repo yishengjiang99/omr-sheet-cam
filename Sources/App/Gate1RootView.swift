@@ -8,11 +8,11 @@ struct Gate1RootView: View {
         "Gate-1 shell",
         "Package: OMRHomrIOS (AGPL)",
         "Scope: staff-only parse → MIDI smoke",
-        "Blocked: onnx_checkpoints + C-scale fixtures + ORT bindings",
+        "Models: bundled SegNet/Encoder fp16 (CoreML), Decoder fp32 (CPU)",
     ]
     @State private var lastError: String?
     @State private var midiPlayer = SimpleMIDIPlayer()
-    @State private var warmupNote: String = SessionWarmup.statusDescription
+    @ObservedObject private var warmup = ModelWarmup.shared
 
     var body: some View {
         NavigationStack {
@@ -25,12 +25,17 @@ struct Gate1RootView: View {
                 }
 
                 Section("Warmup") {
-                    Text(warmupNote)
+                    Text(warmup.debugLine)
                         .font(.footnote.monospaced())
-                        .foregroundStyle(.secondary)
-                    Button("Re-run SessionWarmup") {
-                        SessionWarmup.warmupAtLaunch()
-                        warmupNote = SessionWarmup.statusDescription
+                    if let report = warmup.report {
+                        ForEach(report.lines, id: \.self) { line in
+                            Text(line)
+                                .font(.caption2.monospaced())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    if case .failed = warmup.state {
+                        Button("Retry warmup") { warmup.start() }
                     }
                 }
 

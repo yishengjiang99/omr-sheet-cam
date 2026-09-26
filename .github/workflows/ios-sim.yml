@@ -68,9 +68,21 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             | tee "$RUNNER_TEMP/xcodebuild.log"
 
-      - name: Gate-1 summary
+      - name: Gate-1 + warmup summary
         if: always()
-        run: grep -E "Gate1StaffTokenMatchTests|Gate-1" "$RUNNER_TEMP/xcodebuild.log" || echo "no Gate-1 lines"
+        run: |
+          grep -E "Gate1StaffTokenMatchTests|Gate-1|ModelWarmupTests|Warmup:|\[warmup\]|Bundled ONNX|models not bundled" "$RUNNER_TEMP/xcodebuild.log" || echo "no Gate-1 / warmup lines"
+          if grep -F "should not be called on the main thread" "$RUNNER_TEMP/xcodebuild.log"; then
+            echo "::warning::CoreML main-thread warning present"
+          else
+            echo "no CoreML main-thread warning"
+          fi
+
+      - name: App bundle size
+        if: always()
+        run: |
+          APP=$(find "$HOME/Library/Developer/Xcode/DerivedData" -path '*Debug-iphonesimulator/OMRSheetCam.app' -maxdepth 6 | head -1)
+          if [ -n "$APP" ]; then du -sh "$APP" "$APP/models" "$APP/OMRSheetCam" 2>/dev/null; ls -l "$APP/models" 2>/dev/null; fi
 
       - name: Upload xcresult
         if: failure()

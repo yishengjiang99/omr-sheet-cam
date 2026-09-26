@@ -13,8 +13,12 @@ import OMRHomrIOS
 /// Skips only when the pinned models are absent (e.g. a device without files).
 final class Gate1StaffTokenMatchTests: XCTestCase {
 
-    func testCScaleOracleTokenMatch() throws {
-        try Self.runGate1(encoderProvider: Self.encoderProvider())
+    /// Runs off the main thread: CoreML warns when models load / predict on main.
+    func testCScaleOracleTokenMatch() async throws {
+        let provider = try Self.encoderProvider()
+        try await Task.detached(priority: .userInitiated) {
+            try Self.runGate1(encoderProvider: provider)
+        }.value
     }
 
     // MARK: - Gate 1

@@ -21,6 +21,9 @@ jobs:
           done
           xcodebuild -version
 
+      - name: Fetch ONNX models (bundled by the build; sha256-pinned)
+        run: scripts/fetch-models
+
       - name: Build for simulator
         run: |
           set -euo pipefail
