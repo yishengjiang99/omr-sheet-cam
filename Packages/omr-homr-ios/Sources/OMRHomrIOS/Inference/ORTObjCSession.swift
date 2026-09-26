@@ -1,5 +1,9 @@
 // Apple (iOS / macOS) `ORTSessionBackend` over onnxruntime-objc.
 //
+// DEPRECATED (2026-09-26): iOS now uses `ORTCSession` over the ORT C API (CONNXRuntimeApple), which
+// binds float16 via ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16. Kept behind `#if` until the Apple build
+// of `ORTCSession` is verified on macOS CI; do not add new callers.
+//
 // UNVERIFIED: written against onnxruntime `objectivec/include/*.h` (main, ORT SPM 1.24.x) but
 // never compiled here (Linux box). Module is `OnnxRuntimeBindings` via SwiftPM
 // (microsoft/onnxruntime-swift-package-manager) or `onnxruntime_objc` via CocoaPods.
@@ -29,7 +33,8 @@ public enum ORTObjCSessionError: Error, CustomStringConvertible {
     }
 }
 
-public final class ORTObjCSession: ORTSessionBackend {
+@available(*, deprecated, message: "onnxruntime-objc cannot bind float16; use ORTCSession (ORT C API) on iOS/macOS")
+public final class ORTObjCSession: ORTSessionBackend, ORTProviderReporting {
     /// One process-wide ORT environment.
     private static let sharedEnv: Result<ORTEnv, Error> = Result {
         try ORTEnv(loggingLevel: ORTLoggingLevel.warning)

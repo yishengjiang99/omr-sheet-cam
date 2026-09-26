@@ -47,6 +47,11 @@ public final class DecoderSession: @unchecked Sendable {
                 "Decoder is locked to ORT CPU fp32; refusing provider \(provider)"
             )
         }
+        if let actual = (backend as? any ORTProviderReporting)?.provider, actual != .cpu {
+            throw OMRError.sessionNotConfigured(
+                "Decoder is locked to ORT CPU fp32; backend session was created with provider \(actual)"
+            )
+        }
         let d = DecoderSession(vocabulary: vocabulary)
         let missingIn = d.stepInputNames.filter { !backend.inputNames.contains($0) }
         let missingOut = d.stepOutputNames.filter { !backend.outputNames.contains($0) }

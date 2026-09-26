@@ -33,13 +33,13 @@ Fidelity pass on the staff-only decode loop — **no ONNX weights**, **no UI/geo
 | Writer-only Layer B | `WriterOnlyFixtureTests` vs repo-root `fixtures/` (7 synthetics complete) |
 | Tokens → MIDI + `noteLayout` (Layer C) | `OMRHomrIOS.renderTokens` — one shared note list; `midi-fallback` (no boxes) until attention lands |
 | ONNX models | `scripts/fetch-models` → repo-root `models/` (pinned in `models.lock`, not committed) |
-| ORT backends | Apple: `ORTObjCSession` (onnxruntime-objc, unverified; no fp16 tensors in the ObjC API). Linux: `ORTCSession` (app branch `ios/ort-c-linux`, not on main) |
+| ORT backends | `ORTCSession` (ORT C API) on Linux (`CONNXRuntime`, ort.lock 1.30.0, CPU only) and Apple (`CONNXRuntimeApple` over the SPM xcframework 1.24.2; `.coreML` for encoder/SegNet; Apple compile unverified, pending macOS CI). `ORTObjCSession` is deprecated (no fp16 in the ObjC API). |
 | SegNet / full-page geometry / App UI | Out of scope (do not start) |
 
 ### Remaining blockers
 
-1. Link a runnable `ORTSessionBackend`: `ORTCSession` on Linux; on iOS resolve the fp16 gap
-   (onnxruntime-objc has no float16 element type, the pinned encoder is fp16).
+1. Link a runnable `ORTSessionBackend`: `ORTCSession` on Linux (done) and on iOS via the C API
+   (written; Apple compile pending macOS CI).
 2. Run `omr-test decode-staff` end to end and compare with Python homr.
 3. Export real 22/22 oracle tokens into `fixtures/oracle.c_scale_staff/` from `~/workspace/homr-research` (do not invent).
 4. Run oracle token match (`OracleSymbolSequence`); only then leave Gate-1.

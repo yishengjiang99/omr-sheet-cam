@@ -4,11 +4,16 @@ import PackageDescription
 /// AGPL-3.0 OMR core for omr-sheet-cam.
 /// Product / module name: `OMRHomrIOS` (import OMRHomrIOS).
 ///
-/// ONNX Runtime: onnxruntime-objc (SwiftPM module `OnnxRuntimeBindings`) backs `ORTObjCSession` on
-/// iOS / macOS only. It is declared only when the manifest is evaluated on an Apple host (the
-/// package ships an Apple-only binary xcframework, so Linux resolution never fetches it) and
-/// the target dependency carries a platform condition as well. On Linux the ORT backend is the
-/// app-side `ORTCSession` (ORT C API).
+/// ONNX Runtime on iOS / macOS: the ORT **C API** (`ORTCSession`, same wrapper as Linux) from the
+/// `onnxruntime.xcframework` that microsoft/onnxruntime-swift-package-manager ships
+/// (pod-archive-onnxruntime-c-<ver>.zip; headers include `onnxruntime_c_api.h` and
+/// `coreml_provider_factory.h`). The package's only product (`onnxruntime`, the objc bindings)
+/// is what pulls that binary target in; the local `CONNXRuntimeApple` C target re-exports the C
+/// headers to Swift. `ORTObjCSession` (objc bindings) is deprecated: onnxruntime-objc has no
+/// Float16 element type, so it cannot feed the pinned fp16 encoder / SegNet.
+/// Declared only when the manifest is evaluated on an Apple host (Apple-only binary xcframework,
+/// so Linux resolution never fetches it). On Linux the backend is `ORTCSession` over the
+/// `CONNXRuntime` system library (see the block at the end of this file).
 ///
 /// Version pin: `exact: "1.24.2"` is the newest tag published on onnxruntime-swift-package-manager
 /// (checked 2026-09-26 with `git ls-remote --tags`). Linux `ort.lock` is 1.30.0; the SPM repo's
@@ -24,10 +29,31 @@ let ortTargetDeps: [Target.Dependency] = [
         package: "onnxruntime-swift-package-manager",
         condition: .when(platforms: [.iOS, .macOS])
     ),
+    .target(name: "CONNXRuntimeApple", condition: .when(platforms: [.iOS, .macOS])),
+]
+let ortExtraTargets: [Target] = [
+    // UNVERIFIED on this Linux host: needs a macOS / Xcode build (pending CI).
+    .target(
+        name: "CONNXRuntimeApple",
+        dependencies: [
+            .product(
+                name: "onnxruntime",
+                package: "onnxruntime-swift-package-manager",
+                condition: .when(platforms: [.iOS, .macOS])
+            ),
+        ],
+        path: "Sources/CONNXRuntimeApple",
+        linkerSettings: [
+            .linkedFramework("CoreML", .when(platforms: [.iOS, .macOS])),
+            .linkedFramework("Foundation", .when(platforms: [.iOS, .macOS])),
+            .linkedLibrary("c++", .when(platforms: [.iOS, .macOS])),
+        ]
+    ),
 ]
 #else
 let ortPackages: [Package.Dependency] = []
 let ortTargetDeps: [Target.Dependency] = []
+let ortExtraTargets: [Target] = []
 #endif
 
 let package = Package(
@@ -77,7 +103,7 @@ let package = Package(
                 .copy("Fixtures"),
             ]
         ),
-    ]
+    ] + ortExtraTargets
 )
 
 // MARK: - Linux ONNX Runtime C API (branch ios/ort-c-linux) — self-contained, cherry-pick as one hunk.

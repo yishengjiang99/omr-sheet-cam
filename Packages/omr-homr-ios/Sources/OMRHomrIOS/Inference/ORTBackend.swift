@@ -3,8 +3,8 @@ import Foundation
 // Backend-neutral ONNX Runtime seam.
 //
 // Conformers:
-// - iOS / macOS: `ORTObjCSession` (onnxruntime-objc), behind `#if canImport(onnxruntime_objc)`.
-// - Linux: `ORTCSession` (ORT C API wrapper, app-side branch `ios/ort-c-linux`).
+// - `ORTCSession` (ORT C API) on Linux (`CONNXRuntime`) AND iOS / macOS (`CONNXRuntimeApple`).
+// - `ORTObjCSession` (onnxruntime-objc): DEPRECATED, cannot bind float16; kept behind `#if` for now.
 //
 // Backends move RAW bytes only (little-endian, row-major, element type as tagged). They never
 // convert dtypes: the single fp16 → fp32 cast lives in `EncoderContext.castToFP32ForDecoder()`.
@@ -26,6 +26,12 @@ public struct ORTTensor: Sendable {
         self.shape = shape
         self.data = data
     }
+}
+
+/// Backends that know which execution provider their session was created with. `DecoderSession`
+/// uses this to refuse any non-CPU decoder backend.
+public protocol ORTProviderReporting {
+    var provider: ORTProvider { get }
 }
 
 public protocol ORTSessionBackend: AnyObject {

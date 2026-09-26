@@ -131,7 +131,7 @@ public final class EncoderSession: @unchecked Sendable {
         }
         _ = modelURL
         throw OMRError.sessionNotConfigured(
-            "No ORTSessionBackend bound; use EncoderSession.open(_:fp16ModelURL:) with ORTObjCSession (Apple) or ORTCSession (Linux)"
+            "No ORTSessionBackend bound; use EncoderSession.open(_:fp16ModelURL:) with ORTCSession (ORT C API; Linux and Apple)"
         )
     }
 

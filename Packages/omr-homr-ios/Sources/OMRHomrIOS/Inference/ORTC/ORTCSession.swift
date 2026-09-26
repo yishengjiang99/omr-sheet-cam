@@ -1,20 +1,28 @@
 #if canImport(CONNXRuntime)
 internal import CONNXRuntime
+#elseif canImport(CONNXRuntimeApple)
+internal import CONNXRuntimeApple
+#endif
+
+#if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
 import Foundation
 
-// Linux ONNX Runtime C-API backend for `ORTSessionBackend` (see ORTBackend.swift).
-//
-// - CPU execution provider ONLY: no execution provider is ever appended to the session options,
-//   so ORT runs everything on its default CPU EP. `init` throws for any provider other than `.cpu`.
-// - Moves RAW little-endian, row-major bytes tagged with their element type (float32, float16,
-//   int64, int32). It never converts dtypes; the single fp16 -> fp32 cast lives in
-//   `EncoderContext.castToFP32ForDecoder()`.
-// - Built only on Linux when scripts/fetch-ort has installed third_party/onnxruntime
-//   (Package.swift adds the `CONNXRuntime` system library). iOS keeps onnxruntime-objc + CoreML.
+// ONNX Runtime C-API backend for `ORTSessionBackend` (see ORTBackend.swift), on BOTH platforms:
+// - Linux: `CONNXRuntime` system library over the official libonnxruntime fetched by
+//   scripts/fetch-ort (ort.lock, 1.30.0). CPU execution provider ONLY; `.coreML` throws.
+// - iOS / macOS: `CONNXRuntimeApple` (C headers of the onnxruntime.xcframework shipped by
+//   microsoft/onnxruntime-swift-package-manager, pinned in Package.swift). `.cpu` = default CPU EP;
+//   `.coreML` = `OrtSessionOptionsAppendExecutionProvider_CoreML` (MLProgram, CPU+GPU) with the CPU
+//   EP still registered as fallback. UNVERIFIED on Apple: never compiled here (Linux box); pending
+//   macOS CI. `.coreML` is for encoder / SegNet sessions only: `DecoderSession` rejects any
+//   backend whose provider is not `.cpu`.
+// - Moves RAW little-endian, row-major bytes tagged with their element type (float32, float16 via
+//   ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16, int64, int32). It never converts dtypes; the single
+//   fp16 -> fp32 cast lives in `EncoderContext.castToFP32ForDecoder()`.
 
 /// Errors raised by `ORTCSession`.
 public enum ORTCError: Error, CustomStringConvertible, Sendable {
-    /// Linux C-API backend is CPU-only; `.coreML` (or anything else) is rejected.
+    /// Provider not available on this platform (`.coreML` on Linux, which is CPU EP only).
     case unsupportedProvider(String)
     /// `OrtGetApiBase()->GetApi(ORT_API_VERSION)` returned NULL (header/library mismatch).
     case apiUnavailable(requested: Int, library: String)
@@ -29,7 +37,7 @@ public enum ORTCError: Error, CustomStringConvertible, Sendable {
 
     public var description: String {
         switch self {
-        case let .unsupportedProvider(p): return "ORTCSession: provider \(p) not supported on Linux (CPU EP only)"
+        case let .unsupportedProvider(p): return "ORTCSession: provider \(p) not supported on this platform (Linux: CPU EP only)"
         case let .apiUnavailable(v, lib): return "ORTCSession: ORT C API v\(v) unavailable in libonnxruntime \(lib)"
         case let .ort(code, msg, call): return "ORTCSession: \(call) failed (OrtErrorCode \(code)): \(msg)"
         case let .invalidTensor(m): return "ORTCSession: invalid tensor: \(m)"
@@ -72,14 +80,14 @@ private final class ORTCRuntime: @unchecked Sendable {
     }
 }
 
-/// ONNX Runtime session via the C API, CPU execution provider only.
+/// ONNX Runtime session via the C API. `.cpu` everywhere; `.coreML` (+ CPU fallback) on Apple only.
 ///
 /// ```swift
 /// let dec = try ORTCSession(modelURL: decoderURL, provider: .cpu)
 /// let out = try dec.run(inputs: ["rhythms": ORTTensor(type: .int64, shape: [1, 1], data: ...), ...],
 ///                       outputNames: ["out_rhythms"])
 /// ```
-public final class ORTCSession: ORTSessionBackend, @unchecked Sendable {
+public final class ORTCSession: ORTSessionBackend, ORTProviderReporting, @unchecked Sendable {
     /// Declared model input/output (ONNX metadata). Dynamic dims are `-1` in `shape`,
     /// with their symbolic name (if any) in `symbolicShape`.
     public struct IOInfo: Sendable, CustomStringConvertible {
@@ -99,7 +107,7 @@ public final class ORTCSession: ORTSessionBackend, @unchecked Sendable {
     }
 
     public let modelURL: URL
-    /// Always `.cpu` (enforced in `init`).
+    /// Provider this session was created with (`.coreML` only on Apple; Linux is always `.cpu`).
     public let provider: ORTProvider
     public let inputNames: [String]
     public let outputNames: [String]
@@ -125,7 +133,7 @@ public final class ORTCSession: ORTSessionBackend, @unchecked Sendable {
         ProcessInfo.processInfo.environment["OMR_ORT_INTRA_OP_THREADS"].flatMap { Int($0) } ?? 1
     }
 
-    /// `ORTSessionBackend` entry point. Throws unless `provider == .cpu`.
+    /// `ORTSessionBackend` entry point. On Linux throws unless `provider == .cpu`.
     public convenience init(modelURL: URL, provider: ORTProvider) throws {
         try self.init(modelURL: modelURL, provider: provider, intraOpThreads: Self.defaultIntraOpThreads)
     }
@@ -133,14 +141,16 @@ public final class ORTCSession: ORTSessionBackend, @unchecked Sendable {
     /// - Parameter intraOpThreads: 0 = ORT default pool (one per physical core; NOT run-to-run
     ///   deterministic for the homr decoder), 1 = deterministic single-threaded.
     public init(modelURL: URL, provider: ORTProvider, intraOpThreads: Int) throws {
+        #if !canImport(CONNXRuntimeApple)
         guard case .cpu = provider else {
             throw ORTCError.unsupportedProvider("\(provider)")
         }
+        #endif
         let runtime = try ORTCRuntime.shared.get()
         let api = runtime.api
         self.runtime = runtime
         self.modelURL = modelURL
-        self.provider = .cpu
+        self.provider = provider
 
         var options: OpaquePointer?
         try ORTCRuntime.check(api, api.CreateSessionOptions!(&options), "CreateSessionOptions")
@@ -149,7 +159,23 @@ public final class ORTCSession: ORTSessionBackend, @unchecked Sendable {
         try ORTCRuntime.check(
             api, api.SetSessionGraphOptimizationLevel!(options, ORT_ENABLE_ALL), "SetSessionGraphOptimizationLevel"
         )
-        // CPU EP only: deliberately NO SessionOptionsAppendExecutionProvider* call of any kind.
+        switch provider {
+        case .cpu:
+            break // default CPU EP only: NO SessionOptionsAppendExecutionProvider* call of any kind.
+        case .coreML:
+            #if canImport(CONNXRuntimeApple)
+            // CoreML EP first; ORT keeps the CPU EP registered as fallback for nodes CoreML can't take.
+            // Flags match the old objc path (ModelFormat=MLProgram, MLComputeUnits=CPUAndGPU):
+            // COREML_FLAG_CREATE_MLPROGRAM (0x010) | COREML_FLAG_USE_CPU_AND_GPU (0x020).
+            let coreMLFlags: UInt32 = 0x010 | 0x020
+            try ORTCRuntime.check(
+                api, OrtSessionOptionsAppendExecutionProvider_CoreML(options, coreMLFlags),
+                "OrtSessionOptionsAppendExecutionProvider_CoreML"
+            )
+            #else
+            throw ORTCError.unsupportedProvider("\(provider)")
+            #endif
+        }
 
         var sessionOut: OpaquePointer?
         try ORTCRuntime.check(

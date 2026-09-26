@@ -119,22 +119,16 @@ public struct StaffTensor: Sendable {
 
 extension StaffInferenceSession {
     /// Gate-1 entry: bind caller-created ORT backends for the pinned encoder (fp16) and decoder
-    /// (fp32). The decoder backend MUST be a CPU session (locked rule); an `ORTObjCSession`
-    /// created with any other provider is rejected. Validates model I/O names.
+    /// (fp32). The decoder backend MUST be a CPU session (locked rule): a backend that reports a
+    /// non-CPU provider (`ORTProviderReporting`, e.g. `ORTCSession(provider: .coreML)`) is rejected
+    /// by `DecoderSession`. Validates model I/O names.
     public convenience init(
         encoder: any ORTSessionBackend,
         decoder: any ORTSessionBackend,
         vocabulary: HomrVocabulary
     ) throws {
-        #if canImport(OnnxRuntimeBindings) || canImport(onnxruntime_objc)
-        if let objc = decoder as? ORTObjCSession, objc.provider != .cpu {
-            throw OMRError.sessionNotConfigured("Decoder backend must be CPU; got \(objc.provider)")
-        }
         let encoderProvider: EncoderSession.ExecutionProvider =
-            (encoder as? ORTObjCSession)?.provider == .coreML ? .coreMLFP16 : .cpuFallback
-        #else
-        let encoderProvider: EncoderSession.ExecutionProvider = .cpuFallback
-        #endif
+            (encoder as? any ORTProviderReporting)?.provider == .coreML ? .coreMLFP16 : .cpuFallback
         let enc = try EncoderSession(
             backend: encoder, provider: encoderProvider, inputElementType: .float16
         )

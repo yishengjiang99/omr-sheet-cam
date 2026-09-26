@@ -19,11 +19,9 @@ import Foundation
 import OMRHomrIOS
 import OMRPNG
 
-#if canImport(OnnxRuntimeBindings) || canImport(onnxruntime_objc)
-typealias PlatformORTBackend = ORTObjCSession
-let hasORT = true
-#elseif canImport(CONNXRuntime)
-// Linux: ORT C API (`scripts/fetch-ort`), CPU EP only, 1 intra-op thread by default
+#if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
+// ORT C API on both platforms. Linux (`scripts/fetch-ort`): CPU EP only. Apple: CoreML EP for the
+// encoder (CPU fallback), decoder always CPU. 1 intra-op thread by default
 // (`OMR_ORT_INTRA_OP_THREADS`) for run-to-run deterministic logits.
 typealias PlatformORTBackend = ORTCSession
 let hasORT = true
@@ -160,8 +158,8 @@ func findModels() -> ModelFiles? {
 /// Gate-1 entry: encoder fp16 (CPU on Linux; CoreML EP w/ CPU fallback on Apple) →
 /// `castToFP32ForDecoder()` → decoder fp32 ORT CPU → raw symbols (EOS excluded).
 func decodeStaff(tensor: StaffTensor, models: ModelFiles, vocab: HomrVocabulary) throws -> [EncodedSymbol] {
-    #if canImport(OnnxRuntimeBindings) || canImport(onnxruntime_objc) || canImport(CONNXRuntime)
-    #if canImport(CoreML) && (canImport(OnnxRuntimeBindings) || canImport(onnxruntime_objc))
+    #if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
+    #if canImport(CoreML) && canImport(CONNXRuntimeApple)
     let encoder = (try? PlatformORTBackend(modelURL: models.encoderFP16, provider: .coreML))
         ?? (try PlatformORTBackend(modelURL: models.encoderFP16, provider: .cpu))
     #else
