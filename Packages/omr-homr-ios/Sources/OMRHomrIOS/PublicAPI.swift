@@ -24,6 +24,10 @@ public enum OMRError: Error, Equatable, CustomStringConvertible {
     case tokenizerMissing(String)
     case staffOnlyGate1NotReady(String)
     case invalidVocabulary(String)
+    /// Raw pixel input rejected (size mismatch, non-positive or oversized dimensions).
+    case invalidPixelBuffer(String)
+    /// Image bytes the package cannot decode (it reads PNG only; pass camera photos as gray8 pixels).
+    case unsupportedImageFormat(String)
 
     public var description: String {
         switch self {
@@ -32,6 +36,8 @@ public enum OMRError: Error, Equatable, CustomStringConvertible {
         case .tokenizerMissing(let m): return "tokenizerMissing: \(m)"
         case .staffOnlyGate1NotReady(let m): return "staffOnlyGate1NotReady: \(m)"
         case .invalidVocabulary(let m): return "invalidVocabulary: \(m)"
+        case .invalidPixelBuffer(let m): return "invalidPixelBuffer: \(m)"
+        case .unsupportedImageFormat(let m): return "unsupportedImageFormat: \(m)"
         }
     }
 }

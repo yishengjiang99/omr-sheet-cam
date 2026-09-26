@@ -14,6 +14,11 @@
 //   omr-test preprocess-staff <staff.png> [--compare staff.npy] [--out staff.npy]
 //       PNG → cv2-equivalent grayscale → StaffTensor.fromStaffImage; prints shape and, with --compare,
 //       max/mean abs diff and count(|diff| > 1e-3). 0 = max abs diff <= one gray level (~1/(255*0.1738)).
+//   omr-test segnet-page <page.png> [--compare ORACLE_DIR] [--threads N] [--models DIR]
+//       Page preprocessing (homr autocrop -> PIL bicubic resize to 1920 wide -> CLAHE) + SegNet fp16 tiling
+//       and merge (PagePipeline). With --compare (fixtures/oracle.pages/<id>): resized/preprocessed pixel
+//       mismatches and per-class SegNet mismatch counts vs segnet.png. 0 = preprocessing identical
+//       (SegNet mismatches are reported, not gated). --threads = SegNet ORT intra-op threads (default: cores).
 //   omr-test prepare-staff <page.png> --geometry <geometry.json> [--compare prepared.npy] [--out prepared.npy]
 //       homr prepare_staff_image (crop + dewarp, StaffPrepare) on a grayscale page with explicit staff
 //       geometry; with --compare prints max abs diff (gray levels) and count(|diff| > 1). 0 = identical.
@@ -54,6 +59,7 @@ usage: omr-test --no-onnx [--fixtures DIR] [--tier TIER] [fixtures/<id> | <id> .
        omr-test decode-staff <staff.npy|staff.f32|staff.png | page.png --geometry JSON> [--models DIR] [--expected FILE] [--json]
        omr-test preprocess-staff <staff.png> [--compare staff.npy] [--out staff.npy]
        omr-test prepare-staff <page.png> --geometry <geometry.json> [--compare prepared.npy] [--out prepared.npy]
+       omr-test segnet-page <page.png> [--compare ORACLE_DIR] [--threads N] [--models DIR]
 exit: 0 pass · 1 fail · 2 usage/input error · 3 ONNX path not runnable on this platform yet
 """
 
@@ -69,6 +75,7 @@ var expectedOverride: String?
 var compareNPY: String?
 var outNPY: String?
 var geometryJSON: String?
+var segnetThreads = ProcessInfo.processInfo.activeProcessorCount
 var positional: [String] = []
 while !args.isEmpty {
     let a = args.removeFirst()
@@ -93,6 +100,9 @@ while !args.isEmpty {
     case "--geometry":
         guard !args.isEmpty else { exitUsage("--geometry needs a .json file") }
         geometryJSON = args.removeFirst()
+    case "--threads":
+        guard !args.isEmpty, let n = Int(args.removeFirst()), n >= 0 else { exitUsage("--threads needs a count (0 = ORT default)") }
+        segnetThreads = n
     case "--tier":
         guard !args.isEmpty else { exitUsage("--tier needs a value") }
         tierFilter = args.removeFirst()
@@ -137,7 +147,7 @@ func resolveDir(_ override: String?, _ name: String) -> URL? {
 
 // MARK: - Model discovery + backend
 
-struct ModelFiles { var encoderFP16: URL; var decoderFP32: URL }
+struct ModelFiles { var encoderFP16: URL; var decoderFP32: URL; var segnetFP16: URL? }
 
 /// Pinned models: file names from repo-root `models.lock` (`<sha256>  <file>  <url>`), files in
 /// `models/` (or `--models DIR`). Falls back to a directory scan when no models.lock is found.
@@ -159,7 +169,10 @@ func findModels() -> ModelFiles? {
     let dec = names.filter { $0.hasPrefix("decoder_") && $0.hasSuffix(".onnx") && !$0.hasSuffix("_fp16.onnx") }
         .sorted().last
     guard let enc, let dec else { return nil }
-    let m = ModelFiles(encoderFP16: dir.appendingPathComponent(enc), decoderFP32: dir.appendingPathComponent(dec))
+    let seg = names.filter { $0.hasPrefix("segnet_") && $0.hasSuffix("_fp16.onnx") }.sorted().last
+        .map { dir.appendingPathComponent($0) }.flatMap { fm.fileExists(atPath: $0.path) ? $0 : nil }
+    let m = ModelFiles(encoderFP16: dir.appendingPathComponent(enc), decoderFP32: dir.appendingPathComponent(dec),
+                       segnetFP16: seg)
     guard fm.fileExists(atPath: m.encoderFP16.path), fm.fileExists(atPath: m.decoderFP32.path) else { return nil }
     return m
 }
@@ -399,6 +412,66 @@ if positional.first == "preprocess-staff" {
     }
     out("FAIL exceeds tolerance")
     exit(1)
+}
+
+if positional.first == "segnet-page" {
+    guard positional.count == 2 else { exitUsage("segnet-page needs exactly one page .png") }
+    let url = URL(fileURLWithPath: positional[1], relativeTo: cwd)
+    var t0 = Date()
+    let page: PagePipeline.PreprocessedPage
+    do { page = try PagePipeline.preprocess(pngURL: url) } catch { exitUsage("\(positional[1]): \(error)") }
+    out("segnet-page: \(url.standardizedFileURL.path)")
+    out("autocrop: \(page.cropped ? "cropped" : "full page") \(page.crop) -> resized \(page.width)x\(page.height) "
+        + "(\(String(format: "%.0f", Date().timeIntervalSince(t0) * 1000)) ms incl. PNG decode)")
+    var failed = false
+    var oracle: URL?
+    if let c = compareNPY {
+        let dir = URL(fileURLWithPath: c, relativeTo: cwd)
+        oracle = dir
+        for (name, got) in [("resized.png", page.resized), ("preprocessed.png", page.preprocessed)] {
+            guard let d = try? Data(contentsOf: dir.appendingPathComponent(name)),
+                  let ref = try? PagePipeline.decodeGrayPNG(d) else { exitUsage("\(name) missing in \(dir.path)") }
+            let ne = ref.width == page.width && ref.height == page.height
+                ? zip(ref.pixels, got).filter { $0 != $1 }.count : -1
+            out("compare \(name): \(ne == 0 ? "identical" : (ne < 0 ? "size mismatch \(ref.width)x\(ref.height)" : "\(ne) pixels differ"))")
+            if ne != 0 { failed = true }
+        }
+    }
+    let models = requireONNX()
+    guard let segURL = models.segnetFP16 else { exitNotRunnable("SegNet model not found (run scripts/fetch-models)") }
+    #if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
+    let merged: [UInt8]
+    do {
+        let backend = try PlatformORTBackend(modelURL: segURL, provider: .cpu, intraOpThreads: segnetThreads)
+        t0 = Date()
+        merged = try PagePipeline.segment(page, segnet: SegNetSession(backend: backend))
+    } catch { err("omr-test: segnet failed: \(error)"); exit(1) }
+    let tiles = SegNetSession.tileCount(width: page.width, height: page.height)
+    out("segnet: \(tiles) tiles, \(String(format: "%.0f", Date().timeIntervalSince(t0) * 1000)) ms "
+        + "(CPU, \(segnetThreads) intra-op threads) \(segURL.lastPathComponent)")
+    var counts = [Int](repeating: 0, count: 6)
+    for v in merged { counts[Int(v)] += 1 }
+    out("class_counts: \(counts)")
+    if let dir = oracle {
+        guard let d = try? Data(contentsOf: dir.appendingPathComponent("segnet.png")),
+              let ref = try? PagePipeline.decodeGrayPNG(d), ref.pixels.count == merged.count else {
+            exitUsage("segnet.png missing or wrong size in \(dir.path)")
+        }
+        var confusion = [[Int]](repeating: [Int](repeating: 0, count: 6), count: 6)
+        for i in 0..<merged.count { confusion[Int(ref.pixels[i])][Int(merged[i])] += 1 }
+        let names = ["background", "stems_rests", "notehead", "clefs_keys", "staff", "symbols"]
+        var total = 0
+        for c in 0..<6 {
+            let want = confusion[c].reduce(0, +)
+            let got = (0..<6).map { confusion[$0][c] }.reduce(0, +)
+            let missed = want - confusion[c][c], extra = got - confusion[c][c]
+            total += missed
+            out("class \(c) \(names[c]): oracle \(want) swift \(got) missed \(missed) extra \(extra)")
+        }
+        out("segnet_mismatch_pixels=\(total) / \(merged.count)")
+    }
+    #endif
+    exit(failed ? 1 : 0)
 }
 
 if positional.first == "prepare-staff" {
