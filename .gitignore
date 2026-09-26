@@ -1,0 +1,11 @@
+.DS_Store
+xcuserdata/
+DerivedData/
+*.xcuserstate
+.build/
+Packages/omr-homr-ios/.build/
+# Large ONNX weights — use Git LFS or release assets; do not commit by accident without LFS
+# Models/*.onnx
+*.ipa
+.env
+.env.*

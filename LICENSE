@@ -1,0 +1,8 @@
+Copyright (c) 2026 Yisheng Jiang and contributors.
+
+This repository contains multiple components with different licenses:
+
+- Packages/omr-homr-ios — GNU Affero General Public License v3.0 (see that package)
+- App UI / Player — license TBD; must only consume midi Data + noteLayout
+
+Upstream OMR weights and algorithms: liebharc/homr (AGPL-3.0), BreezeWhite/oemer, NetEase/Polyphonic-TrOMR.
