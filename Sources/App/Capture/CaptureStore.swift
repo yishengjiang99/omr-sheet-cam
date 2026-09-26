@@ -1,0 +1,66 @@
+import Foundation
+import UIKit
+
+/// Pure helpers for captured / picked images (unit-tested; no camera hardware).
+enum CaptureStore {
+    /// Redraws `image` so its pixels are upright and `imageOrientation == .up` (EXIF baked in).
+    static func normalizedUpright(_ image: UIImage) -> UIImage {
+        guard image.imageOrientation != .up else { return image }
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = image.scale
+        format.opaque = true
+        return UIGraphicsImageRenderer(size: image.size, format: format).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: image.size))
+        }
+    }
+
+    /// `<Documents>/captures`.
+    static func defaultDirectory() throws -> URL {
+        try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+            .appendingPathComponent("captures", isDirectory: true)
+    }
+
+    /// `yyyyMMdd-HHmmss-SSS` in the device time zone.
+    static func timestamp(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyyMMdd-HHmmss-SSS"
+        return f.string(from: date)
+    }
+
+    enum SaveError: Error, CustomStringConvertible {
+        case encodeFailed
+        var description: String { "could not JPEG-encode the image" }
+    }
+
+    /// Saves an upright JPEG to `<directory>/<timestamp>.jpg` (default Documents/captures).
+    @discardableResult
+    static func save(
+        _ image: UIImage, date: Date = Date(), directory: URL? = nil, quality: CGFloat = 0.9
+    ) throws -> URL {
+        let dir = try directory ?? defaultDirectory()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        guard let data = normalizedUpright(image).jpegData(compressionQuality: quality) else {
+            throw SaveError.encodeFailed
+        }
+        var url = dir.appendingPathComponent("\(timestamp(date)).jpg")
+        var n = 1
+        while FileManager.default.fileExists(atPath: url.path) {
+            url = dir.appendingPathComponent("\(timestamp(date))-\(n).jpg")
+            n += 1
+        }
+        try data.write(to: url, options: .atomic)
+        return url
+    }
+}
+
+/// A captured or picked photo, already upright. Identity-based so it can be a navigation value.
+struct CapturedPhoto: Hashable, Identifiable {
+    enum Source: String { case camera, library }
+    let id = UUID()
+    let image: UIImage
+    let source: Source
+
+    static func == (a: CapturedPhoto, b: CapturedPhoto) -> Bool { a.id == b.id }
+    func hash(into h: inout Hasher) { h.combine(id) }
+}

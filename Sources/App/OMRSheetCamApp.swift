@@ -12,7 +12,7 @@ struct OMRSheetCamApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Gate1RootView()
+            RootFlowView()
         }
     }
 }

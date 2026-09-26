@@ -7,6 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CA0000000000000000000001 /* CaptureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000001 /* CaptureStore.swift */; };
+		CA0000000000000000000002 /* RecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000002 /* RecognitionService.swift */; };
+		CA0000000000000000000003 /* CameraController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000003 /* CameraController.swift */; };
+		CA0000000000000000000004 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000004 /* CameraPreviewView.swift */; };
+		CA0000000000000000000005 /* CameraScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000005 /* CameraScreen.swift */; };
+		CA0000000000000000000006 /* ResultScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000006 /* ResultScreen.swift */; };
+		CA0000000000000000000007 /* PlayerRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000007 /* PlayerRoute.swift */; };
+		CA0000000000000000000008 /* RootFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000008 /* RootFlowView.swift */; };
+		CA0000000000000000000009 /* CaptureHelpersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000009 /* CaptureHelpersTests.swift */; };
 		A10000000000000000000001 /* OMRSheetCamApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* OMRSheetCamApp.swift */; };
 		A10000000000000000000002 /* Gate1RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* Gate1RootView.swift */; };
 		A10000000000000000000003 /* SimpleMIDIPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* SimpleMIDIPlayer.swift */; };
@@ -33,6 +42,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		CB0000000000000000000001 /* CaptureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStore.swift; sourceTree = "<group>"; };
+		CB0000000000000000000002 /* RecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecognitionService.swift; sourceTree = "<group>"; };
+		CB0000000000000000000003 /* CameraController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraController.swift; sourceTree = "<group>"; };
+		CB0000000000000000000004 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
+		CB0000000000000000000005 /* CameraScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraScreen.swift; sourceTree = "<group>"; };
+		CB0000000000000000000006 /* ResultScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultScreen.swift; sourceTree = "<group>"; };
+		CB0000000000000000000007 /* PlayerRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerRoute.swift; sourceTree = "<group>"; };
+		CB0000000000000000000008 /* RootFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootFlowView.swift; sourceTree = "<group>"; };
+		CB0000000000000000000009 /* CaptureHelpersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureHelpersTests.swift; sourceTree = "<group>"; };
 		B10000000000000000000001 /* OMRSheetCamApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OMRSheetCamApp.swift; sourceTree = "<group>"; };
 		B10000000000000000000002 /* Gate1RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gate1RootView.swift; sourceTree = "<group>"; };
 		B10000000000000000000003 /* SimpleMIDIPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleMIDIPlayer.swift; sourceTree = "<group>"; };
@@ -69,6 +87,27 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		CC0000000000000000000001 /* Capture */ = {
+			isa = PBXGroup;
+			children = (
+				CB0000000000000000000001 /* CaptureStore.swift */,
+				CB0000000000000000000002 /* RecognitionService.swift */,
+				CB0000000000000000000003 /* CameraController.swift */,
+				CB0000000000000000000004 /* CameraPreviewView.swift */,
+				CB0000000000000000000005 /* CameraScreen.swift */,
+				CB0000000000000000000006 /* ResultScreen.swift */,
+			);
+			path = Capture;
+			sourceTree = "<group>";
+		};
+		CC0000000000000000000002 /* Player */ = {
+			isa = PBXGroup;
+			children = (
+				CB0000000000000000000007 /* PlayerRoute.swift */,
+			);
+			path = Player;
+			sourceTree = "<group>";
+		};
 		G10000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
@@ -91,6 +130,9 @@
 			children = (
 				B10000000000000000000001 /* OMRSheetCamApp.swift */,
 				B10000000000000000000002 /* Gate1RootView.swift */,
+				CB0000000000000000000008 /* RootFlowView.swift */,
+				CC0000000000000000000001 /* Capture */,
+				CC0000000000000000000002 /* Player */,
 				G10000000000000000000004 /* MIDI */,
 				G10000000000000000000005 /* Inference */,
 				B10000000000000000000005 /* Assets.xcassets */,
@@ -123,6 +165,7 @@
 				B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */,
 				B1000000000000000000000A /* ModelWarmupTests.swift */,
 				B1000000000000000000000C /* Gate1RunnerTests.swift */,
+				CB0000000000000000000009 /* CaptureHelpersTests.swift */,
 				C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */,
 				B10000000000000000000008 /* Fixtures */,
 			);
@@ -293,6 +336,14 @@
 				A10000000000000000000003 /* SimpleMIDIPlayer.swift in Sources */,
 				A10000000000000000000004 /* ModelWarmup.swift in Sources */,
 				A1000000000000000000000B /* Gate1Runner.swift in Sources */,
+				CA0000000000000000000001 /* CaptureStore.swift in Sources */,
+				CA0000000000000000000002 /* RecognitionService.swift in Sources */,
+				CA0000000000000000000003 /* CameraController.swift in Sources */,
+				CA0000000000000000000004 /* CameraPreviewView.swift in Sources */,
+				CA0000000000000000000005 /* CameraScreen.swift in Sources */,
+				CA0000000000000000000006 /* ResultScreen.swift in Sources */,
+				CA0000000000000000000007 /* PlayerRoute.swift in Sources */,
+				CA0000000000000000000008 /* RootFlowView.swift in Sources */,
 				4F06444BBF09D87CE872BDB8 /* MIDINoteExtractor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -305,6 +356,7 @@
 				A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */,
 				A1000000000000000000000A /* ModelWarmupTests.swift in Sources */,
 				A1000000000000000000000C /* Gate1RunnerTests.swift in Sources */,
+				CA0000000000000000000009 /* CaptureHelpersTests.swift in Sources */,
 				21EBA7280EC15355707ED56C /* PlaybackSmokeFixtureTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -373,7 +425,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "AI Camera - Music Reader";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
-				INFOPLIST_KEY_NSCameraUsageDescription = "AI Camera - Music Reader uses the camera to photograph sheet music so it can be read and played back on this device.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Take photos of sheet music to read and play them.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AI Camera - Music Reader can open a photo of sheet music from your library to read and play it back on this device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -409,7 +461,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "AI Camera - Music Reader";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
-				INFOPLIST_KEY_NSCameraUsageDescription = "AI Camera - Music Reader uses the camera to photograph sheet music so it can be read and played back on this device.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Take photos of sheet music to read and play them.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AI Camera - Music Reader can open a photo of sheet music from your library to read and play it back on this device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
