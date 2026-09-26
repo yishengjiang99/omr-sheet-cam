@@ -154,7 +154,9 @@ struct CameraScreen: View {
         camera.capturePhoto(rotationAngle: rotation.captureAngle) { result in
             switch result {
             case let .success(image): onPhoto(CapturedPhoto(image: image, source: .camera))
-            case let .failure(e): error = "Capture failed: \(e)"
+            case let .failure(e):
+                error = "Capture failed: \(e)"
+                DiagnosticsLog.shared.record(error: e, category: .capture, context: "photo capture")
             }
         }
     }
@@ -167,6 +169,7 @@ struct CameraScreen: View {
             do {
                 guard let data = try await item.loadTransferable(type: Data.self) else {
                     error = "Could not load that photo"
+                    DiagnosticsLog.shared.record(.error, .capture, "Photos pick: no data")
                     return
                 }
                 let image = await Task.detached(priority: .userInitiated) { () -> UIImage? in
@@ -174,11 +177,13 @@ struct CameraScreen: View {
                 }.value
                 guard let image else {
                     error = "Unsupported image"
+                    DiagnosticsLog.shared.record(.error, .capture, "Photos pick: unsupported image (\(data.count) bytes)")
                     return
                 }
                 onPhoto(CapturedPhoto(image: image, source: .library))
             } catch {
                 self.error = "Could not load that photo: \(error.localizedDescription)"
+                DiagnosticsLog.shared.record(error: error, category: .capture, context: "Photos pick")
             }
         }
     }

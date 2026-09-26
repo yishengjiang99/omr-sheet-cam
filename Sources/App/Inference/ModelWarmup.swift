@@ -54,6 +54,11 @@ final class ModelWarmup: ObservableObject {
                 return m.report
             case let .failure(error):
                 self.state = .failed(String(describing: error))
+                DiagnosticsLog.shared.record(
+                    .error, .warmup, "warmup failed: \(error)",
+                    payload: ["kind": "failed", "error": String(describing: error), "type": String(reflecting: type(of: error)),
+                              "footprint_mb": String(format: "%.1f", ModelWarmup.physFootprintMB())]
+                )
                 return nil
             }
         }
@@ -114,11 +119,22 @@ final class ModelWarmup: ObservableObject {
         var timings: [WarmupReport.Session] = []
         let dir = try resolveModelsDir(modelsDir)
         log.notice("warmup start: models=\(dir.path, privacy: .public) mainThread=\(onMain) footprint=\(startMB, format: .fixed(precision: 1)) MB")
+        let diag = DiagnosticsLog.shared
+        diag.record(.info, .warmup, String(format: "warmup start: footprint %.0f MB", startMB),
+                    payload: ["kind": "start", "models": dir.lastPathComponent, "main_thread": "\(onMain)"])
+        var providers: [String] = []
 
         func record(_ name: String, _ provider: ORTProvider, _ createMs: Double, _ runMs: Double) {
             let mb = physFootprintMB()
             peak = max(peak, mb)
             timings.append(.init(name: name, provider: "\(provider)", createMs: createMs, firstRunMs: runMs, footprintMB: mb))
+            providers.append("\(name)=\(provider)")
+            diag.record(
+                .info, .warmup,
+                String(format: "%@ %@: create %.0f ms, first run %.0f ms, footprint %.0f MB", name, "\(provider)", createMs, runMs, mb),
+                payload: ["kind": "session", "session": name, "provider": "\(provider)", "create_ms": String(format: "%.1f", createMs),
+                          "first_run_ms": String(format: "%.1f", runMs), "footprint_mb": String(format: "%.1f", mb)]
+            )
             log.notice("\(name, privacy: .public) provider=\(String(describing: provider), privacy: .public) create=\(createMs, format: .fixed(precision: 1)) ms firstRun=\(runMs, format: .fixed(precision: 1)) ms footprint=\(mb, format: .fixed(precision: 1)) MB")
         }
 
@@ -174,6 +190,13 @@ final class ModelWarmup: ObservableObject {
         let endMB = physFootprintMB()
         peak = max(peak, endMB)
         log.notice("warmup ready: total=\(totalMs, format: .fixed(precision: 1)) ms footprint start=\(startMB, format: .fixed(precision: 1)) end=\(endMB, format: .fixed(precision: 1)) peak=\(peak, format: .fixed(precision: 1)) MB ORT=\(ORTCSession.runtimeVersion, privacy: .public)")
+        diag.record(
+            .info, .warmup,
+            String(format: "warmup ready: total %.0f ms, footprint %.0f → %.0f MB, peak %.0f MB", totalMs, startMB, endMB, peak),
+            payload: ["kind": "summary", "total_ms": String(format: "%.1f", totalMs), "start_mb": String(format: "%.1f", startMB),
+                      "end_mb": String(format: "%.1f", endMB), "peak_mb": String(format: "%.1f", peak),
+                      "providers": providers.joined(separator: " "), "ort": ORTCSession.runtimeVersion]
+        )
         let report = WarmupReport(
             sessions: timings, totalMs: totalMs, startMB: startMB, endMB: endMB, peakMB: peak,
             ranOnMainThread: onMain, modelsDir: dir

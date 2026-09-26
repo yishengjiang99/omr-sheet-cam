@@ -1,5 +1,5 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-09-26 PT by Chief of Staff_
+_Last updated: 2026-09-26 PT by OMR iOS_
 
 Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`.
 
@@ -18,6 +18,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
   - [ ] M3: `parseSheetMusicWithLayout` page path (PNG + `gray8:width:height:`) + `omr-test parse-page`
   - [ ] M4 gate: C-scale page end-to-end, 12/12 tokens, valid SMF; edit distances vs homr on other fixtures
 - [ ] Swap `StubRecognitionService` for the page path once M3 lands (feed upright capture as `gray8`) — OMR iOS
+- [ ] In-app diagnostics: `DiagnosticsLog` (JSONL in Application Support, 2000 entries / 5 MB cap, os_log mirror; warmup, Gate-1, capture, camera, recognition, playback, feedback), Log screen (filters, Clear), "Copy as prompt" (≤4 KB Markdown), visual OMR compare + accuracy feedback on Result + Diagnostics → Compare Gate-1 staff — OMR iOS — ios-sim pending
 
 ## Next
 - [ ] SF2Player gaps inherited from gbk: pitch bend, drum channel 10, the file's own CC7/10/11, SF2 modulators, filter Q; gbk export's master dynamics not ported — OMR iOS

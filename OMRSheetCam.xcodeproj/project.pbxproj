@@ -21,6 +21,14 @@
 		CA0000000000000000000007 /* PlayerRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000007 /* PlayerRoute.swift */; };
 		CA0000000000000000000008 /* RootFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000008 /* RootFlowView.swift */; };
 		CA0000000000000000000009 /* CaptureHelpersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000009 /* CaptureHelpersTests.swift */; };
+		CA000000000000000000000A /* DiagnosticsLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB000000000000000000000A /* DiagnosticsLog.swift */; };
+		CA000000000000000000000B /* PromptBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB000000000000000000000B /* PromptBuilder.swift */; };
+		CA000000000000000000000C /* PromptCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB000000000000000000000C /* PromptCopy.swift */; };
+		CA000000000000000000000D /* LogScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB000000000000000000000D /* LogScreen.swift */; };
+		CA000000000000000000000E /* OMRFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB000000000000000000000E /* OMRFeedback.swift */; };
+		CA000000000000000000000F /* OMRCompareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB000000000000000000000F /* OMRCompareView.swift */; };
+		CA0000000000000000000010 /* Gate1CompareScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000010 /* Gate1CompareScreen.swift */; };
+		CA0000000000000000000011 /* DiagnosticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000011 /* DiagnosticsTests.swift */; };
 		A10000000000000000000001 /* OMRSheetCamApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* OMRSheetCamApp.swift */; };
 		A10000000000000000000002 /* Gate1RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* Gate1RootView.swift */; };
 		A10000000000000000000003 /* SimpleMIDIPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* SimpleMIDIPlayer.swift */; };
@@ -60,6 +68,14 @@
 		CB0000000000000000000007 /* PlayerRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerRoute.swift; sourceTree = "<group>"; };
 		CB0000000000000000000008 /* RootFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootFlowView.swift; sourceTree = "<group>"; };
 		CB0000000000000000000009 /* CaptureHelpersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureHelpersTests.swift; sourceTree = "<group>"; };
+		CB000000000000000000000A /* DiagnosticsLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLog.swift; sourceTree = "<group>"; };
+		CB000000000000000000000B /* PromptBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptBuilder.swift; sourceTree = "<group>"; };
+		CB000000000000000000000C /* PromptCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptCopy.swift; sourceTree = "<group>"; };
+		CB000000000000000000000D /* LogScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogScreen.swift; sourceTree = "<group>"; };
+		CB000000000000000000000E /* OMRFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OMRFeedback.swift; sourceTree = "<group>"; };
+		CB000000000000000000000F /* OMRCompareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OMRCompareView.swift; sourceTree = "<group>"; };
+		CB0000000000000000000010 /* Gate1CompareScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gate1CompareScreen.swift; sourceTree = "<group>"; };
+		CB0000000000000000000011 /* DiagnosticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsTests.swift; sourceTree = "<group>"; };
 		B10000000000000000000001 /* OMRSheetCamApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OMRSheetCamApp.swift; sourceTree = "<group>"; };
 		B10000000000000000000002 /* Gate1RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gate1RootView.swift; sourceTree = "<group>"; };
 		B10000000000000000000003 /* SimpleMIDIPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleMIDIPlayer.swift; sourceTree = "<group>"; };
@@ -110,6 +126,20 @@
 			path = Capture;
 			sourceTree = "<group>";
 		};
+		CC0000000000000000000003 /* Diagnostics */ = {
+			isa = PBXGroup;
+			children = (
+				CB000000000000000000000A /* DiagnosticsLog.swift */,
+				CB000000000000000000000B /* PromptBuilder.swift */,
+				CB000000000000000000000C /* PromptCopy.swift */,
+				CB000000000000000000000D /* LogScreen.swift */,
+				CB000000000000000000000E /* OMRFeedback.swift */,
+				CB000000000000000000000F /* OMRCompareView.swift */,
+				CB0000000000000000000010 /* Gate1CompareScreen.swift */,
+			);
+			path = Diagnostics;
+			sourceTree = "<group>";
+		};
 		CC0000000000000000000002 /* Player */ = {
 			isa = PBXGroup;
 			children = (
@@ -146,6 +176,7 @@
 				CB0000000000000000000008 /* RootFlowView.swift */,
 				CC0000000000000000000001 /* Capture */,
 				CC0000000000000000000002 /* Player */,
+				CC0000000000000000000003 /* Diagnostics */,
 				G10000000000000000000004 /* MIDI */,
 				G10000000000000000000005 /* Inference */,
 				B10000000000000000000005 /* Assets.xcassets */,
@@ -179,6 +210,7 @@
 				B1000000000000000000000A /* ModelWarmupTests.swift */,
 				B1000000000000000000000C /* Gate1RunnerTests.swift */,
 				CB0000000000000000000009 /* CaptureHelpersTests.swift */,
+				CB0000000000000000000011 /* DiagnosticsTests.swift */,
 				C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */,
 				5E0000000000000000000004 /* SF2PlayerAppTests.swift */,
 				B10000000000000000000008 /* Fixtures */,
@@ -363,6 +395,13 @@
 				CA0000000000000000000006 /* ResultScreen.swift in Sources */,
 				CA0000000000000000000007 /* PlayerRoute.swift in Sources */,
 				CA0000000000000000000008 /* RootFlowView.swift in Sources */,
+				CA000000000000000000000A /* DiagnosticsLog.swift in Sources */,
+				CA000000000000000000000B /* PromptBuilder.swift in Sources */,
+				CA000000000000000000000C /* PromptCopy.swift in Sources */,
+				CA000000000000000000000D /* LogScreen.swift in Sources */,
+				CA000000000000000000000E /* OMRFeedback.swift in Sources */,
+				CA000000000000000000000F /* OMRCompareView.swift in Sources */,
+				CA0000000000000000000010 /* Gate1CompareScreen.swift in Sources */,
 				4F06444BBF09D87CE872BDB8 /* MIDINoteExtractor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -376,6 +415,7 @@
 				A1000000000000000000000A /* ModelWarmupTests.swift in Sources */,
 				A1000000000000000000000C /* Gate1RunnerTests.swift in Sources */,
 				CA0000000000000000000009 /* CaptureHelpersTests.swift in Sources */,
+				CA0000000000000000000011 /* DiagnosticsTests.swift in Sources */,
 				21EBA7280EC15355707ED56C /* PlaybackSmokeFixtureTests.swift in Sources */,
 				5F0000000000000000000004 /* SF2PlayerAppTests.swift in Sources */,
 			);

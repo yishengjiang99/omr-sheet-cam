@@ -21,6 +21,19 @@ struct Gate1RootView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section("Tools") {
+                    NavigationLink {
+                        LogScreen()
+                    } label: {
+                        Label("Event log", systemImage: "list.bullet.rectangle")
+                    }
+                    NavigationLink {
+                        Gate1CompareScreen()
+                    } label: {
+                        Label("Compare Gate-1 staff", systemImage: "rectangle.on.rectangle")
+                    }
+                }
+
                 Section("Status") {
                     ForEach(statusLines, id: \.self) { line in
                         Text(line)
@@ -119,8 +132,10 @@ struct Gate1RootView: View {
                 }.value
                 gate1Verdict = "\(result.input): \(result.verdict)"
                 gate1Detail = result.detail
+                Gate1Runner.record(result)
             } catch {
                 gate1Verdict = "ERROR: \(error)"
+                Gate1Runner.record(error: error, input: png ? "png" : "npy")
                 Gate1Runner.log.error("Gate-1 (\(png ? "png" : "npy", privacy: .public)) error: \(String(describing: error), privacy: .public)")
             }
         }
@@ -142,8 +157,10 @@ struct Gate1RootView: View {
             }
         } catch let error as OMRError {
             lastError = String(describing: error)
+            DiagnosticsLog.shared.record(.warn, .recognition, "dummy parse (staff-only): \(error)", payload: ["kind": "dummy"])
         } catch {
             lastError = "unexpected: \(error)"
+            DiagnosticsLog.shared.record(error: error, category: .recognition, context: "dummy parse")
         }
     }
 
@@ -153,6 +170,7 @@ struct Gate1RootView: View {
             try midiPlayer.play(midiData: data)
         } catch {
             lastError = "MIDI play failed: \(error)"
+            DiagnosticsLog.shared.record(error: error, category: .playback, context: "empty SMF smoke")
         }
     }
 

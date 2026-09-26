@@ -27,6 +27,8 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
     private var inFlight: [Int64: PhotoDelegate] = [:]
     private var observers: [NSObjectProtocol] = []
     private let log = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.ragnus.vp", category: "camera")
+    private let diag = DiagnosticsLog.shared
+    private var loggedAuthorization: Authorization?
 
     override init() {
         super.init()
@@ -34,15 +36,20 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
         observers.append(nc.addObserver(forName: AVCaptureSession.wasInterruptedNotification, object: session, queue: nil) { [weak self] note in
             let reason = (note.userInfo?[AVCaptureSessionInterruptionReasonKey] as? Int)
                 .flatMap(AVCaptureSession.InterruptionReason.init(rawValue:))
-            self?.publish { $0.statusMessage = CameraController.message(for: reason) }
+            let message = CameraController.message(for: reason)
+            self?.diag.record(.warn, .capture, "camera interrupted: \(message)", payload: ["reason": "\(reason?.rawValue ?? -1)"])
+            self?.publish { $0.statusMessage = message }
         })
         observers.append(nc.addObserver(forName: AVCaptureSession.interruptionEndedNotification, object: session, queue: nil) { [weak self] _ in
+            self?.diag.record(.info, .capture, "camera interruption ended")
             self?.publish { $0.statusMessage = nil }
         })
         observers.append(nc.addObserver(forName: AVCaptureSession.runtimeErrorNotification, object: session, queue: nil) { [weak self] note in
             guard let self else { return }
             let error = note.userInfo?[AVCaptureSessionErrorKey] as? AVError
             self.log.error("capture runtime error: \(String(describing: error), privacy: .public)")
+            self.diag.record(.error, .capture, "camera runtime error: \(error.map { String(describing: $0) } ?? "unknown")",
+                             payload: ["code": "\(error?.code.rawValue ?? 0)", "localized": error?.localizedDescription ?? ""])
             self.sessionQueue.async {
                 // Media services reset: restart if we still want to run.
                 if error?.code == .mediaServicesWereReset, self.wantsRunning, !self.session.isRunning {
@@ -85,6 +92,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
         case .notDetermined:
             AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
                 guard let self else { return }
+                self.diag.record(granted ? .info : .warn, .capture, "camera permission \(granted ? "granted" : "denied") at prompt")
                 self.publish { $0.authorization = granted ? .authorized : .denied }
                 if granted { self.startSession() }
             }
@@ -92,6 +100,10 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
             publish { $0.authorization = .authorized }
             startSession()
         case let other:
+            if loggedAuthorization != other {
+                loggedAuthorization = other
+                diag.record(.warn, .capture, "camera permission \(other == .restricted ? "restricted" : "denied")")
+            }
             publish { $0.authorization = other }
         }
     }
@@ -118,6 +130,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
     /// Runs on `sessionQueue`.
     private func configure() {
         guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
+            diag.record(.warn, .capture, "camera unavailable (no back wide-angle camera)")
             publish { $0.isCameraAvailable = false }
             return
         }
@@ -127,6 +140,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
         do {
             let input = try AVCaptureDeviceInput(device: device)
             guard session.canAddInput(input), session.canAddOutput(photoOutput) else {
+                diag.record(.error, .capture, "camera configuration failed (cannot add input/output)")
                 publish { $0.statusMessage = "Camera configuration failed" }
                 return
             }
@@ -143,6 +157,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
             publish { $0.torchAvailable = torch }
         } catch {
             log.error("camera input: \(String(describing: error), privacy: .public)")
+            diag.record(error: error, category: .capture, context: "camera input")
             publish { $0.statusMessage = "Camera unavailable: \(error.localizedDescription)" }
         }
     }
@@ -167,6 +182,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
                 device.isSubjectAreaChangeMonitoringEnabled = true
             } catch {
                 self.log.error("focus lock: \(String(describing: error), privacy: .public)")
+                self.diag.record(error: error, category: .capture, context: "focus lock")
             }
         }
     }
@@ -182,6 +198,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
                 self.publish { $0.torchOn = state }
             } catch {
                 self.log.error("torch: \(String(describing: error), privacy: .public)")
+                self.diag.record(error: error, category: .capture, context: "torch")
             }
         }
     }

@@ -52,6 +52,8 @@ struct Gate1Result: Sendable {
     var ortVersion: String
     /// png run only: max |png tensor - npy tensor|.
     var tensorMaxAbsDiff: Float? = nil
+    /// Decoded symbols (for the Compare Gate-1 screen).
+    var symbols: [EncodedSymbol] = []
 
     var passed: Bool { divergence == nil }
 
@@ -65,6 +67,22 @@ struct Gate1Result: Sendable {
         var d = String(format: "decode %.0f ms, encoder %@, ORT %@", decodeMs, encoderProvider, ortVersion)
         if let diff = tensorMaxAbsDiff { d += ", png-npy max|diff| \(diff)" }
         return d
+    }
+
+    /// Structured fields for the `gate1` diagnostics event.
+    var payload: [String: String] {
+        var p: [String: String] = [
+            "kind": "result", "input": input, "verdict": passed ? "PASS" : "FAIL",
+            "matched": "\(matched)", "expected": "\(expectedCount)", "got": "\(gotCount)",
+            "ms": String(format: "%.1f", decodeMs), "provider": encoderProvider, "ort": ortVersion,
+        ]
+        if let d = divergence {
+            p["divergence_index"] = "\(d.index)"
+            p["divergence_got"] = d.got
+            p["divergence_expected"] = d.expected
+        }
+        if let diff = tensorMaxAbsDiff { p["png_npy_max_abs_diff"] = "\(diff)" }
+        return p
     }
 }
 
@@ -81,6 +99,15 @@ enum Gate1Runner {
     }
 
     static let log = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.ragnus.vp", category: "gate1")
+
+    /// Records a run (UI boundary) in the in-app diagnostics log.
+    static func record(_ r: Gate1Result, to log: DiagnosticsLog = .shared) {
+        log.record(r.passed ? .info : .error, .gate1, "\(r.input): \(r.verdict); \(r.detail)", payload: r.payload)
+    }
+
+    static func record(error: Error, input: String, to log: DiagnosticsLog = .shared) {
+        log.record(error: error, category: .gate1, context: "Gate-1 (\(input)) error", payload: ["kind": "error", "input": input])
+    }
 
     /// `<App>.app/gate1/` (copied from fixtures/oracle.c_scale_staff by the "Bundle Gate-1 fixtures" phase).
     static func bundledFixturesDir(_ bundle: Bundle = .main) throws -> URL {
@@ -142,7 +169,8 @@ enum Gate1Runner {
             decodeMs: ms,
             encoderProvider: "\(models.encoderBackend.provider)",
             ortVersion: ORTCSession.runtimeVersion,
-            tensorMaxAbsDiff: tensorMaxAbsDiff
+            tensorMaxAbsDiff: tensorMaxAbsDiff,
+            symbols: got
         )
         log.notice("Gate-1 (\(input, privacy: .public)): \(result.verdict, privacy: .public); \(result.detail, privacy: .public); got \(got.count) symbols")
         return result

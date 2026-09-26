@@ -5,6 +5,7 @@ struct RootFlowView: View {
     enum Route: Hashable {
         case result(CapturedPhoto)
         case player(PlayerRoute)
+        case log
     }
 
     @State private var path: [Route] = []
@@ -16,6 +17,9 @@ struct RootFlowView: View {
                 .navigationTitle("AI Camera - Music Reader")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button { path.append(.log) } label: { Label("Log", systemImage: "list.bullet.rectangle") }
+                    }
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Diagnostics") { showDiagnostics = true }
                     }
@@ -26,6 +30,8 @@ struct RootFlowView: View {
                         ResultScreen(photo: photo) { path.append(.player($0)) }
                     case let .player(p):
                         PlayerDestination.view(for: p)
+                    case .log:
+                        LogScreen()
                     }
                 }
         }

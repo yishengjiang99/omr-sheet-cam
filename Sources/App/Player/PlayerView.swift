@@ -91,6 +91,7 @@ struct PlayerView: View {
             status = "\(sf.info["INAM"] ?? "SoundFont") · \(midi.count) B SMF · \(player.song?.tracks.count ?? 0) tracks"
         } catch {
             status = "Player unavailable: \(error)"
+            DiagnosticsLog.shared.record(error: error, category: .playback, context: "PlayerView load (\(midi.count) B SMF)")
         }
     }
 
