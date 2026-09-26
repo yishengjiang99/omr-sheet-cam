@@ -1,9 +1,23 @@
 id: oracle.c_scale_staff
 match_tier: exact_tokens
+status: complete
 clef: treble
 key: C
 time: "4/4"
-source: homr-research / Python Staff2Score (22/22 hard gate)
-license: see upstream
-notes: Pre-cropped staff [1,1,256,1280]; tokens must match Python homr exactly (22/22).
-  Blocked on onnx/homr-research export — do not invent oracle tokens.
+source: Python homr oracle export (tools/oracle/export_staff_tokens.py) of fixtures/mono.c_major_scale/input.png
+license: CC0 synthetic input; tokens are homr (AGPL-3.0) model output
+homr_repo: https://github.com/liebharc/homr
+homr_commit: 7d97c3cee4ad772b50266fdf9dc78bbf9064701e
+models:
+  encoder: {file: encoder_pytorch_model_465-597144cab54c8f6d0f6c9619df5c5312694eadd6_fp16.onnx, sha256: 50823c061533328f5e64df016d3ed16eb9071a9f5c5ee8621646cf9ac9c8a992, precision: fp16, ep: CPU}
+  decoder: {file: decoder_pytorch_model_465-597144cab54c8f6d0f6c9619df5c5312694eadd6.onnx, sha256: 18801c1e3657bdea1b031db90b10d66e15accfc1d607780f09a9e059133e886a, precision: fp32, ep: CPU}
+  segnet: {file: segnet_308-3296ccd40960f90ca6ab9c035cca945675d30a0f_fp16.onnx, sha256: 60f495496cb41473c0521d0811d8f44b9d5cff892d287974a8aebb3eaee2fa83, precision: fp16, ep: CPU, used_for: staff detection/crop only}
+staff_input:
+  image: staff.png          # uint8 grayscale 256x1280 canvas homr fed the encoder
+  tensor: staff.npy         # float32 [1,1,256,1280] = (px/255 - 0.7931) / 0.1738
+  tensor_sha256: 692ca20a3b3ab4711f6c60bc28670d0788ed80c08a594375cdd5513fa6582fa9
+  preprocessing: homr staff_parsing.prepare_staff_image (crop, dewarp, centre on canvas)
+symbol_count: 12
+expected_notes: expected.notes.csv is canonicalized from these tokens (fixtures/README.md rules)
+notes: Gate-1 = Swift omr-test decoding staff.png must equal expected.tokens.json exactly.
+  Python checks are reference/cross-check only.

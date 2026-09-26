@@ -1,5 +1,229 @@
 {
-  "streams": {},
-  "symbols": [],
-  "status": "awaiting_oracle_export"
+  "source": "python-homr Staff2Score.predict (raw decoder output, EOS excluded)",
+  "status": "complete",
+  "exporter": "tools/oracle/export_staff_tokens.py",
+  "homr_commit": "7d97c3cee4ad772b50266fdf9dc78bbf9064701e",
+  "input": "staff.png",
+  "input_tensor": "staff.npy",
+  "symbol_count": 12,
+  "streams": {
+    "rhythm": {
+      "tokens": [
+        "clef_G2",
+        "timeSignature/4",
+        "note_4",
+        "note_4",
+        "note_4",
+        "note_4",
+        "barline",
+        "note_4",
+        "note_4",
+        "note_4",
+        "note_4",
+        "barline"
+      ],
+      "ids": [
+        22,
+        42,
+        82,
+        82,
+        82,
+        82,
+        4,
+        82,
+        82,
+        82,
+        82,
+        4
+      ]
+    },
+    "pitch": {
+      "tokens": [
+        "_",
+        ".",
+        "C4",
+        "D4",
+        "E4",
+        "F4",
+        ".",
+        "G4",
+        "A4",
+        "B4",
+        "C5",
+        "."
+      ],
+      "ids": [
+        1,
+        0,
+        43,
+        42,
+        41,
+        40,
+        0,
+        39,
+        38,
+        37,
+        36,
+        0
+      ]
+    },
+    "lift": {
+      "tokens": [
+        "_",
+        ".",
+        "_",
+        "_",
+        "_",
+        "_",
+        ".",
+        "_",
+        "_",
+        "_",
+        "_",
+        "."
+      ],
+      "ids": [
+        1,
+        0,
+        1,
+        1,
+        1,
+        1,
+        0,
+        1,
+        1,
+        1,
+        1,
+        0
+      ]
+    },
+    "articulation": {
+      "tokens": [
+        "_",
+        ".",
+        "_",
+        "_",
+        "_",
+        "_",
+        ".",
+        "_",
+        "_",
+        "_",
+        "_",
+        "."
+      ],
+      "ids": [
+        1,
+        0,
+        1,
+        1,
+        1,
+        1,
+        0,
+        1,
+        1,
+        1,
+        1,
+        0
+      ]
+    }
+  },
+  "symbols": [
+    {
+      "rhythm": "clef_G2",
+      "pitch": "_",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "timeSignature/4",
+      "pitch": ".",
+      "lift": ".",
+      "articulation": ".",
+      "slur": ".",
+      "position": "."
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "C4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "D4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "E4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "F4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "barline",
+      "pitch": ".",
+      "lift": ".",
+      "articulation": ".",
+      "slur": ".",
+      "position": "."
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "G4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "A4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "B4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "C5",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "barline",
+      "pitch": ".",
+      "lift": ".",
+      "articulation": ".",
+      "slur": ".",
+      "position": "."
+    }
+  ]
 }

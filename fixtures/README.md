@@ -48,7 +48,7 @@ Token strings must exist in `Packages/omr-homr-ios/.../Resources/Vocab/vocabular
 
 ## Layers (brief)
 
-- **Layer A — Tokens:** dewarped staff → homr streams; **hard gate** `oracle.c_scale_staff` **22/22** vs Python homr (blocked on onnx / homr-research export).
+- **Layer A — Tokens:** dewarped staff → homr streams; **hard gate** `oracle.c_scale_staff` — Swift decode of `staff.png` must equal the Python homr export exactly (12 symbols with homr `7d97c3c` + `models.lock`). Export: `tools/oracle/export_staff_tokens.py`; cross-check vs hand-authored GT in `ORACLE_REPORT.md`; per-fixture `oracle.tokens.json` (reference only).
 - **Layer B — MIDI:** tokens → SMF / canonical notes; writer-only asserts sorted `(tick, pitch, duration, staff)` == `expected.notes.csv`.
 - **Layer C — Layout (soft):** highlight count == sounding notes (not ship-gated on IoU). Package helper `OMRHomrIOS.renderTokens` builds MIDI + `noteLayout` from one note list; Linux check: `python3 tools/oracle/check_note_layout.py`.
 
@@ -66,7 +66,7 @@ Canonicalize (Layer B): C4=MIDI 60; lift `#` +1 / `b` −1; `note_4`=480 TPQ tic
 | `clefs.bass` | exact_tokens | complete | complete | LilyPond `input.png` (200 dpi gray) |
 | `piano.grand` | exact_midi | complete | complete | LilyPond `input.png` (200 dpi gray) |
 | `camera.deskew` | midi_distance (≤2 / 16 notes) | stub | complete (scale mirror) | synthetic ~15° rotate + keystone of scale |
-| `oracle.c_scale_staff` | exact_tokens (22/22 gate) | awaiting_oracle_export | empty | blocked onnx/homr-research |
+| `oracle.c_scale_staff` | exact_tokens (Gate 1, 12/12) | complete (Python homr export) | derived from oracle tokens | `staff.png` 256×1280 + `staff.npy` |
 
 Images are rendered from `fixtures/<id>/source.ly` by `tools/fixtures/render_fixtures.py`
 (LilyPond 2.24, A4, 200 dpi grayscale). The script also checks LilyPond's MIDI for the same
