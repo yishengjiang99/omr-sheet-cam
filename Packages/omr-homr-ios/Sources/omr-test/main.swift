@@ -4,8 +4,10 @@
 //       Writer-only: expected.tokens.json → SMFWriter → SMFNoteReader → diff expected.notes.csv.
 //   omr-test [--fixtures DIR] [--models DIR] [fixtures/<id> ...]
 //       ONNX path (staff image → tokens). Exits 3 where no ORT backend is linked.
-//   omr-test decode-staff <staff.npy | staff.f32 | staff.png> [--models DIR] [--json]
-//       Encoder → DecoderLoop end to end; prints the raw decoded token streams.
+//   omr-test decode-staff <staff.npy | staff.f32> [--models DIR] [--expected FILE] [--json]
+//       StaffTensor → StaffInferenceSession.decodeStaff (encoder fp16 → cast → decoder fp32 CPU);
+//       prints raw rhythm/pitch/lift/articulation per symbol + token edit distance vs
+//       expected.tokens.json (default: next to the input). 0 = exact match, 1 = mismatch.
 //
 // Exit codes: 0 all selected fixtures passed (SKIP does not fail) · 1 a fixture failed ·
 //             2 usage / input error · 3 ONNX path not runnable on this platform yet.
@@ -14,9 +16,15 @@ import OMRHomrIOS
 
 #if canImport(OnnxRuntimeBindings) || canImport(onnxruntime_objc)
 typealias PlatformORTBackend = ORTObjCSession
+let hasORT = true
+#elseif canImport(CONNXRuntime)
+// Linux: ORT C API (`scripts/fetch-ort`), CPU EP only, 1 intra-op thread by default
+// (`OMR_ORT_INTRA_OP_THREADS`) for run-to-run deterministic logits.
+typealias PlatformORTBackend = ORTCSession
+let hasORT = true
+#else
+let hasORT = false
 #endif
-// TODO(ORTCSession): on Linux, alias the app engineer's `ORTCSession` (branch ios/ort-c-linux)
-// here once it is on main; until then the ONNX path exits 3 on Linux.
 
 // MARK: - Output / exit helpers
 
@@ -36,7 +44,7 @@ func exitNotRunnable(_ detail: String) -> Never {
 let usage = """
 usage: omr-test --no-onnx [--fixtures DIR] [--tier TIER] [fixtures/<id> | <id> ...]
        omr-test [--fixtures DIR] [--models DIR] [fixtures/<id> ...]       (ONNX path)
-       omr-test decode-staff <staff.npy|staff.f32|staff.png> [--models DIR] [--json]
+       omr-test decode-staff <staff.npy|staff.f32> [--models DIR] [--expected FILE] [--json]
 exit: 0 pass · 1 fail · 2 usage/input error · 3 ONNX path not runnable on this platform yet
 """
 
@@ -48,6 +56,7 @@ var fixturesOverride: String?
 var modelsOverride: String?
 var tierFilter: String?
 var jsonOut = false
+var expectedOverride: String?
 var positional: [String] = []
 while !args.isEmpty {
     let a = args.removeFirst()
@@ -60,6 +69,9 @@ while !args.isEmpty {
     case "--models":
         guard !args.isEmpty else { exitUsage("--models needs a directory") }
         modelsOverride = args.removeFirst()
+    case "--expected":
+        guard !args.isEmpty else { exitUsage("--expected needs a file") }
+        expectedOverride = args.removeFirst()
     case "--tier":
         guard !args.isEmpty else { exitUsage("--tier needs a value") }
         tierFilter = args.removeFirst()
@@ -106,54 +118,76 @@ func resolveDir(_ override: String?, _ name: String) -> URL? {
 
 struct ModelFiles { var encoderFP16: URL; var decoderFP32: URL }
 
+/// Pinned models: file names from repo-root `models.lock` (`<sha256>  <file>  <url>`), files in
+/// `models/` (or `--models DIR`). Falls back to a directory scan when no models.lock is found.
 func findModels() -> ModelFiles? {
-    guard let dir = resolveDir(modelsOverride, "models"),
-          let names = try? fm.contentsOfDirectory(atPath: dir.path) else { return nil }
+    guard let dir = resolveDir(modelsOverride, "models") else { return nil }
+    var names: [String] = []
+    let lock = dir.deletingLastPathComponent().appendingPathComponent("models.lock")
+    if let text = try? String(contentsOf: lock, encoding: .utf8) {
+        for line in text.split(whereSeparator: \.isNewline) {
+            let t = line.trimmingCharacters(in: .whitespaces)
+            if t.isEmpty || t.hasPrefix("#") { continue }
+            let f = t.split(whereSeparator: { $0 == " " || $0 == "\t" })
+            if f.count >= 2 { names.append(String(f[1])) }
+        }
+    } else {
+        names = (try? fm.contentsOfDirectory(atPath: dir.path)) ?? []
+    }
     let enc = names.filter { $0.hasPrefix("encoder_") && $0.hasSuffix("_fp16.onnx") }.sorted().last
     let dec = names.filter { $0.hasPrefix("decoder_") && $0.hasSuffix(".onnx") && !$0.hasSuffix("_fp16.onnx") }
         .sorted().last
     guard let enc, let dec else { return nil }
-    return ModelFiles(encoderFP16: dir.appendingPathComponent(enc), decoderFP32: dir.appendingPathComponent(dec))
+    let m = ModelFiles(encoderFP16: dir.appendingPathComponent(enc), decoderFP32: dir.appendingPathComponent(dec))
+    guard fm.fileExists(atPath: m.encoderFP16.path), fm.fileExists(atPath: m.decoderFP32.path) else { return nil }
+    return m
 }
 
-/// Encoder (CoreML EP w/ CPU fallback on Apple) → fp32 cast → Decoder (CPU fp32) → symbols.
-func decodeStaff(normalized: Data, models: ModelFiles, vocab: HomrVocabulary) throws -> [EncodedSymbol] {
-    #if canImport(OnnxRuntimeBindings) || canImport(onnxruntime_objc)
-    let encoder = try EncoderSession.open(PlatformORTBackend.self, fp16ModelURL: models.encoderFP16)
-    let decoder = try DecoderSession.open(PlatformORTBackend.self, vocabulary: vocab, modelURL: models.decoderFP32)
-    let context = try encoder.generateContext(staffImageNormalized: normalized).castToFP32ForDecoder()
-    let runner = try decoder.makeStepRunner(context: context)
-    return try DecoderLoop(vocabulary: vocab).generate(context: context, stepRunner: runner)
+/// Gate-1 entry: encoder fp16 (CPU on Linux; CoreML EP w/ CPU fallback on Apple) →
+/// `castToFP32ForDecoder()` → decoder fp32 ORT CPU → raw symbols (EOS excluded).
+func decodeStaff(tensor: StaffTensor, models: ModelFiles, vocab: HomrVocabulary) throws -> [EncodedSymbol] {
+    #if canImport(OnnxRuntimeBindings) || canImport(onnxruntime_objc) || canImport(CONNXRuntime)
+    #if canImport(CoreML) && (canImport(OnnxRuntimeBindings) || canImport(onnxruntime_objc))
+    let encoder = (try? PlatformORTBackend(modelURL: models.encoderFP16, provider: .coreML))
+        ?? (try PlatformORTBackend(modelURL: models.encoderFP16, provider: .cpu))
     #else
-    exitNotRunnable("no ORTSessionBackend is linked on this platform (Linux needs ORTCSession from ios/ort-c-linux)")
+    let encoder = try PlatformORTBackend(modelURL: models.encoderFP16, provider: .cpu)
+    #endif
+    let decoder = try PlatformORTBackend(modelURL: models.decoderFP32, provider: .cpu)
+    let session = try StaffInferenceSession(encoder: encoder, decoder: decoder, vocabulary: vocab)
+    return try session.decodeStaff(tensor: tensor)
+    #else
+    exitNotRunnable("no ORTSessionBackend is linked on this platform (Linux: run scripts/fetch-ort, see docs/ORT-LINUX.md)")
     #endif
 }
 
 func requireONNX() -> ModelFiles {
-    #if !(canImport(OnnxRuntimeBindings) || canImport(onnxruntime_objc))
-    exitNotRunnable("no ORTSessionBackend is linked on this platform (Linux needs ORTCSession from ios/ort-c-linux)")
-    #else
+    guard hasORT else {
+        exitNotRunnable("no ORTSessionBackend is linked on this platform (Linux: run scripts/fetch-ort, see docs/ORT-LINUX.md)")
+    }
     guard let m = findModels() else {
         exitNotRunnable("pinned models not found (run scripts/fetch-models or pass --models DIR)")
     }
     return m
-    #endif
 }
 
 // MARK: - Staff tensor input
 
-/// Load a normalized fp32 NCHW [1,1,256,1280] staff tensor (little-endian bytes).
-func loadStaffTensor(_ path: String) -> Data {
+/// Load a normalized fp32 NCHW [1,1,256,1280] staff tensor (`.npy` via `StaffTensor.loadNPY`,
+/// or raw little-endian fp32 `.f32`).
+func loadStaffTensor(_ path: String) -> StaffTensor {
     let url = URL(fileURLWithPath: path, relativeTo: cwd)
-    let want = StaffInputSpec.nchwShape.reduce(1, *) * 4
     switch url.pathExtension.lowercased() {
     case "f32", "bin", "raw":
         guard let d = try? Data(contentsOf: url) else { exitUsage("cannot read \(path)") }
-        guard d.count == want else { exitUsage("\(path): \(d.count) bytes, want \(want) (fp32 \(StaffInputSpec.nchwShape))") }
-        return d
+        let n = StaffInputSpec.elementCount
+        guard d.count == n * 4 else { exitUsage("\(path): \(d.count) bytes, want \(n * 4) (fp32 \(StaffInputSpec.nchwShape))") }
+        let values: [Float] = d.withUnsafeBytes { raw in
+            (0..<n).map { Float(bitPattern: UInt32(littleEndian: raw.loadUnaligned(fromByteOffset: $0 * 4, as: UInt32.self))) }
+        }
+        do { return try StaffTensor(values: values, shape: StaffInputSpec.nchwShape) } catch { exitUsage("\(path): \(error)") }
     case "npy":
-        guard let d = try? Data(contentsOf: url) else { exitUsage("cannot read \(path)") }
-        return parseNPY(d, path: path, wantBytes: want)
+        do { return try StaffTensor.loadNPY(url) } catch { exitUsage("\(path): \(error)") }
     case "png", "jpg", "jpeg":
         exitUsage("""
         \(path): image decode is not built into omr-test. Convert first (homr canvas + ConvertToArray):
@@ -162,37 +196,6 @@ func loadStaffTensor(_ path: String) -> Data {
     default:
         exitUsage("\(path): expected .npy, .f32 or .png")
     }
-}
-
-/// Minimal .npy v1/v2/v3 reader: little-endian float32, C order, 1*1*256*1280 elements.
-func parseNPY(_ d: Data, path: String, wantBytes: Int) -> Data {
-    let b = [UInt8](d)
-    guard b.count > 10, b[0] == 0x93, String(bytes: b[1..<6], encoding: .ascii) == "NUMPY" else {
-        exitUsage("\(path): not a .npy file")
-    }
-    let major = b[6]
-    let headerLen: Int
-    let start: Int
-    if major == 1 {
-        headerLen = Int(b[8]) | Int(b[9]) << 8
-        start = 10
-    } else {
-        guard b.count > 12 else { exitUsage("\(path): truncated .npy") }
-        headerLen = Int(b[8]) | Int(b[9]) << 8 | Int(b[10]) << 16 | Int(b[11]) << 24
-        start = 12
-    }
-    guard b.count >= start + headerLen,
-          let header = String(bytes: b[start..<(start + headerLen)], encoding: .ascii) else {
-        exitUsage("\(path): bad .npy header")
-    }
-    guard header.contains("'<f4'"), header.contains("'fortran_order': False") else {
-        exitUsage("\(path): need little-endian float32 C-order (<f4); header \(header)")
-    }
-    let body = d.subdata(in: (start + headerLen)..<d.count)
-    guard body.count == wantBytes else {
-        exitUsage("\(path): \(body.count) data bytes, want \(wantBytes) (fp32 \(StaffInputSpec.nchwShape))")
-    }
-    return body
 }
 
 // MARK: - Fixtures
@@ -332,26 +335,61 @@ do {
 
 if positional.first == "decode-staff" {
     guard positional.count == 2 else { exitUsage("decode-staff needs exactly one input file") }
-    let models = requireONNX()
     let tensor = loadStaffTensor(positional[1])
+    // Oracle: --expected FILE, else expected.tokens.json next to the input tensor.
+    let inputURL = URL(fileURLWithPath: positional[1], relativeTo: cwd).standardizedFileURL
+    let expectedURL = expectedOverride.map { URL(fileURLWithPath: $0, relativeTo: cwd).standardizedFileURL }
+        ?? inputURL.deletingLastPathComponent().appendingPathComponent("expected.tokens.json")
+    let models = requireONNX()
+    let symbols: [EncodedSymbol]
     do {
-        let symbols = try decodeStaff(normalized: tensor, models: models, vocab: vocab)
-        if jsonOut {
-            let enc = JSONEncoder()
-            enc.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let body = try enc.encode(OracleSymbolSequence(encoded: symbols).symbols)
-            out(String(decoding: body, as: UTF8.self))
-        } else {
-            out("# \(symbols.count) symbols: index rhythm pitch lift articulation slur position")
-            for (i, s) in symbols.enumerated() {
-                out("\(i)\t\(s.rhythm)\t\(s.pitch)\t\(s.lift)\t\(s.articulation)\t\(s.slur)\t\(s.position)")
-            }
-        }
-        exit(0)
+        symbols = try decodeStaff(tensor: tensor, models: models, vocab: vocab)
     } catch {
         err("omr-test: decode-staff failed: \(error)")
         exit(1)
     }
+    if jsonOut {
+        let enc = JSONEncoder()
+        enc.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if let body = try? enc.encode(OracleSymbolSequence(encoded: symbols).symbols) {
+            out(String(decoding: body, as: UTF8.self))
+        }
+    }
+    out("decode-staff: \(inputURL.path)")
+    out("models: \(models.encoderFP16.lastPathComponent) (fp16) | \(models.decoderFP32.lastPathComponent) (fp32 CPU)")
+    out("# idx\trhythm\tpitch\tlift\tarticulation")
+    for (i, s) in symbols.enumerated() {
+        out("\(i)\t\(s.rhythm)\t\(s.pitch)\t\(s.lift)\t\(s.articulation)")
+    }
+    out("symbols: \(symbols.count)")
+    struct FourStreams: Equatable { var rhythm, pitch, lift, articulation: String }
+    let got = symbols.map { FourStreams(rhythm: $0.rhythm, pitch: $0.pitch, lift: $0.lift, articulation: $0.articulation) }
+    guard let data = try? Data(contentsOf: expectedURL),
+          let tf = try? JSONDecoder().decode(TokenFile.self, from: data), !tf.symbols.isEmpty else {
+        out("expected: \(expectedURL.path) missing/unreadable; token_edit=n/a")
+        exit(1)
+    }
+    let want = tf.symbols.map { FourStreams(rhythm: $0.rhythm, pitch: $0.pitch, lift: $0.lift, articulation: $0.articulation) }
+    let dist = levenshtein(got, want)
+    let perStream = [
+        ("rhythm", levenshtein(got.map(\.rhythm), want.map(\.rhythm))),
+        ("pitch", levenshtein(got.map(\.pitch), want.map(\.pitch))),
+        ("lift", levenshtein(got.map(\.lift), want.map(\.lift))),
+        ("articulation", levenshtein(got.map(\.articulation), want.map(\.articulation))),
+    ].map { "\($0.0)=\($0.1)" }.joined(separator: " ")
+    out("expected: \(expectedURL.path) (\(want.count) symbols)")
+    out("token_edit=\(dist) (symbol = rhythm/pitch/lift/articulation tuple; per stream: \(perStream))")
+    if dist == 0 {
+        out("PASS exact match")
+        exit(0)
+    }
+    if let i = (0..<min(got.count, want.count)).first(where: { got[$0] != want[$0] }) ?? (got.count != want.count ? min(got.count, want.count) : nil) {
+        let g = i < got.count ? "\(got[i])" : "<end>"
+        let w = i < want.count ? "\(want[i])" : "<end>"
+        out("first mismatch at symbol \(i): got \(g) want \(w)")
+    }
+    out("FAIL token mismatch")
+    exit(1)
 }
 
 guard let fixturesRoot = resolveDir(fixturesOverride, "fixtures") else {

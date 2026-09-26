@@ -8,8 +8,8 @@ Priority is **implementation first**. Keep test tooling to what's needed to prov
 
 ## Now: Gate 1, where Swift decoder tokens exactly match the homr oracle
 - [x] **iOS** (merged by **Core** into `main`): Linux ONNX Runtime C wrapper `ORTCSession` on `ios/ort-c-linux`. It conforms to `ORTSessionBackend`, runs on CPU only, returns fp16 bytes uncast, and gets the ORT library through a pinned fetch.
-- [ ] **Core**: Merge `ios/ort-c-linux`, then run `omr-test decode-staff fixtures/oracle.c_scale_staff/staff.npy` on Linux and post the raw tokens.
-- [ ] **Core**: Gate 1 passes when `decodeStaff(tensor:)` output equals the 12 tokens in `fixtures/oracle.c_scale_staff/expected.tokens.json`, with a real exit code.
+- [x] **Core**: Merge `ios/ort-c-linux`, then run `omr-test decode-staff fixtures/oracle.c_scale_staff/staff.npy` on Linux and post the raw tokens (12 symbols, token_edit=0, exit 0).
+- [x] **Core**: Gate 1 passes when `decodeStaff(tensor:)` output equals the 12 tokens in `fixtures/oracle.c_scale_staff/expected.tokens.json`, with a real exit code. PASSED on Linux ORT 1.30.0 CPU: exact match (all 6 fields), `omr-test` exit 0; `Gate1ORTCTests` in `swift test` (52/52).
 - [ ] **iOS**: Point `Tests/Gate1StaffTokenMatchTests.swift` at `fixtures/oracle.c_scale_staff/`, loading `staff.npy` and running `decodeStaff`.
 
 ## Next
