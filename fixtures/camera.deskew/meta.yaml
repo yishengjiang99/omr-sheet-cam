@@ -1,8 +1,9 @@
 id: camera.deskew
 match_tier: midi_distance
-clef: TBD
-key: TBD
+clef: treble
+key: C
 time: "4/4"
-source: TBD  # LilyPond / Verovio / MuseScore / oracle
-license: TBD
-# midi_distance_threshold: 2   # only for midi_distance (events per 16 sounding notes)
+source: TBD camera photo of mono.c_major_scale ~15°
+license: CC0 synthetic
+midi_distance_threshold: 2
+notes: Threshold ≤2 events per 16 sounding notes. notes.csv mirrors scale GT; image follow-up.

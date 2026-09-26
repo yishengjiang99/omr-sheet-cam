@@ -70,4 +70,18 @@ final class SMFWriterTests: XCTestCase {
         XCTAssertEqual(SymbolMIDIMapping.midiNote(pitchToken: "C4", liftToken: "#"), 61)
         XCTAssertNil(SymbolMIDIMapping.midiNote(pitchToken: "."))
     }
+
+    func testChordSharesOnset() {
+        let symbols: [EncodedSymbol] = [
+            EncodedSymbol(rhythm: "note_4", pitch: "C4", lift: "_", articulation: "_", slur: "_", position: "upper"),
+            EncodedSymbol(rhythm: "chord", pitch: ".", lift: ".", articulation: ".", slur: ".", position: "."),
+            EncodedSymbol(rhythm: "note_4", pitch: "E4", lift: "_", articulation: "_", slur: "_", position: "upper"),
+            EncodedSymbol(rhythm: "chord", pitch: ".", lift: ".", articulation: ".", slur: ".", position: "."),
+            EncodedSymbol(rhythm: "note_4", pitch: "G4", lift: "_", articulation: "_", slur: "_", position: "upper"),
+        ]
+        let events = SymbolMIDIMapping.noteEvents(from: symbols)
+        XCTAssertEqual(events.map(\.midiNote), [60, 64, 67])
+        XCTAssertEqual(events.map(\.onsetTicks), [0, 0, 0])
+        XCTAssertEqual(Set(events.map(\.durationTicks)), [480])
+    }
 }

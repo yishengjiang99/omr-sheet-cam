@@ -80,33 +80,82 @@ public enum SymbolMIDIMapping: Sendable {
         rhythm.hasPrefix("rest_")
     }
 
+    /// Map position token → staff index for canonical `(tick, pitch, duration, staff)` compares.
+    /// `upper` / `upper2` → 0; `lower` / `lower2` → 1; unknown → 0.
+    public static func staffIndex(positionToken: String) -> Int {
+        switch positionToken {
+        case "lower", "lower2":
+            return 1
+        default:
+            return 0
+        }
+    }
+
     /// Build sequential note events from decoded symbols (skips non-notes; advances time on rests).
-    /// Chord tokens are ignored for Gate-1 monophonic C-scale; no invented pitches.
+    ///
+    /// Chord handling mirrors upstream `_group_into_chords`: a `chord` rhythm marker means the
+    /// **next** note shares onset with the previous note (no invented pitches).
+    /// Barlines, clefs, key/time signatures are no-ops for the cursor.
     public static func noteEvents(
         from symbols: [EncodedSymbol],
         tpq: Int = Int(SMFWriter.ticksPerQuarter)
     ) -> [SMFWriter.NoteEvent] {
         var onset = 0
+        var chordAnchor = 0
+        var shareNextOnset = false
         var events: [SMFWriter.NoteEvent] = []
         for sym in symbols {
+            if sym.rhythm == "chord" {
+                shareNextOnset = true
+                continue
+            }
             if isRestRhythm(sym.rhythm) {
                 let dur = durationTicks(rhythmToken: sym.rhythm, tpq: tpq) ?? tpq
                 onset += dur
+                shareNextOnset = false
                 continue
             }
-            guard isNoteRhythm(sym.rhythm) else { continue }
+            if sym.rhythm.hasPrefix("clef_") {
+                // New clef starts a staff stream: reset cursor (grand-staff sequential dumps).
+                if !events.isEmpty {
+                    onset = 0
+                    chordAnchor = 0
+                }
+                shareNextOnset = false
+                continue
+            }
+            guard isNoteRhythm(sym.rhythm) else {
+                // barline / keySignature / timeSignature / etc. — cursor no-op
+                shareNextOnset = false
+                continue
+            }
             guard let midi = midiNote(pitchToken: sym.pitch, liftToken: sym.lift) else {
+                shareNextOnset = false
                 continue
             }
             let dur = durationTicks(rhythmToken: sym.rhythm, tpq: tpq) ?? tpq
             // Grace (kern contains G) → zero-duration in upstream; skip sounding note.
             if let kern = kernSuffix(fromRhythm: sym.rhythm), kern.contains("G") {
+                shareNextOnset = false
                 continue
             }
+            let tick: Int
+            if shareNextOnset {
+                tick = chordAnchor
+                shareNextOnset = false
+            } else {
+                tick = onset
+                chordAnchor = onset
+                onset += dur
+            }
             events.append(
-                SMFWriter.NoteEvent(midiNote: midi, onsetTicks: onset, durationTicks: max(1, dur))
+                SMFWriter.NoteEvent(
+                    midiNote: midi,
+                    onsetTicks: tick,
+                    durationTicks: max(1, dur),
+                    staff: staffIndex(positionToken: sym.position)
+                )
             )
-            onset += dur
         }
         return events
     }

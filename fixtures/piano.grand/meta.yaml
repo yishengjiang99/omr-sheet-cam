@@ -1,8 +1,8 @@
 id: piano.grand
 match_tier: exact_midi
-clef: TBD
-key: TBD
+clef: grand
+key: C
 time: "4/4"
-source: TBD  # LilyPond / Verovio / MuseScore / oracle
-license: TBD
-# midi_distance_threshold: 2   # only for midi_distance (events per 16 sounding notes)
+source: hand-authored (vocabulary.json tokens only)
+license: CC0 synthetic
+notes: Two staves × 4 bars of C-E-G-C quarters. Layer B exact_midi; tokens present for writer.

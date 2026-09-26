@@ -29,7 +29,8 @@ Fidelity pass on the staff-only decode loop — **no ONNX weights**, **no UI/geo
 | Oracle compare hook | `OracleSymbolSequence` / `decodeStaffOracleSequence` (no invented vocab) |
 | SMF format 1 @ 480 TPQ | Writer + 4/4 meta; `SymbolMIDIMapping` interprets tokenizer `note_*`/`C4` strings only |
 | Encoder CoreML EP + Decoder ORT CPU wiring | Compile-safe stubs + TODOs |
-| C-scale oracle fixtures | Placeholder path — **blocked** |
+| C-scale oracle fixtures | Schema + stubs on `fixtures/oracle.c_scale_staff/` — **22/22 tokens blocked** on onnx/homr-research |
+| Writer-only Layer B | `WriterOnlyFixtureTests` vs repo-root `fixtures/` (7 synthetics complete) |
 | ONNX models in repo | **Blocked** (download from upstream release) |
 | ORT Swift bindings | **Blocked** |
 | SegNet / full-page geometry / App UI | Out of scope (do not start) |
@@ -38,7 +39,7 @@ Fidelity pass on the staff-only decode loop — **no ONNX weights**, **no UI/geo
 
 1. Bundle Encoder fp16 + Decoder fp32 ONNX from [onnx_checkpoints](https://github.com/liebharc/homr/releases/tag/onnx_checkpoints) (LFS / release assets; do not requantize decoder).
 2. Wire ORT Swift sessions (CoreML EP encoder + CPU-only decoder).
-3. Drop C-scale fixtures into `Tests/.../Fixtures/c_scale_staff_oracle/` from `~/workspace/homr-research`.
+3. Export real 22/22 oracle tokens into `fixtures/oracle.c_scale_staff/` from `~/workspace/homr-research` (do not invent).
 4. Run oracle token match (`OracleSymbolSequence`); only then leave Gate-1.
 
 ## Model execution providers (locked)
@@ -95,7 +96,13 @@ Sources/OMRHomrIOS/
     Vocab/vocabulary.json          # Vocabulary() export
     Tokenizers/tokenizer_*.json    # upstream HF WordLevel copies
 Tests/OMRHomrIOSTests/
-  Fixtures/c_scale_staff_oracle/   # oracle hook (empty until research export)
+  WriterOnlyFixtureTests.swift     # Layer B: tokens → notes.csv (no image)
+  Fixtures/                        # legacy oracle hook path (see repo-root fixtures/)
+
+Repo-root `fixtures/` (consumed by package tests):
+  mono.c_major_scale, mono.sharps_flats, mono.rhythms, mono.rests,
+  poly.chord, clefs.bass, piano.grand, camera.deskew, oracle.c_scale_staff
+  See fixtures/README.md + docs/TESTING.md.
 ```
 
 ## Upstream

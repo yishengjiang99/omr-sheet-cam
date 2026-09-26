@@ -1,5 +1,7 @@
 {
-  "streams": {},
+  "source": "TBD LilyPond + ~15\u00b0 deskew photo",
+  "staff": "camera.deskew",
+  "status": "stub",
   "symbols": [],
-  "status": "stub"
+  "todo": "Generate input.jpg (~15\u00b0 rotation of mono.c_major_scale) in follow-up"
 }

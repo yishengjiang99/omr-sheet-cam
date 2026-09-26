@@ -1,5 +1,112 @@
 {
-  "streams": {},
-  "symbols": [],
-  "status": "stub"
+  "source": "hand-authored writer GT",
+  "staff": "clefs.bass",
+  "status": "complete",
+  "symbol_count": 13,
+  "symbols": [
+    {
+      "rhythm": "clef_F4",
+      "pitch": ".",
+      "lift": ".",
+      "articulation": ".",
+      "slur": ".",
+      "position": "lower"
+    },
+    {
+      "rhythm": "keySignature_0",
+      "pitch": ".",
+      "lift": ".",
+      "articulation": ".",
+      "slur": ".",
+      "position": "lower"
+    },
+    {
+      "rhythm": "timeSignature/4",
+      "pitch": ".",
+      "lift": ".",
+      "articulation": ".",
+      "slur": ".",
+      "position": "lower"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "C3",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "lower"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "D3",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "lower"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "E3",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "lower"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "F3",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "lower"
+    },
+    {
+      "rhythm": "barline",
+      "pitch": ".",
+      "lift": ".",
+      "articulation": ".",
+      "slur": ".",
+      "position": "lower"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "G3",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "lower"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "A3",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "lower"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "B3",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "lower"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "C4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "lower"
+    },
+    {
+      "rhythm": "barline",
+      "pitch": ".",
+      "lift": ".",
+      "articulation": ".",
+      "slur": ".",
+      "position": "lower"
+    }
+  ]
 }

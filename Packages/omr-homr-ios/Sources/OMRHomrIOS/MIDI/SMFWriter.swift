@@ -56,19 +56,23 @@ public struct SMFWriter: Sendable {
         public var durationTicks: Int
         public var channel: UInt8
         public var velocity: UInt8?
+        /// Staff index for Layer B canonicalize compares (`expected.notes.csv` column).
+        public var staff: Int
 
         public init(
             midiNote: UInt8,
             onsetTicks: Int,
             durationTicks: Int,
             channel: UInt8 = 0,
-            velocity: UInt8? = nil
+            velocity: UInt8? = nil,
+            staff: Int = 0
         ) {
             self.midiNote = midiNote
             self.onsetTicks = onsetTicks
             self.durationTicks = durationTicks
             self.channel = channel
             self.velocity = velocity
+            self.staff = staff
         }
     }
 

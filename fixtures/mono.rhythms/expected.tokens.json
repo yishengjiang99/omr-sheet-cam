@@ -1,5 +1,176 @@
 {
-  "streams": {},
-  "symbols": [],
-  "status": "stub"
+  "source": "hand-authored writer GT",
+  "staff": "mono.rhythms",
+  "status": "complete",
+  "symbol_count": 21,
+  "symbols": [
+    {
+      "rhythm": "clef_G2",
+      "pitch": ".",
+      "lift": ".",
+      "articulation": ".",
+      "slur": ".",
+      "position": "upper"
+    },
+    {
+      "rhythm": "keySignature_0",
+      "pitch": ".",
+      "lift": ".",
+      "articulation": ".",
+      "slur": ".",
+      "position": "upper"
+    },
+    {
+      "rhythm": "timeSignature/4",
+      "pitch": ".",
+      "lift": ".",
+      "articulation": ".",
+      "slur": ".",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_1",
+      "pitch": "C4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "barline",
+      "pitch": ".",
+      "lift": ".",
+      "articulation": ".",
+      "slur": ".",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_2",
+      "pitch": "D4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_2",
+      "pitch": "E4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "barline",
+      "pitch": ".",
+      "lift": ".",
+      "articulation": ".",
+      "slur": ".",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "F4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_4",
+      "pitch": "G4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_8",
+      "pitch": "A4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_8",
+      "pitch": "B4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_16",
+      "pitch": "C5",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_16",
+      "pitch": "C5",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_16",
+      "pitch": "B4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_16",
+      "pitch": "A4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "barline",
+      "pitch": ".",
+      "lift": ".",
+      "articulation": ".",
+      "slur": ".",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_4.",
+      "pitch": "G4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_8",
+      "pitch": "F4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "note_2",
+      "pitch": "E4",
+      "lift": "_",
+      "articulation": "_",
+      "slur": "_",
+      "position": "upper"
+    },
+    {
+      "rhythm": "barline",
+      "pitch": ".",
+      "lift": ".",
+      "articulation": ".",
+      "slur": ".",
+      "position": "upper"
+    }
+  ]
 }
