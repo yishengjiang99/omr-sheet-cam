@@ -4,6 +4,15 @@ Standalone native iOS/iPadOS app: photo of engraved Western sheet music → on-d
 
 **Not** optical mark recognition (bubble sheets).
 
+## Open in Xcode
+
+Open **`OMRSheetCam.xcodeproj`** (iOS 17+, links local package `Packages/omr-homr-ios` → product `OMRHomrIOS`).
+
+App identity (locked): see `docs/asc/APP_IDENTITY.md` — display name **AI Camera - Music Reader**, bundle id `com.ragnus.vp`.
+
+Gate-1 shell only: no capture UI yet. Blocked on onnx_checkpoints + C-scale fixtures + ORT bindings.
+
+
 ## Locked pipeline
 
 Camera / Photos → optional Vision crop → SegNet fp16 (CoreML) → staff geometry + dewarp (CPU) → Encoder fp16 (CoreML) → cast context fp16→fp32 → Decoder fp32 (ORT CPU) → SMF MIDI + `noteLayout` → local playback + highlights.
@@ -13,7 +22,7 @@ Camera / Photos → optional Vision crop → SegNet fp16 (CoreML) → staff geom
 | Package | License | Contents |
 |---------|---------|----------|
 | `omr-homr-ios` | AGPL-3.0 | OMR, geometry, tokenizers, decode loop, MIDI writer |
-| App UI / Player | TBD (separate) | Consumes `midi` + `noteLayout` only |
+| App (`OMRSheetCam`) | TBD (separate from AGPL) | Gate-1 shell; consumes `midi` + `noteLayout` only |
 
 ## Stable API
 

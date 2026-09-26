@@ -1,0 +1,448 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* OMRSheetCamApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* OMRSheetCamApp.swift */; };
+		A10000000000000000000002 /* Gate1RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* Gate1RootView.swift */; };
+		A10000000000000000000003 /* SimpleMIDIPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* SimpleMIDIPlayer.swift */; };
+		A10000000000000000000004 /* SessionWarmup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* SessionWarmup.swift */; };
+		A10000000000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* Assets.xcassets */; };
+		A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */; };
+		A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */; };
+		A10000000000000000000008 /* OMRHomrIOS in Frameworks */ = {isa = PBXBuildFile; productRef = P10000000000000000000002 /* OMRHomrIOS */; };
+		A10000000000000000000009 /* OMRHomrIOS in Frameworks */ = {isa = PBXBuildFile; productRef = P10000000000000000000003 /* OMRHomrIOS */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C10000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E10000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = T10000000000000000000001;
+			remoteInfo = OMRSheetCam;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		B10000000000000000000001 /* OMRSheetCamApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OMRSheetCamApp.swift; sourceTree = "<group>"; };
+		B10000000000000000000002 /* Gate1RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gate1RootView.swift; sourceTree = "<group>"; };
+		B10000000000000000000003 /* SimpleMIDIPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleMIDIPlayer.swift; sourceTree = "<group>"; };
+		B10000000000000000000004 /* SessionWarmup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWarmup.swift; sourceTree = "<group>"; };
+		B10000000000000000000005 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gate1StaffTokenMatchTests.swift; sourceTree = "<group>"; };
+		B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDIPlayerSmokeTests.swift; sourceTree = "<group>"; };
+		B10000000000000000000008 /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fixtures; sourceTree = "<group>"; };
+		B10000000000000000000010 /* OMRSheetCam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OMRSheetCam.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000000000000000000011 /* OMRSheetCamTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OMRSheetCamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F10000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000008 /* OMRHomrIOS in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F10000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000009 /* OMRHomrIOS in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		G10000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				G10000000000000000000002 /* Sources */,
+				G10000000000000000000006 /* Tests */,
+				G10000000000000000000007 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		G10000000000000000000002 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				G10000000000000000000003 /* App */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		G10000000000000000000003 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000001 /* OMRSheetCamApp.swift */,
+				B10000000000000000000002 /* Gate1RootView.swift */,
+				G10000000000000000000004 /* MIDI */,
+				G10000000000000000000005 /* Inference */,
+				B10000000000000000000005 /* Assets.xcassets */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		G10000000000000000000004 /* MIDI */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000003 /* SimpleMIDIPlayer.swift */,
+			);
+			path = MIDI;
+			sourceTree = "<group>";
+		};
+		G10000000000000000000005 /* Inference */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000004 /* SessionWarmup.swift */,
+			);
+			path = Inference;
+			sourceTree = "<group>";
+		};
+		G10000000000000000000006 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */,
+				B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */,
+				B10000000000000000000008 /* Fixtures */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		G10000000000000000000007 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000010 /* OMRSheetCam.app */,
+				B10000000000000000000011 /* OMRSheetCamTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		T10000000000000000000001 /* OMRSheetCam */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L10000000000000000000002 /* Build configuration list for PBXNativeTarget "OMRSheetCam" */;
+			buildPhases = (
+				S10000000000000000000001 /* Sources */,
+				F10000000000000000000001 /* Frameworks */,
+				R10000000000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OMRSheetCam;
+			packageProductDependencies = (
+				P10000000000000000000002 /* OMRHomrIOS */,
+			);
+			productName = OMRSheetCam;
+			productReference = B10000000000000000000010 /* OMRSheetCam.app */;
+			productType = "com.apple.product-type.application";
+		};
+		T10000000000000000000002 /* OMRSheetCamTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L10000000000000000000003 /* Build configuration list for PBXNativeTarget "OMRSheetCamTests" */;
+			buildPhases = (
+				S10000000000000000000002 /* Sources */,
+				F10000000000000000000002 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D10000000000000000000001 /* PBXTargetDependency */,
+			);
+			name = OMRSheetCamTests;
+			packageProductDependencies = (
+				P10000000000000000000003 /* OMRHomrIOS */,
+			);
+			productName = OMRSheetCamTests;
+			productReference = B10000000000000000000011 /* OMRSheetCamTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E10000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					T10000000000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					T10000000000000000000002 = {
+						CreatedOnToolsVersion = 15.0;
+						TestTargetID = T10000000000000000000001;
+					};
+				};
+			};
+			buildConfigurationList = L10000000000000000000001 /* Build configuration list for PBXProject "OMRSheetCam" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = G10000000000000000000001;
+			packageReferences = (
+				P10000000000000000000001 /* XCLocalSwiftPackageReference "Packages/omr-homr-ios" */,
+			);
+			productRefGroup = G10000000000000000000007 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				T10000000000000000000001 /* OMRSheetCam */,
+				T10000000000000000000002 /* OMRSheetCamTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		R10000000000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000005 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		S10000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000001 /* OMRSheetCamApp.swift in Sources */,
+				A10000000000000000000002 /* Gate1RootView.swift in Sources */,
+				A10000000000000000000003 /* SimpleMIDIPlayer.swift in Sources */,
+				A10000000000000000000004 /* SessionWarmup.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		S10000000000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */,
+				A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D10000000000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = T10000000000000000000001 /* OMRSheetCam */;
+			targetProxy = C10000000000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		BC1000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		BC1000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		BC1000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGNING_ALLOWED = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "AI Camera - Music Reader";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ragnus.vp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		BC1000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGNING_ALLOWED = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "AI Camera - Music Reader";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ragnus.vp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		BC1000000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGNING_ALLOWED = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ragnus.vp.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OMRSheetCam.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OMRSheetCam";
+			};
+			name = Debug;
+		};
+		BC1000000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGNING_ALLOWED = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ragnus.vp.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OMRSheetCam.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OMRSheetCam";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		L10000000000000000000001 /* Build configuration list for PBXProject "OMRSheetCam" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BC1000000000000000000001 /* Debug */,
+				BC1000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		L10000000000000000000002 /* Build configuration list for PBXNativeTarget "OMRSheetCam" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BC1000000000000000000003 /* Debug */,
+				BC1000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		L10000000000000000000003 /* Build configuration list for PBXNativeTarget "OMRSheetCamTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BC1000000000000000000005 /* Debug */,
+				BC1000000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		P10000000000000000000001 /* XCLocalSwiftPackageReference "Packages/omr-homr-ios" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/omr-homr-ios;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		P10000000000000000000002 /* OMRHomrIOS */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P10000000000000000000001 /* XCLocalSwiftPackageReference "Packages/omr-homr-ios" */;
+			productName = OMRHomrIOS;
+		};
+		P10000000000000000000003 /* OMRHomrIOS */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P10000000000000000000001 /* XCLocalSwiftPackageReference "Packages/omr-homr-ios" */;
+			productName = OMRHomrIOS;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = E10000000000000000000001 /* Project object */;
+}
