@@ -6,6 +6,9 @@ import Foundation
 /// Never GPU / WebGPU / Metal / CoreML for the decoder.
 /// Do not requantize the published decoder checkpoint.
 ///
+/// Cache layout mirrors `ScoreDecoder.init_cache`:
+/// `decoder_depth * 4` KV entries, each `[1, heads, cache_len, head_dim]`.
+///
 /// TODO(gate-1): Attach ORT Swift `CPUExecutionProvider` to bundled Decoder fp32 ONNX.
 public final class DecoderSession: @unchecked Sendable {
     public let vocabulary: HomrVocabulary
@@ -47,4 +50,13 @@ public final class DecoderSession: @unchecked Sendable {
     public var decoderDepth: Int { 8 }
     public var decoderHeads: Int { 8 }
     public var decoderDim: Int { 512 }
+    public var headDim: Int { decoderDim / decoderHeads }
+    /// `decoder_depth * 4` — self/cross K/V per layer (upstream `init_cache`).
+    public var kvCacheTensorCount: Int { decoderDepth * 4 }
+
+    /// Empty KV cache shapes for `cache_len == 0` (start of generate).
+    public func initialCacheShapes(cacheLen: Int = 0) -> [[Int]] {
+        let shape = [1, decoderHeads, cacheLen, headDim]
+        return Array(repeating: shape, count: kvCacheTensorCount)
+    }
 }

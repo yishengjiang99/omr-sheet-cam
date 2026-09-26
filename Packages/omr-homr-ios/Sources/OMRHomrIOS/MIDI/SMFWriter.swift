@@ -2,18 +2,52 @@ import Foundation
 
 /// Minimal Standard MIDI File writer — **Format 1**, **480 TPQ**, metrical division.
 ///
-/// Web-player-compatible subset: tempo track + one note track.
-/// Gate-1: usable for header/structure tests and later token→note mapping.
+/// Web-player-compatible subset: tempo (+ optional time-signature) track + one note track.
+/// Gate-1: structure tests + `SymbolMIDIMapping.noteEvents` for tokenizer-faithful C-scale writeout.
 public struct SMFWriter: Sendable {
     public static let ticksPerQuarter: UInt16 = 480
     public static let format: UInt16 = 1
 
     public var tempoMicroseconds: UInt32
     public var defaultVelocity: UInt8
+    /// When set, writes FF 58 time-signature meta on the conductor track (metrical SMF).
+    public var timeSignature: TimeSignature?
 
-    public init(tempoMicroseconds: UInt32 = 500_000, defaultVelocity: UInt8 = 80) {
+    public struct TimeSignature: Equatable, Sendable {
+        public var numerator: UInt8
+        public var denominatorPowerOfTwo: UInt8 // 2 = quarter (denom 4), MIDI meta encoding
+        public var metronome: UInt8
+        public var thirtySeconds: UInt8
+
+        /// Common-time 4/4.
+        public static let fourFour = TimeSignature(
+            numerator: 4,
+            denominatorPowerOfTwo: 2,
+            metronome: 24,
+            thirtySeconds: 8
+        )
+
+        public init(
+            numerator: UInt8,
+            denominatorPowerOfTwo: UInt8,
+            metronome: UInt8 = 24,
+            thirtySeconds: UInt8 = 8
+        ) {
+            self.numerator = numerator
+            self.denominatorPowerOfTwo = denominatorPowerOfTwo
+            self.metronome = metronome
+            self.thirtySeconds = thirtySeconds
+        }
+    }
+
+    public init(
+        tempoMicroseconds: UInt32 = 500_000,
+        defaultVelocity: UInt8 = 80,
+        timeSignature: TimeSignature? = .fourFour
+    ) {
         self.tempoMicroseconds = tempoMicroseconds
         self.defaultVelocity = defaultVelocity
+        self.timeSignature = timeSignature
     }
 
     public struct NoteEvent: Equatable, Sendable {
@@ -46,6 +80,12 @@ public struct SMFWriter: Sendable {
         return assembleFile(tracks: tracks)
     }
 
+    /// Convenience: map decoded symbols via `SymbolMIDIMapping` then write.
+    /// Skips symbols that are not `note_*` with a scientific pitch token — no invented pitches.
+    public func write(symbols: [EncodedSymbol]) -> Data {
+        write(notes: SymbolMIDIMapping.noteEvents(from: symbols, tpq: Int(Self.ticksPerQuarter)))
+    }
+
     /// Empty score (tempo + empty note track) — useful for structure tests.
     public func writeEmpty() -> Data {
         write(notes: [])
@@ -74,6 +114,16 @@ public struct SMFWriter: Sendable {
         events.append(contentsOf: encodeVLQ(0))
         events.append(contentsOf: [0xFF, 0x51, 0x03])
         events.append(u24be(tempoMicroseconds))
+        if let ts = timeSignature {
+            events.append(contentsOf: encodeVLQ(0))
+            events.append(contentsOf: [
+                0xFF, 0x58, 0x04,
+                ts.numerator,
+                ts.denominatorPowerOfTwo,
+                ts.metronome,
+                ts.thirtySeconds,
+            ])
+        }
         // end of track
         events.append(contentsOf: encodeVLQ(0))
         events.append(contentsOf: [0xFF, 0x2F, 0x00])
@@ -189,6 +239,48 @@ public enum SMFHeaderInspector {
             i += 8 + len
         }
         return count
+    }
+
+    /// True when conductor track contains FF 58 time-signature meta (metrical cue).
+    public static func containsTimeSignatureMeta(in data: Data) -> Bool {
+        guard data.count >= 14 else { return false }
+        var i = 14
+        let bytes = [UInt8](data)
+        // Inspect first MTrk only (conductor)
+        guard i + 8 <= bytes.count else { return false }
+        guard String(bytes: bytes[i..<i + 4], encoding: .ascii) == "MTrk" else { return false }
+        let len = Int(u32(data, i + 4))
+        let start = i + 8
+        let end = min(bytes.count, start + len)
+        var j = start
+        while j + 2 < end {
+            // Skip VLQ delta
+            while j < end, bytes[j] & 0x80 != 0 { j += 1 }
+            if j >= end { break }
+            j += 1 // last VLQ byte
+            guard j + 2 < end else { break }
+            if bytes[j] == 0xFF, bytes[j + 1] == 0x58 {
+                return true
+            }
+            if bytes[j] == 0xFF {
+                // meta: FF type len ...
+                guard j + 2 < end else { break }
+                let metaLen = Int(bytes[j + 2])
+                j += 3 + metaLen
+                continue
+            }
+            // Channel voice / other — rough skip: status + 1 or 2 data bytes
+            let status = bytes[j]
+            let hi = status >> 4
+            if hi == 0xC || hi == 0xD {
+                j += 2
+            } else if status == 0xF0 || status == 0xF7 {
+                break
+            } else {
+                j += 3
+            }
+        }
+        return false
     }
 
     private static func u16(_ data: Data, _ offset: Int) -> UInt16 {

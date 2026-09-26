@@ -2,10 +2,11 @@ import Foundation
 
 /// Public entry for App / Player consumers.
 ///
-/// Gate-1 status: returns a structured error / empty MIDI until encoder+decoder
-/// ORT sessions and C-scale oracle match are wired. Do not call from UI yet.
+/// Gate-1 status: returns a structured error until encoder+decoder ORT sessions
+/// and C-scale oracle match are wired. App shell (when linked) should expect
+/// `staffOnlyGate1NotReady` (or `modelsNotBundled`) for staff-only calls.
 public enum OMRHomrIOS {
-    /// Stable API target (stubbed for gate-1 scaffold).
+    /// Stable API target for the app shell.
     ///
     /// - Returns: SMF format 1 @ 480 TPQ + note layout metadata.
     /// - Throws: `OMRError` when models/sessions are missing or staff-only path is not ready.
