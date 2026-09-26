@@ -90,12 +90,8 @@ struct Gate1RootView: View {
                 }
 
                 Section("SF2 player") {
-                    if let sample = try? SampleMIDI.sweden() {
-                        NavigationLink("Play sample (sweden.midi, GeneralUser GS)") {
-                            PlayerView(midi: sample, title: "Sample: Sweden")
-                        }
-                    } else {
-                        Text("sweden.midi not bundled").font(.footnote).foregroundStyle(.orange)
+                    NavigationLink("Play sample (sweden.midi, GeneralUser GS)") {
+                        PlayerView(route: .sample("sweden", title: "Sample: Sweden", autoplay: false))
                     }
                     Text(BundledSoundFont.url() == nil ? "GeneralUser-GS.sf2 missing" : "GeneralUser-GS.sf2 bundled")
                         .font(.footnote.monospaced())

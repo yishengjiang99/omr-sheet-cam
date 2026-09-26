@@ -11,7 +11,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 
 ## Now (in progress)
 - [ ] TestFlight build 4 in internal testing: Run Gate-1 (npy + png) + warmup diagnostics — OMR iOS — `c2950ae`, run 36265488038, VALID 12:21 PM PT
-- [ ] SF2 player wired into the app (Result "Play sample" + Diagnostics → `PlayerView`, bundled sweden.midi + GeneralUser-GS.sf2): waiting on ios-sim — OMR iOS — `466c22d` + this commit
+- [ ] Playlist (samples + every recognized scan saved to Application Support/playlist, swipe-delete scans), Player prev/next + elapsed/total + lock-free live level meter, pinned pulsing Play on Result, Debug screenshot deep links — OMR iOS — this commit, waiting on ios-sim
 - [x] Page pipeline port (homr 7d97c3c `detect_staffs_in_image` + `parse_staffs`): page → SegNet → staffs → per-staff decode → SMF + noteLayout — OMR Core — oracle fixtures in `9839f13`
   - [x] M1: page preprocessing (autocrop, PIL bicubic resize, CLAHE) + SegNet tiling/merge: all 9 oracle pages byte-identical (crop, resized, CLAHE) and 0 SegNet class mismatches; `omr-test segnet-page --compare` — `5fd4ff3`
   - [x] M2: symbol boxes + staff detection + brace/grand-staff → `StaffGeometry` (`PagePipeline.detectStaffs` → `PageStaffLayout`): identical to homr on all 9 oracle pages (every symbol box list, note-head height, staff grids, grand staffs, ensured rows, per-staff geometry + regions); cv2 5.0.0 shape ports (hull, minAreaRect, fitEllipse, intersectConvexConvex, fillPoly, ellipse kernels) exact vs `page_cv2/shapes.json`; `omr-test detect-staffs` — `f9ca549`, ios-sim run 36270574216 green
@@ -28,7 +28,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 
 ## Blocked / waiting on user
 - [ ] GitHub Actions jobs not starting: "recent account payments have failed or your spending limit needs to be increased" (Billing & plans). ios-sim runs 36268535216 (`9839f13`), 36269031273 (`f38272a`), 36269132629 (`e853f3c`, re-run too) never started — User — resolved: ios-sim run 36269240737 on `7432a87` green 1:41 PM PT
-- [ ] SF2 playback on a real device (latency, interruptions, headphone unplug, route changes) — User
+- [ ] SF2 playback on a real device (latency, interruptions, headphone unplug, route changes, level meter, playlist prev/next) — User
 - [ ] Pick a license for SF2Player / gbk (gbk has no LICENSE; package is "all rights reserved" for now) — User
 - [ ] Build 4 Warmup + Gate-1 screenshots from a real device — User
 - [ ] Publish Support/Privacy pages? Drafts in docs/asc/web/, proposed at grepawk.com/music-reader/ — User
@@ -38,6 +38,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 
 ## Done (recent)
 - [x] Page pipeline M3 + M4 (`parseSheetMusicWithLayout(gray8:width:height:)`, `PageInferenceSession`, `omr-test parse-page`): all 9 oracle pages identical to homr end to end, 110 tests — this commit — 2026-09-26
+- [x] SF2 player wired into the app (Result "Play sample" + Diagnostics → `PlayerView`, bundled sweden.midi + GeneralUser-GS.sf2), ios-sim green — `f38272a`, run 36269240737 — 2026-09-26
 - [x] Page pipeline M2 (`PagePipeline.detectStaffs(segmentation:width:height:)` → `PageStaffLayout`): identical to homr staff detection on 9 pages, 104 tests — this commit — 2026-09-26
 - [x] Page pipeline M1 (`PagePipeline.preprocess(gray8:width:height:)`, `SegNetSession`): exact vs homr on 9 pages, 92 tests — `5fd4ff3` — 2026-09-26
 - [x] `Packages/SF2Player` (non-AGPL gbk port): c_scale + sweden render bit-identical PCM to gbk (SHA-256), 44 Linux tests; GeneralUser-GS.sf2 pinned in models.lock — `466c22d` — 2026-09-26

@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5F000000000000000000000A /* ScreenshotDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000009 /* ScreenshotDemo.swift */; };
+		5F0000000000000000000006 /* PlaylistStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000005 /* PlaylistStore.swift */; };
+		5F0000000000000000000007 /* PlaylistScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000006 /* PlaylistScreen.swift */; };
+		5F0000000000000000000008 /* LevelMeterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000007 /* LevelMeterView.swift */; };
+		5F0000000000000000000009 /* PlaylistStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000008 /* PlaylistStoreTests.swift */; };
 		5F0000000000000000000001 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000001 /* PlayerView.swift */; };
 		5F0000000000000000000002 /* Acknowledgements.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000002 /* Acknowledgements.swift */; };
 		5F0000000000000000000003 /* sweden.midi in Resources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000003 /* sweden.midi */; };
@@ -55,6 +60,11 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		5E0000000000000000000009 /* ScreenshotDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotDemo.swift; sourceTree = "<group>"; };
+		5E0000000000000000000005 /* PlaylistStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistStore.swift; sourceTree = "<group>"; };
+		5E0000000000000000000006 /* PlaylistScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistScreen.swift; sourceTree = "<group>"; };
+		5E0000000000000000000007 /* LevelMeterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelMeterView.swift; sourceTree = "<group>"; };
+		5E0000000000000000000008 /* PlaylistStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistStoreTests.swift; sourceTree = "<group>"; };
 		5E0000000000000000000001 /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
 		5E0000000000000000000002 /* Acknowledgements.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Acknowledgements.swift; sourceTree = "<group>"; };
 		5E0000000000000000000003 /* sweden.midi */ = {isa = PBXFileReference; lastKnownFileType = audio.midi; name = sweden.midi; path = fixtures/sf2/sweden.midi; sourceTree = SOURCE_ROOT; };
@@ -146,6 +156,9 @@
 				CB0000000000000000000007 /* PlayerRoute.swift */,
 				5E0000000000000000000001 /* PlayerView.swift */,
 				5E0000000000000000000002 /* Acknowledgements.swift */,
+				5E0000000000000000000005 /* PlaylistStore.swift */,
+				5E0000000000000000000006 /* PlaylistScreen.swift */,
+				5E0000000000000000000007 /* LevelMeterView.swift */,
 				5E0000000000000000000003 /* sweden.midi */,
 			);
 			path = Player;
@@ -174,6 +187,7 @@
 				B10000000000000000000001 /* OMRSheetCamApp.swift */,
 				B10000000000000000000002 /* Gate1RootView.swift */,
 				CB0000000000000000000008 /* RootFlowView.swift */,
+				5E0000000000000000000009 /* ScreenshotDemo.swift */,
 				CC0000000000000000000001 /* Capture */,
 				CC0000000000000000000002 /* Player */,
 				CC0000000000000000000003 /* Diagnostics */,
@@ -213,6 +227,7 @@
 				CB0000000000000000000011 /* DiagnosticsTests.swift */,
 				C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */,
 				5E0000000000000000000004 /* SF2PlayerAppTests.swift */,
+				5E0000000000000000000008 /* PlaylistStoreTests.swift */,
 				B10000000000000000000008 /* Fixtures */,
 			);
 			path = Tests;
@@ -385,6 +400,9 @@
 				A10000000000000000000003 /* SimpleMIDIPlayer.swift in Sources */,
 				5F0000000000000000000001 /* PlayerView.swift in Sources */,
 				5F0000000000000000000002 /* Acknowledgements.swift in Sources */,
+				5F0000000000000000000006 /* PlaylistStore.swift in Sources */,
+				5F0000000000000000000007 /* PlaylistScreen.swift in Sources */,
+				5F0000000000000000000008 /* LevelMeterView.swift in Sources */,
 				A10000000000000000000004 /* ModelWarmup.swift in Sources */,
 				A1000000000000000000000B /* Gate1Runner.swift in Sources */,
 				CA0000000000000000000001 /* CaptureStore.swift in Sources */,
@@ -395,6 +413,7 @@
 				CA0000000000000000000006 /* ResultScreen.swift in Sources */,
 				CA0000000000000000000007 /* PlayerRoute.swift in Sources */,
 				CA0000000000000000000008 /* RootFlowView.swift in Sources */,
+				5F000000000000000000000A /* ScreenshotDemo.swift in Sources */,
 				CA000000000000000000000A /* DiagnosticsLog.swift in Sources */,
 				CA000000000000000000000B /* PromptBuilder.swift in Sources */,
 				CA000000000000000000000C /* PromptCopy.swift in Sources */,
@@ -418,6 +437,7 @@
 				CA0000000000000000000011 /* DiagnosticsTests.swift in Sources */,
 				21EBA7280EC15355707ED56C /* PlaybackSmokeFixtureTests.swift in Sources */,
 				5F0000000000000000000004 /* SF2PlayerAppTests.swift in Sources */,
+				5F0000000000000000000009 /* PlaylistStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
