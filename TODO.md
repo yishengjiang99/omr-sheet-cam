@@ -13,7 +13,8 @@ Priority is **implementation first**. Keep test tooling to what's needed to prov
 - [ ] **iOS**: Point `Tests/Gate1StaffTokenMatchTests.swift` at `fixtures/oracle.c_scale_staff/`, loading `staff.npy` and running `decodeStaff`.
 
 ## Next
-- [ ] **Core**: `Package.swift` pins onnxruntime-swift-package-manager `from: "1.24.2"` but `ort.lock` is 1.30.0 (1.24.2 encoder context differed by up to 0.0039); pin Apple SPM to 1.30.0 so iOS and Linux run identical ORT kernels.
+- [x] **Core**: Pin Apple SPM onnxruntime exactly. Now `exact: "1.24.2"` (was `from:`). 1.30.0 is **not tagged** on onnxruntime-swift-package-manager; newest tag is 1.24.2, see docs/ORT-LINUX.md "iOS version gap".
+- [ ] **Core**: iOS/Linux ORT gap: iOS SPM is 1.24.2 and `ort.lock` is 1.30.0 (1.24.2 encoder context differed by up to 0.0039). Bump to `exact: "1.30.0"` once upstream tags it (open PR microsoft/onnxruntime-swift-package-manager#46).
 - [ ] **Core**: Port homr's staff preprocessing. `staff.png` to tensor must match `staff.npy`; report the max abs diff.
 - [ ] **Yisheng**: When the Mac is online, add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture.
 - [ ] **Yisheng**: Get the app target compiled once with `xcodebuild test` on a Mac or CI (still never compiled).

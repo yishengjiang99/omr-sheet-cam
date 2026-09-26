@@ -9,9 +9,14 @@ import PackageDescription
 /// package ships an Apple-only binary xcframework, so Linux resolution never fetches it) and
 /// the target dependency carries a platform condition as well. On Linux the ORT backend is the
 /// app-side `ORTCSession` (ORT C API).
+///
+/// Version pin: `exact: "1.24.2"` is the newest tag published on onnxruntime-swift-package-manager
+/// (checked 2026-09-26 with `git ls-remote --tags`). Linux `ort.lock` is 1.30.0; the SPM repo's
+/// 1.30.0 bump is still an open PR (microsoft/onnxruntime-swift-package-manager#46, untagged), so
+/// iOS and Linux differ by 1.24.2 vs 1.30.0 until it is tagged. See docs/ORT-LINUX.md "iOS version gap".
 #if canImport(Darwin)
 let ortPackages: [Package.Dependency] = [
-    .package(url: "https://github.com/microsoft/onnxruntime-swift-package-manager", from: "1.24.2"),
+    .package(url: "https://github.com/microsoft/onnxruntime-swift-package-manager", exact: "1.24.2"),
 ]
 let ortTargetDeps: [Target.Dependency] = [
     .product(

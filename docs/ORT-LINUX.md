@@ -6,7 +6,7 @@ iOS/macOS keep `onnxruntime-objc` + CoreML and never compile this path.
 
 | Piece | Path |
 |-------|------|
-| Pinned release + SHA-256 | `ort.lock` (repo root, `models.lock` format; ONNX Runtime **1.30.0**, same as the onnxruntime-objc 1.30.0 pod and pip onnxruntime used by the Python oracle) |
+| Pinned release + SHA-256 | `ort.lock` (repo root, `models.lock` format; ONNX Runtime **1.30.0**, same as the onnxruntime-objc 1.30.0 pod and pip onnxruntime used by the Python oracle; the iOS SwiftPM pin is still 1.24.2, see below) |
 | Fetch + verify + install | `scripts/fetch-ort` → `third_party/onnxruntime/{include,lib}` (gitignored) |
 | System library | `Packages/omr-homr-ios/Sources/CONNXRuntime/{module.modulemap,shim.h}` |
 | Swift wrapper | `Packages/omr-homr-ios/Sources/OMRHomrIOS/Inference/ORTC/ORTCSession.swift` (`#if canImport(CONNXRuntime)`) |
@@ -24,6 +24,20 @@ without ORT stay green (ORTCSession is compiled out). Overrides: `OMR_ORT_C=0|1`
 It adds `-Xcc -I<ort>/include` and `-L<ort>/lib -Xlinker -rpath -Xlinker <ort>/lib` as
 Linux-conditional `unsafeFlags` (fine for the root package and local path dependencies).
 Manual equivalent for another package that reuses the modulemap: `scripts/fetch-ort --print-flags`.
+
+## iOS version gap (SwiftPM)
+
+`Packages/omr-homr-ios/Package.swift` pins `onnxruntime-swift-package-manager` to `exact: "1.24.2"`.
+That is the newest tag published there (`git ls-remote --tags https://github.com/microsoft/onnxruntime-swift-package-manager`
+on 2026-09-26: `v1.15.0` … `v1.19.2`, `1.20.0`, `1.24.1`, `1.24.2`; no `1.24.3`, no `1.30.0`).
+The 1.30.0 bump exists only as open PR microsoft/onnxruntime-swift-package-manager#46 (branch
+`edgchen1/update_to_ort_1.30`, untagged), which points at
+`https://download.onnxruntime.ai/pod-archive-onnxruntime-c-1.30.0.zip`
+(SHA-256 `e6f1670c14406fd9f082bb400ab197a9b0a9646058ca6366e440642e2b54a2ea`; the archive is live, HTTP 200).
+
+Gap: iOS runs ORT **1.24.2**, Linux and the Python oracle run **1.30.0**. On Linux, 1.24.2 gave an fp16
+encoder context that differed from 1.30.0 / Python homr by up to 0.0039. Once a `1.30.0` tag is published,
+switch to `exact: "1.30.0"`. Don't pin to the PR branch or a revision; it isn't a release.
 
 ## Locked rules
 
