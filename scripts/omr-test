@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Repo-root wrapper for the omr-test fixture runner (Packages/omr-homr-ios, target omr-test).
+#   scripts/omr-test --no-onnx                 # writer-only over every fixture
+#   scripts/omr-test decode-staff staff.npy    # encoder → decoder → raw tokens
+# Runs from the caller's cwd so fixtures/ and models/ are found by walking up.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+exec swift run --quiet --package-path "$ROOT/Packages/omr-homr-ios" omr-test "$@"

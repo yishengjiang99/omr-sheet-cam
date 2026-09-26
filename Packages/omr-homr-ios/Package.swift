@@ -36,6 +36,8 @@ let package = Package(
             name: "OMRHomrIOS",
             targets: ["OMRHomrIOS"]
         ),
+        // Non-interactive fixture runner (repo root: scripts/omr-test).
+        .executable(name: "omr-test", targets: ["omr-test"]),
     ],
     dependencies: ortPackages,
     targets: [
@@ -50,6 +52,11 @@ let package = Package(
                 .copy("Resources/Tokenizers"),
                 .copy("Resources/Vocab"),
             ]
+        ),
+        .executableTarget(
+            name: "omr-test",
+            dependencies: ["OMRHomrIOS"],
+            path: "Sources/omr-test"
         ),
         .testTarget(
             name: "OMRHomrIOSTests",
