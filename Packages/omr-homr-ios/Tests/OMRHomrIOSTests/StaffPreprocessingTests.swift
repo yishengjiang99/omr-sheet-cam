@@ -53,7 +53,8 @@ final class StaffPreprocessingTests: XCTestCase {
         let t = StaffPreprocessing.normalizationTable
         XCTAssertEqual(t[0], Float((0.0 - 0.7931) / 0.1738))
         XCTAssertEqual(t[255], Float((1.0 - 0.7931) / 0.1738))
-        XCTAssertEqual(t[200], Float((200.0 / 255.0 - 0.7931) / 0.1738))
+        let g200: Double = 200.0 / 255.0
+        XCTAssertEqual(t[200], Float((g200 - 0.7931) / 0.1738))
     }
 
     // MARK: homr canvas geometry

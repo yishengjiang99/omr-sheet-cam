@@ -130,9 +130,10 @@ public struct ParseSheetMusicResult: Equatable, Sendable {
 
 /// Input to the public parse entry point. Gate-1 uses a single staff image.
 public struct ParseSheetMusicInput: Sendable {
-    /// Staff (or page) image bytes — PNG/JPEG. Full-page geometry is out of scope for gate-1.
+    /// Staff image bytes (staff-only), or a PNG page when `staffOnly == false` (JPEG/HEIC pages: use
+    /// `parseSheetMusicWithLayout(gray8:width:height:)`).
     public var imageData: Data
-    /// When true, run staff-only encoder→decoder path (gate-1). Full-page SegNet is later.
+    /// When true, run the staff-only encoder→decoder path (gate-1); false = full-page SegNet path.
     public var staffOnly: Bool
 
     public init(imageData: Data, staffOnly: Bool = true) {

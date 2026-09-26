@@ -10,9 +10,16 @@ public enum OMRHomrIOS {
     ///
     /// - Returns: SMF format 1 @ 480 TPQ + note layout metadata.
     /// - Throws: `OMRError` when models/sessions are missing or staff-only path is not ready.
+    ///
+    /// `staffOnly: false` runs the full-page path on PNG bytes (`parseSheetMusicWithLayout(png:)`); other
+    /// formats throw `OMRError.unsupportedImageFormat` — decode camera photos yourself and call
+    /// `parseSheetMusicWithLayout(gray8:width:height:)`.
     public static func parseSheetMusicWithLayout(
         input: ParseSheetMusicInput
     ) throws -> ParseSheetMusicResult {
+        if !input.staffOnly {
+            return try parseSheetMusicWithLayout(png: input.imageData)
+        }
         let session = try StaffInferenceSession.makeDefault()
         return try session.parse(input: input)
     }

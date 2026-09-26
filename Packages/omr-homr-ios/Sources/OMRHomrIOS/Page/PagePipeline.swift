@@ -76,8 +76,6 @@ public enum PagePipeline {
         try StaffTensor.decodeGrayPNG(data)
     }
 
-    /// SegNet over the preprocessed page: merged class map (uint8 0..5, `width * height`;
-    /// 1 stems_rests, 2 notehead, 3 clefs_keys, 4 staff, 5 symbols).
     /// homr's staff detection on a SegNet class map (`segment` output, 0...5, row-major `width x height`):
     /// symbol boxes, staffs, braces / grand staffs and the per-staff `StaffGeometry` in decode order.
     public static func detectStaffs(segmentation: [UInt8], width: Int, height: Int) throws -> PageStaffLayout {
@@ -87,6 +85,8 @@ public enum PagePipeline {
         return try PageStaffDetection.detect(segmentation: segmentation, width: width, height: height)
     }
 
+    /// SegNet over the preprocessed page: merged class map (uint8 0..5, `width * height`;
+    /// 1 stems_rests, 2 notehead, 3 clefs_keys, 4 staff, 5 symbols).
     public static func segment(_ page: PreprocessedPage, segnet: SegNetSession) throws -> [UInt8] {
         try segnet.segment(preprocessed: page.preprocessed, width: page.width, height: page.height)
     }

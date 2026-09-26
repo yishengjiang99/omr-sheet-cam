@@ -159,9 +159,13 @@ public enum SymbolMIDIMapping: Sendable {
     }
 
     /// Token-order note events tagged with their source symbol index.
+    /// `resetCursorOnClef`: a clef after the first note restarts time at 0 (staff-only grand-staff dumps).
+    /// The page path passes false: its voice streams run continuously across rows (homr joins them with
+    /// `newline` and drops repeated clefs), and a mid-piece clef change must not rewind time.
     static func sourcedNoteEvents(
         from symbols: [EncodedSymbol],
-        tpq: Int = Int(SMFWriter.ticksPerQuarter)
+        tpq: Int = Int(SMFWriter.ticksPerQuarter),
+        resetCursorOnClef: Bool = true
     ) -> [SourcedNoteEvent] {
         var onset = 0
         var chordAnchor = 0
@@ -180,7 +184,7 @@ public enum SymbolMIDIMapping: Sendable {
             }
             if sym.rhythm.hasPrefix("clef_") {
                 // New clef starts a staff stream: reset cursor (grand-staff sequential dumps).
-                if !events.isEmpty {
+                if resetCursorOnClef && !events.isEmpty {
                     onset = 0
                     chordAnchor = 0
                 }

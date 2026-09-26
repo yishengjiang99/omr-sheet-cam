@@ -94,7 +94,11 @@ final class CVShapesTests: XCTestCase {
                 XCTAssertEqual(r.w >= 4 && r.h >= 4, e.w >= 4 && e.h >= 4, "\(c.pts)")
                 continue
             }
-            let d = [abs(r.cx - e.cx), abs(r.cy - e.cy), abs(r.w - e.w), abs(r.h - e.h)].map { Double($0) }.max()!
+            let dcx: Double = Double(abs(r.cx - e.cx))
+            let dcy: Double = Double(abs(r.cy - e.cy))
+            let dw: Double = Double(abs(r.w - e.w))
+            let dh: Double = Double(abs(r.h - e.h))
+            let d: Double = max(max(dcx, dcy), max(dw, dh))
             var da = Double(abs(r.angle - e.angle))
             da = min(da, abs(da - 180))
             worst = max(worst, d)

@@ -23,6 +23,11 @@
 //       homr staff detection (PagePipeline.detectStaffs) on ORACLE_DIR/segnet.png; compares symbol boxes,
 //       note-head height, staff grids, multi-staffs / grand staffs, ensured rows and per-staff geometry
 //       against ORACLE_DIR/stages.json. 0 = identical to homr, 1 = any difference.
+//   omr-test parse-page <page.png> [--compare ORACLE_DIR] [--out song.mid] [--threads N] [--models DIR]
+//       Full page (PageInferenceSession.parsePage, all CPU): preprocessing -> SegNet -> staff detection -> per-staff
+//       crop/dewarp + decode -> homr voices -> SMF + noteLayout; prints stage timings, voices and SMF checks. With
+//       --compare fixtures/oracle.pages/<id>: per-staff canvas SHA-256, raw / position-filtered symbols and voices
+//       vs stages.json (edit distances). 0 = valid SMF (+ identical to homr with --compare).
 //   omr-test prepare-staff <page.png> --geometry <geometry.json> [--compare prepared.npy] [--out prepared.npy]
 //       homr prepare_staff_image (crop + dewarp, StaffPrepare) on a grayscale page with explicit staff
 //       geometry; with --compare prints max abs diff (gray levels) and count(|diff| > 1). 0 = identical.
@@ -65,6 +70,7 @@ usage: omr-test --no-onnx [--fixtures DIR] [--tier TIER] [fixtures/<id> | <id> .
        omr-test prepare-staff <page.png> --geometry <geometry.json> [--compare prepared.npy] [--out prepared.npy]
        omr-test segnet-page <page.png> [--compare ORACLE_DIR] [--threads N] [--models DIR]
        omr-test detect-staffs <ORACLE_DIR>   (homr staff detection on ORACLE_DIR/segnet.png vs stages.json)
+       omr-test parse-page <page.png> [--compare ORACLE_DIR] [--out song.mid] [--threads N] [--models DIR]
 exit: 0 pass · 1 fail · 2 usage/input error · 3 ONNX path not runnable on this platform yet
 """
 
@@ -499,6 +505,31 @@ if positional.first == "detect-staffs" {
     for line in report.lines { out(line) }
     out(report.ok ? "PASS identical to homr" : "FAIL differs from homr")
     exit(report.ok ? 0 : 1)
+}
+
+if positional.first == "parse-page" {
+    guard positional.count == 2 else { exitUsage("parse-page needs exactly one page .png") }
+    let models = requireONNX()
+    guard let segURL = models.segnetFP16 else { exitNotRunnable("SegNet model not found (run scripts/fetch-models)") }
+    #if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
+    let vocab: HomrVocabulary
+    do { vocab = try TokenizerLoader.loadVocabulary() } catch { err("omr-test: vocabulary: \(error)"); exit(1) }
+    let session: PageInferenceSession
+    do {
+        let seg = try PlatformORTBackend(modelURL: segURL, provider: .cpu, intraOpThreads: segnetThreads)
+        let enc = try PlatformORTBackend(modelURL: models.encoderFP16, provider: .cpu)
+        let dec = try PlatformORTBackend(modelURL: models.decoderFP32, provider: .cpu)
+        session = try PageInferenceSession(segnet: seg, encoder: enc, decoder: dec, vocabulary: vocab)
+    } catch { err("omr-test: model load failed: \(error)"); exit(1) }
+    out("models: \(segURL.lastPathComponent) | \(models.encoderFP16.lastPathComponent) | \(models.decoderFP32.lastPathComponent) (all CPU)")
+    let code = PageParseCommand.run(
+        session: session, pageURL: URL(fileURLWithPath: positional[1], relativeTo: cwd),
+        oracle: compareNPY.map { URL(fileURLWithPath: $0, relativeTo: cwd) },
+        midiOut: outNPY.map { URL(fileURLWithPath: $0, relativeTo: cwd) }, verbose: jsonOut)
+    exit(code)
+    #else
+    exitNotRunnable("no ORTSessionBackend is linked on this platform")
+    #endif
 }
 
 if positional.first == "prepare-staff" {
