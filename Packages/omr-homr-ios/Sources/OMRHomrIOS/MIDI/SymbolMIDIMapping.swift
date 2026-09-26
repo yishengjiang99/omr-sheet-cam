@@ -96,15 +96,78 @@ public enum SymbolMIDIMapping: Sendable {
     /// Chord handling mirrors upstream `_group_into_chords`: a `chord` rhythm marker means the
     /// **next** note shares onset with the previous note (no invented pitches).
     /// Barlines, clefs, key/time signatures are no-ops for the cursor.
+    ///
+    /// Returned in token (emission) order. For the canonical sorted list shared with
+    /// `noteLayout`, use `orderedNoteEvents(from:tpq:staffIndexOffset:)`.
     public static func noteEvents(
         from symbols: [EncodedSymbol],
         tpq: Int = Int(SMFWriter.ticksPerQuarter)
     ) -> [SMFWriter.NoteEvent] {
+        sourcedNoteEvents(from: symbols, tpq: tpq).map(\.event)
+    }
+
+    /// One sounding note plus the index of the decoded symbol that produced it.
+    ///
+    /// This is the single shared note-event record behind both the SMF note track and
+    /// `noteLayout` (see `OMRHomrIOS.renderTokens`). `symbolIndex` is the index into the
+    /// input `[EncodedSymbol]` array — the seam used to attach attention boxes later.
+    public struct SourcedNoteEvent: Equatable, Sendable {
+        /// Zero-based index into the input symbol array (the `note_*` symbol).
+        public var symbolIndex: Int
+        /// The MIDI note event (pitch, onset, duration, staff) written to the SMF.
+        public var event: SMFWriter.NoteEvent
+
+        public init(symbolIndex: Int, event: SMFWriter.NoteEvent) {
+            self.symbolIndex = symbolIndex
+            self.event = event
+        }
+    }
+
+    /// Canonical, **stably ordered** sounding-note list shared by MIDI + `noteLayout`.
+    ///
+    /// Ordering (total, deterministic): ascending `onsetTicks`, then `staff` (0 = top staff,
+    /// increasing downward), then `midiNote` (low → high), then `durationTicks`, then
+    /// `symbolIndex`. Rests, clefs, barlines, key/time signatures and grace notes produce no
+    /// entries; each chord member is its own entry sharing the chord's onset.
+    ///
+    /// - Parameter staffIndexOffset: added to every position-derived staff index
+    ///   (`upper`→0, `lower`→1) so a staff decoded on its own can be placed on a page.
+    public static func orderedNoteEvents(
+        from symbols: [EncodedSymbol],
+        tpq: Int = Int(SMFWriter.ticksPerQuarter),
+        staffIndexOffset: Int = 0
+    ) -> [SourcedNoteEvent] {
+        var events = sourcedNoteEvents(from: symbols, tpq: tpq)
+        if staffIndexOffset != 0 {
+            for i in events.indices {
+                events[i].event.staff += staffIndexOffset
+            }
+        }
+        events.sort(by: canonicalOrder)
+        return events
+    }
+
+    /// `(tick, staff, pitch, duration, symbolIndex)` ascending — see `orderedNoteEvents`.
+    static func canonicalOrder(_ lhs: SourcedNoteEvent, _ rhs: SourcedNoteEvent) -> Bool {
+        let a = lhs.event
+        let b = rhs.event
+        if a.onsetTicks != b.onsetTicks { return a.onsetTicks < b.onsetTicks }
+        if a.staff != b.staff { return a.staff < b.staff }
+        if a.midiNote != b.midiNote { return a.midiNote < b.midiNote }
+        if a.durationTicks != b.durationTicks { return a.durationTicks < b.durationTicks }
+        return lhs.symbolIndex < rhs.symbolIndex
+    }
+
+    /// Token-order note events tagged with their source symbol index.
+    static func sourcedNoteEvents(
+        from symbols: [EncodedSymbol],
+        tpq: Int = Int(SMFWriter.ticksPerQuarter)
+    ) -> [SourcedNoteEvent] {
         var onset = 0
         var chordAnchor = 0
         var shareNextOnset = false
-        var events: [SMFWriter.NoteEvent] = []
-        for sym in symbols {
+        var events: [SourcedNoteEvent] = []
+        for (symbolIndex, sym) in symbols.enumerated() {
             if sym.rhythm == "chord" {
                 shareNextOnset = true
                 continue
@@ -149,11 +212,14 @@ public enum SymbolMIDIMapping: Sendable {
                 onset += dur
             }
             events.append(
-                SMFWriter.NoteEvent(
-                    midiNote: midi,
-                    onsetTicks: tick,
-                    durationTicks: max(1, dur),
-                    staff: staffIndex(positionToken: sym.position)
+                SourcedNoteEvent(
+                    symbolIndex: symbolIndex,
+                    event: SMFWriter.NoteEvent(
+                        midiNote: midi,
+                        onsetTicks: tick,
+                        durationTicks: max(1, dur),
+                        staff: staffIndex(positionToken: sym.position)
+                    )
                 )
             )
         }

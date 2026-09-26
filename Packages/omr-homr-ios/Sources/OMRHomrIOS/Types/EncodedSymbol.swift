@@ -29,6 +29,19 @@ public struct EncodedSymbol: Equatable, Sendable, CustomStringConvertible {
         self.attentionPayload = attentionPayload
     }
 
+    /// Build from fixture / oracle fields (e.g. `expected.tokens.json` symbols).
+    public init(oracleFields f: OracleSymbolFields, attentionPayload: Data? = nil) {
+        self.init(
+            rhythm: f.rhythm,
+            pitch: f.pitch,
+            lift: f.lift,
+            articulation: f.articulation,
+            slur: f.slur,
+            position: f.position,
+            attentionPayload: attentionPayload
+        )
+    }
+
     /// Upstream `nonote = "."`
     public static let nonote = "."
     /// Upstream `empty = "_"`

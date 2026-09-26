@@ -1,10 +1,16 @@
 import Foundation
 import CoreGraphics
 
-/// Stable layout hit for highlight overlays. Geometry fields may be zero until
-/// attention / midi-fallback layout is wired (post gate-1).
+/// Stable layout hit for highlight overlays.
+///
+/// One entry per **sounding** MIDI note (rests produce none; each chord member gets its own
+/// entry with the shared onset). When built by `OMRHomrIOS.renderTokens`, `noteLayout[k]`
+/// describes the k-th note-on in the SMF note track (same shared, sorted note-event list).
+///
+/// `pageRect` is `CGRect.null` when no real box is known (`layoutSource == .midiFallback`);
+/// coordinates are never fabricated.
 public struct NoteLayout: Equatable, Sendable {
-    /// Zero-based index into the decoded symbol stream (notes only when layout is filled).
+    /// Zero-based index into the decoded symbol stream (the `note_*` symbol that sounded).
     public var symbolIndex: Int
     /// MIDI note number when known; nil for rests / non-pitch symbols.
     public var midiNote: Int?
@@ -12,10 +18,13 @@ public struct NoteLayout: Equatable, Sendable {
     public var onsetTicks: Int
     /// Duration in ticks.
     public var durationTicks: Int
-    /// Approximate page-space rect for highlight; empty until layout source is ready.
+    /// Page-space rect for highlight; `.null` when no box is available (midi-fallback).
     public var pageRect: CGRect
-    /// Staff index within the page (0-based). Staff-only gate-1 uses 0.
+    /// Staff index within the page (0-based, 0 = top staff). Staff-only gate-1 uses 0.
     public var staffIndex: Int
+    /// Zero-based index of this entry in the sorted sounding-note list (== its array index
+    /// in `noteLayout`, == ordinal of its note-on in the SMF note track).
+    public var noteIndex: Int
 
     public init(
         symbolIndex: Int,
@@ -23,7 +32,8 @@ public struct NoteLayout: Equatable, Sendable {
         onsetTicks: Int = 0,
         durationTicks: Int = 0,
         pageRect: CGRect = .null,
-        staffIndex: Int = 0
+        staffIndex: Int = 0,
+        noteIndex: Int = 0
     ) {
         self.symbolIndex = symbolIndex
         self.midiNote = midiNote
@@ -31,6 +41,32 @@ public struct NoteLayout: Equatable, Sendable {
         self.durationTicks = durationTicks
         self.pageRect = pageRect
         self.staffIndex = staffIndex
+        self.noteIndex = noteIndex
+    }
+
+    /// True when `pageRect` carries a real box (not `.null` / empty).
+    public var hasBox: Bool {
+        !pageRect.isNull && !pageRect.isEmpty
+    }
+
+    /// Box-less layout (one entry per sounding note) from the shared ordered note list.
+    ///
+    /// Pass the output of `SymbolMIDIMapping.orderedNoteEvents(from:)` so entry order matches
+    /// the MIDI note order. `noteIndex` is the position in `events`; `pageRect` is `.null`.
+    public static func midiFallback(
+        from events: [SymbolMIDIMapping.SourcedNoteEvent]
+    ) -> [NoteLayout] {
+        events.enumerated().map { index, sourced in
+            NoteLayout(
+                symbolIndex: sourced.symbolIndex,
+                midiNote: Int(sourced.event.midiNote),
+                onsetTicks: sourced.event.onsetTicks,
+                durationTicks: sourced.event.durationTicks,
+                pageRect: .null,
+                staffIndex: sourced.event.staff,
+                noteIndex: index
+            )
+        }
     }
 }
 

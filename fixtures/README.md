@@ -50,7 +50,7 @@ Token strings must exist in `Packages/omr-homr-ios/.../Resources/Vocab/vocabular
 
 - **Layer A — Tokens:** dewarped staff → homr streams; **hard gate** `oracle.c_scale_staff` **22/22** vs Python homr (blocked on onnx / homr-research export).
 - **Layer B — MIDI:** tokens → SMF / canonical notes; writer-only asserts sorted `(tick, pitch, duration, staff)` == `expected.notes.csv`.
-- **Layer C — Layout (soft):** highlight count == sounding notes (not ship-gated on IoU).
+- **Layer C — Layout (soft):** highlight count == sounding notes (not ship-gated on IoU). Package helper `OMRHomrIOS.renderTokens` builds MIDI + `noteLayout` from one note list; Linux check: `python3 tools/oracle/check_note_layout.py`.
 
 Canonicalize (Layer B): C4=MIDI 60; lift `#` +1 / `b` −1; `note_4`=480 TPQ ticks; one dot ×1.5; two dots ×1.75; `chord` = shared onset; rests advance cursor; barlines/clefs no-ops (clef after music resets onset for sequential grand-staff dumps). SMF format 1, 480 TPQ, metrical.
 

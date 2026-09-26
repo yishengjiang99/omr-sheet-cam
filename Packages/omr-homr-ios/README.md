@@ -31,6 +31,7 @@ Fidelity pass on the staff-only decode loop — **no ONNX weights**, **no UI/geo
 | Encoder CoreML EP + Decoder ORT CPU wiring | Compile-safe stubs + TODOs |
 | C-scale oracle fixtures | Schema + stubs on `fixtures/oracle.c_scale_staff/` — **22/22 tokens blocked** on onnx/homr-research |
 | Writer-only Layer B | `WriterOnlyFixtureTests` vs repo-root `fixtures/` (7 synthetics complete) |
+| Tokens → MIDI + `noteLayout` (Layer C) | `OMRHomrIOS.renderTokens` — one shared note list; `midi-fallback` (no boxes) until attention lands |
 | ONNX models in repo | **Blocked** (download from upstream release) |
 | ORT Swift bindings | **Blocked** |
 | SegNet / full-page geometry / App UI | Out of scope (do not start) |
@@ -83,12 +84,39 @@ let result = try OMRHomrIOS.parseSheetMusicWithLayout(
 // seq.mismatches(vs: expectedFromFixture)
 ```
 
+## Tokens → MIDI + noteLayout (Layer C helper)
+
+`OMRHomrIOS.renderTokens(_:staffIndexOffset:boxProvider:writer:) -> ParseSheetMusicResult`
+(`Sources/OMRHomrIOS/Layout/TokenRender.swift`) writes the SMF **and** `noteLayout` from ONE
+shared list (`SymbolMIDIMapping.orderedNoteEvents`), so there is exactly one layout entry per
+sounding note (rests: none; chord members: one each, shared onset).
+
+```swift
+let symbols = fixture.symbols.map { EncodedSymbol(oracleFields: $0) }  // or decoded tokens
+let r = OMRHomrIOS.renderTokens(symbols)             // grand staff OK; staff 0 = top
+XCTAssertEqual(r.layoutSource, .midiFallback)        // no attention boxes yet; pageRect == .null
+XCTAssertEqual(r.noteLayout.count, soundingNoteCount) // Layer C: highlight count == notes
+let k = r.noteLayout[i].noteIndex                    // == i == i-th note-on in r.midi
+```
+
+- **Ordering (stable, total):** ascending `(onsetTicks, staffIndex, midiNote)`, tie-break
+  `(durationTicks, symbolIndex)`. The SMF note track emits note-ons in the same order, so
+  `noteLayout[k]` ↔ k-th note-on.
+- Each entry carries `noteIndex`, `symbolIndex` (into the input symbols), `staffIndex`,
+  `onsetTicks`, `durationTicks`, `midiNote`, and `pageRect` (`.null` = no box; never fabricated).
+- Pieces: `SymbolMIDIMapping.orderedNoteEvents(from:tpq:staffIndexOffset:)` and
+  `NoteLayout.midiFallback(from:)`.
+- Attention seam: pass a `NoteBoxProvider`; if it returns a real rect for every note,
+  `layoutSource == .attention`, otherwise it stays `.midiFallback`.
+- Linux mirror of the fixture check: `python3 tools/oracle/check_note_layout.py`.
+
 ## Layout
 
 ```
 Sources/OMRHomrIOS/
   PublicAPI.swift
   Types/          NoteLayout, EncodedSymbol, OracleSymbolSequence, parse I/O
+  Layout/         TokenRender (renderTokens: tokens → MIDI + noteLayout, NoteBoxProvider seam)
   Tokenizer/      Vocabulary + TokenizerLoader
   Inference/      Encoder/Decoder stubs, DecoderLoop, StaffInputSpec, StaffInferenceSession
   MIDI/           SMFWriter (format 1, 480 TPQ) + SymbolMIDIMapping
@@ -97,6 +125,7 @@ Sources/OMRHomrIOS/
     Tokenizers/tokenizer_*.json    # upstream HF WordLevel copies
 Tests/OMRHomrIOSTests/
   WriterOnlyFixtureTests.swift     # Layer B: tokens → notes.csv (no image)
+  RenderTokensLayoutTests.swift    # Layer C: noteLayout 1:1 with MIDI notes per fixture
   Fixtures/                        # legacy oracle hook path (see repo-root fixtures/)
 
 Repo-root `fixtures/` (consumed by package tests):
