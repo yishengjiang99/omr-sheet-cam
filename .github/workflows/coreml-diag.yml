@@ -28,6 +28,7 @@ jobs:
       - name: swift test (SegNetCoreMLDiagTests, CoreMLModelCacheTests)
         env:
           OMR_MODELS_DIR: ${{ github.workspace }}/models
+          OMR_SEGNET_DIAG: "1"
           OMR_SEGNET_DIAG_VERBOSE: ${{ inputs.verbose && '1' || '0' }}
         run: |
           set -o pipefail
@@ -69,6 +70,7 @@ jobs:
         working-directory: Packages/omr-homr-ios
         env:
           TEST_RUNNER_OMR_MODELS_DIR: ${{ github.workspace }}/models
+          TEST_RUNNER_OMR_SEGNET_DIAG: "1"
           TEST_RUNNER_OMR_SEGNET_DIAG_VERBOSE: ${{ inputs.verbose && '1' || '0' }}
         run: |
           set -o pipefail

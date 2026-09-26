@@ -228,11 +228,6 @@ final class PageRecognitionServiceTests: XCTestCase {
         var expectedPitches: [Int]
     }
 
-    /// Known package failure on iOS (ios-sim run 36271815661): every oracle page fails inside
-    /// OMRHomrIOS staff detection with "no noteheads found" while the app's gray8 input is byte-identical
-    /// to the package PNG decode. Non-strict: these tests pass again once OMR Core fixes it.
-    static let knownPackageIssue = "OMRHomrIOS on iOS sim: PageStaffDetectionError \"no noteheads found\" on every oracle page (SegNet CoreML EP suspected; see testSegNetClassCountsCoreMLvsCPUvsHomr)"
-
     private struct Stages: Decodable {
         struct Staff: Decodable { var is_grandstaff: Bool }
         struct SegNet: Decodable { var class_counts: [Int]; var shape: [Int] }
@@ -281,7 +276,6 @@ final class PageRecognitionServiceTests: XCTestCase {
     /// `Gray8Image` → `PageInferenceSession` on the warmed sessions. homr: 1 staff, C4…C5.
     @MainActor
     func testCScalePageFullParseOnWarmedSessions() async throws {
-        XCTExpectFailure(Self.knownPackageIssue, strict: false)
         let png = Gate1StaffTokenMatchTests.repoRoot.appendingPathComponent("fixtures/mono.c_major_scale/input.png")
         guard let data = try? Data(contentsOf: png) else { throw XCTSkip("fixture page missing: \(png.path)") }
         let dir = try requireModels()
@@ -297,6 +291,25 @@ final class PageRecognitionServiceTests: XCTestCase {
         XCTAssertFalse(d.hasBoxes, "noteLayout has no page positions yet")
         XCTAssertEqual(e?.payload?["staff_count"], "1")
         XCTAssertEqual(e?.payload?["source_format"]?.hasPrefix("gray 8bpc 1654x2339"), true, e?.payload?["source_format"] ?? "")
+
+        // Tokens: the same warmed sessions through the package page API; staff 0 raw decoder output must equal
+        // homr's Gate-1 staff oracle (`fixtures/oracle.c_scale_staff/expected.tokens.json`, 12 symbols).
+        let expected = try Gate1Oracle.loadExpectedSymbols(
+            from: Gate1StaffTokenMatchTests.repoRoot.appendingPathComponent("fixtures/oracle.c_scale_staff/expected.tokens.json"))
+        let factory = PageRecognitionService.warmedSession
+        let r = try await Task.detached(priority: .userInitiated) { () -> PageParseResult in
+            guard let session = try await factory() as? PageInferenceSession else {
+                throw XCTSkip("warmed session is not a PageInferenceSession")
+            }
+            let g = try Gray8Image.decode(imageData: data)
+            return try session.parsePage(gray8: g.pixels, width: g.width, height: g.height)
+        }.value
+        let got = r.staffSymbols.first ?? []
+        let matched = Gate1Oracle.matchedCount(got, expected)
+        let timings = r.timings.map { "\($0.stage) \(String(format: "%.0f", $0.ms)) ms" }.joined(separator: ", ")
+        print("PageParse mono.c_major_scale tokens: staffs \(r.layout.staffs.count), staff0 \(matched)/\(expected.count) tokens (got \(got.count)) | \(timings)")
+        XCTAssertEqual(r.layout.staffs.count, 1)
+        XCTAssertNil(Gate1Oracle.firstMismatch(got, expected), "staff 0 tokens \(matched)/\(expected.count) vs homr")
     }
 
     /// Every other homr oracle page through the app path. Hard: recognized + staffCount == homr.
@@ -308,7 +321,6 @@ final class PageRecognitionServiceTests: XCTestCase {
         guard ProcessInfo.processInfo.environment["OMR_ORACLE_PAGES"] == "1" else {
             throw XCTSkip("set OMR_ORACLE_PAGES=1 (ios-sim.yml dispatch input oracle_pages) to parse all 8 other oracle pages")
         }
-        XCTExpectFailure(Self.knownPackageIssue, strict: false)
         let pages = try Self.oraclePages().filter { $0.id != "mono.c_major_scale" }
         guard !pages.isEmpty else { throw XCTSkip("no fixtures/oracle.pages/*/stages.json") }
         _ = try requireModels()
@@ -338,9 +350,10 @@ final class PageRecognitionServiceTests: XCTestCase {
         summary.forEach { print("OraclePages: \($0)") }
     }
 
-    /// Isolates the page failure: C-scale page → `PagePipeline.preprocess` → SegNet on the warmed CoreML EP
-    /// session vs a CPU EP session → class counts vs homr (`stages.json` segnet.class_counts). Then staff
-    /// detection on each map. Diagnostic only: prints both (grep "SegNetDiag" in the CI log).
+    /// C-scale page → `PagePipeline.preprocess` → SegNet on the warmed CoreML EP session vs a CPU EP session →
+    /// class counts vs homr (`stages.json` segnet.class_counts), then staff detection on each map (grep
+    /// "SegNetDiag" in the CI log). Regression guard for the all-class-0 CoreML bug (MLProgram): the warmed
+    /// session (`SegNetSession.openBackend`, NeuralNetwork 0x000) must give the CPU EP's class counts.
     @MainActor
     func testSegNetClassCountsCoreMLvsCPUvsHomr() async throws {
         let root = Gate1StaffTokenMatchTests.repoRoot
@@ -353,7 +366,7 @@ final class PageRecognitionServiceTests: XCTestCase {
         let models = try await ModelWarmup.shared.readyModels()
         let segnetFile = try PageModels.files(in: dir).segnet
         let homrShape = st.segnet?.shape ?? []
-        let lines = try await Task.detached(priority: .userInitiated) { () -> [String] in
+        let (lines, coreMLCounts, cpuCounts) = try await Task.detached(priority: .userInitiated) { () -> ([String], [Int], [Int]) in
             let g = try Gray8Image.decode(imageData: data)
             let page = try PagePipeline.preprocess(gray8: g.pixels, width: g.width, height: g.height)
             var out = ["page \(page.width)x\(page.height) (homr \(homrShape))"]
@@ -372,13 +385,15 @@ final class PageRecognitionServiceTests: XCTestCase {
                 out.append("\(name): classes \(counts) · \(String(format: "%.0f", ModelWarmup.ms(since: t))) ms · \(detect)")
                 return counts
             }
-            let coreML = try run("coreML (warmed, \(models.segnet.provider))", models.segnet)
+            let coreML = try run("coreML (warmed, \(models.segnet.provider) \(models.segnet.coreMLModelFormat ?? "-"))", models.segnet)
             let cpu = try run("cpu", ORTCSession(modelURL: segnetFile, provider: .cpu))
             out.append("homr: classes \(homr)")
             out.append("L1 vs homr: coreML \(zip(coreML, homr).map { abs($0 - $1) }.reduce(0, +)) px, cpu \(zip(cpu, homr).map { abs($0 - $1) }.reduce(0, +)) px")
-            return out
+            return (out, coreML, cpu)
         }.value
         lines.forEach { print("SegNetDiag: \($0)") }
         XCTAssertEqual(lines.count, 5)
+        XCTAssertEqual(models.segnet.coreMLModelFormat ?? "cpu", "NeuralNetwork", "warmed SegNet format")
+        XCTAssertEqual(coreMLCounts, cpuCounts, "SegNet CoreML EP class counts vs CPU EP")
     }
 }

@@ -9,9 +9,13 @@ import CryptoKit
 ///
 /// Verified against ORT v1.24.2 (what iOS ships; `onnxruntime/core/providers/coreml/`):
 /// - `ModelCacheDirectory` is a provider option (`SessionOptionsAppendExecutionProvider("CoreML", …)`);
-///   the legacy `OrtSessionOptionsAppendExecutionProvider_CoreML(flags)` cannot set it. It works for both
-///   model formats (cache sub-folder suffix `_mlprogram` / `_nn`); we keep `MLProgram` + `CPUAndGPU`,
-///   exactly what the legacy flags `COREML_FLAG_CREATE_MLPROGRAM | COREML_FLAG_USE_CPU_AND_GPU` select.
+///   the legacy `OrtSessionOptionsAppendExecutionProvider_CoreML(flags)` cannot set it. ORT itself would
+///   cache both model formats (`model_builder.cc` `GetModelOutputPath`: sub-folder suffix `_mlprogram` /
+///   `_nn`); this cache path always uses `MLProgram` + `CPUAndGPU`, exactly what the legacy flags
+///   `COREML_FLAG_CREATE_MLPROGRAM | COREML_FLAG_USE_CPU_AND_GPU` select, and is used for the ENCODER only.
+///   SegNet runs NeuralNetwork via legacy flags 0x000 (MLProgram returns all zeros for its dynamic
+///   shapes) and is never cached: create is ~0.1–0.2 s, and that is the configuration verified against
+///   the CPU EP (see `SegNetSession.openBackend`).
 /// - Layout: `<dir>/<key>/<metadef id>_dynamic_mlprogram/model/…` (+ `compiled_model.mlmodelc`) and
 ///   `<dir>/<key>/model.txt`. `<key>` = the model's `COREML_CACHE_KEY` metadata if valid, else a
 ///   MurmurHash3 of the model *file path* (or, for models loaded from bytes, of graph input/output names).
@@ -38,7 +42,10 @@ public enum CoreMLModelCache {
     public static let modelFormat = "MLProgram"
     public static let computeUnits = "CPUAndGPU"
     /// Legacy flags used when there is NO cache directory (unchanged behaviour): 0x010 | 0x020.
+    /// Encoder default. NOT for SegNet (see `SegNetSession.coreMLLegacyFlags`).
     public static let legacyCoreMLFlags: UInt32 = 0x010 | 0x020
+    /// `COREML_FLAG_CREATE_MLPROGRAM`; without it the CoreML EP builds a NeuralNetwork model.
+    public static let createMLProgramFlag: UInt32 = 0x010
 
     /// Provider options for `SessionOptionsAppendExecutionProvider(options, "CoreML", keys, values, n)`
     /// with a cache: same format / compute units as the legacy flags, plus `ModelCacheDirectory`.

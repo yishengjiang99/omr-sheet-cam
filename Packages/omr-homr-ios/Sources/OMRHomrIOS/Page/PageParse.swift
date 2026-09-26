@@ -108,9 +108,15 @@ extension PageInferenceSession {
     /// `bundle` (default `Bundle.main`). SegNet + encoder use the CoreML EP on Apple (CPU fallback), CPU on Linux;
     /// the decoder always runs on CPU (never CoreML, never a cache).
     ///
-    /// - Parameters segnetCacheDirectory / encoderCacheDirectory: CoreML compiled-model cache folder per model
-    ///   (the app's `<AppSupport>/coreml-cache/<sha256>/`), nil (default) = no cache. Cache key = SHA-256 of
-    ///   the model file. Used only for the CoreML attempt, not the CPU fallback; ignored on Linux. See
+    /// SegNet runs the CoreML NeuralNetwork format (`SegNetSession.openBackend`, legacy flags 0x000); the
+    /// encoder keeps MLProgram (CPU+GPU).
+    ///
+    /// - Parameter segnetCacheDirectory: IGNORED (silent no-op, kept so existing callers still compile and
+    ///   run). SegNet uses the NeuralNetwork format with no compiled-model cache: create ~0.1–0.2 s, and the
+    ///   MLProgram format a cache would need returns all zeros for SegNet. Nothing is created in the folder.
+    /// - Parameter encoderCacheDirectory: CoreML compiled-model cache folder for the encoder (the app's
+    ///   `<AppSupport>/coreml-cache/<sha256>/`), nil (default) = no cache. Cache key = SHA-256 of the model
+    ///   file. Used only for the CoreML attempt, not the CPU fallback; ignored on Linux. See
     ///   `ORTCSession.init(modelURL:provider:cacheDirectory:cacheKey:)` for what the folder owner must handle.
     public static func load(
         modelsDirectory: URL? = nil,
@@ -121,7 +127,8 @@ extension PageInferenceSession {
         let dir = try PageModels.resolveDirectory(modelsDirectory, bundle: bundle)
         let files = try PageModels.files(in: dir)
         let vocab = try TokenizerLoader.loadVocabulary(bundle: nil)
-        let seg = try PageModels.accelerated(files.segnet, cacheDirectory: segnetCacheDirectory)
+        _ = segnetCacheDirectory // intentionally unused: SegNet (NeuralNetwork) has no CoreML cache
+        let seg = try PageModels.acceleratedSegNet(files.segnet)
         let enc = try PageModels.accelerated(files.encoder, cacheDirectory: encoderCacheDirectory)
         let dec = try ORTCSession(modelURL: files.decoder, provider: .cpu)
         return try PageInferenceSession(segnet: seg, encoder: enc, decoder: dec, vocabulary: vocab)
@@ -164,12 +171,22 @@ public enum PageModels {
     }
 
     #if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
-    /// `.coreML` (+ optional compiled-model cache) on Apple, else / on failure `.cpu` (never with a cache).
+    /// Encoder: `.coreML` (+ optional compiled-model cache) on Apple, else / on failure `.cpu` (never with a
+    /// cache). Not for SegNet (`acceleratedSegNet`).
     static func accelerated(_ url: URL, cacheDirectory: URL? = nil) throws -> ORTCSession {
         #if canImport(CONNXRuntimeApple)
         if let s = try? ORTCSession(modelURL: url, provider: .coreML, cacheDirectory: cacheDirectory) { return s }
         #endif
         return try ORTCSession(modelURL: url, provider: .cpu)
+    }
+
+    /// SegNet: `SegNetSession.openBackend(.coreML)` (NeuralNetwork 0x000, never cached) on Apple, else /
+    /// on failure `.cpu`.
+    static func acceleratedSegNet(_ url: URL) throws -> ORTCSession {
+        #if canImport(CONNXRuntimeApple)
+        if let s = try? SegNetSession.openBackend(modelURL: url, provider: .coreML) { return s }
+        #endif
+        return try SegNetSession.openBackend(modelURL: url, provider: .cpu)
     }
     #endif
 }

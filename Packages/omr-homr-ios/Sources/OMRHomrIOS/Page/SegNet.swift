@@ -17,6 +17,17 @@ public final class SegNetSession: @unchecked Sendable {
     public static let batchSize = 8
     public static let classCount = 6
 
+    /// CoreML EP legacy flags for SegNet: `0x000` = NeuralNetwork model format, all compute units (CPU, GPU
+    /// and the Neural Engine on a device), dynamic shapes allowed; CPU EP stays registered as fallback.
+    ///
+    /// Why not the encoder's MLProgram `0x030`: SegNet's input (`batch_size`) and every `upsample_nearest2d`
+    /// output have unbounded dimensions, which CoreML's MLProgram runtime rejects ("E5RT: … has unbounded
+    /// dimension which is not supported") and ORT 1.24.2 then silently returns an all-zero output, so every
+    /// pixel is class 0 and staff detection finds no noteheads. `SegNetCoreMLDiagTests` (CI run 36275275275,
+    /// iOS simulator): 0x000 / 0x020 / 0x001 NeuralNetwork = CPU EP exactly (0 px, max |diff| 0.0, create
+    /// 89–192 ms); 0x010 / 0x011 / 0x030 MLProgram and the provider-options / cache paths = all zeros.
+    public static let coreMLLegacyFlags: UInt32 = 0x000
+
     public let backend: ORTSessionBackend
     /// Tiles per `run` (homr: 8). Results do not depend on it (tiles are independent).
     public let tilesPerRun: Int
@@ -159,3 +170,37 @@ public final class SegNetSession: @unchecked Sendable {
         return merged
     }
 }
+
+#if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
+extension SegNetSession {
+    /// The ONE way to open the SegNet model: `.coreML` = CoreML EP with `coreMLLegacyFlags` (NeuralNetwork,
+    /// all compute units) + CPU EP fallback; `.cpu` = plain CPU EP. Use this instead of
+    /// `ORTCSession(modelURL:provider: .coreML)`, whose MLProgram default gives SegNet an all-zero output.
+    ///
+    /// - Parameters:
+    ///   - provider: `.coreML` on Apple (throws `ORTCError.unsupportedProvider` on Linux), `.cpu` anywhere.
+    ///   - cacheDirectory: accepted and IGNORED (no CoreML compiled-model cache for SegNet). ORT's
+    ///     `ModelCacheDirectory` can only be set through the provider-options API, not the legacy flags
+    ///     this configuration is verified with, and SegNet's NeuralNetwork create is ~0.1–0.2 s, so a cache
+    ///     buys nothing. A silent no-op (not a throw) so an app that still passes a folder keeps working;
+    ///     nothing is created in or read from it.
+    ///   - intraOpThreads: see `ORTCSession.defaultIntraOpThreads`.
+    public static func openBackend(
+        modelURL: URL, provider: ORTProvider = .coreML, cacheDirectory: URL? = nil,
+        intraOpThreads: Int = ORTCSession.defaultIntraOpThreads
+    ) throws -> ORTCSession {
+        #if !canImport(CONNXRuntimeApple)
+        guard case .cpu = provider else { throw ORTCError.unsupportedProvider("\(provider)") }
+        #endif
+        return try ORTCSession(modelURL: modelURL, plan: sessionPlan(provider: provider, intraOpThreads: intraOpThreads))
+    }
+
+    /// Session plan for `openBackend`: legacy flags `coreMLLegacyFlags` with `.coreML`, never provider
+    /// options, never a cache directory or embedded cache key, model opened by path.
+    static func sessionPlan(provider: ORTProvider, intraOpThreads: Int) -> ORTCSession.SessionPlan {
+        var plan = ORTCSession.SessionPlan(provider: provider, intraOpThreads: intraOpThreads)
+        if case .coreML = provider { plan.coreMLLegacyFlags = coreMLLegacyFlags }
+        return plan
+    }
+}
+#endif

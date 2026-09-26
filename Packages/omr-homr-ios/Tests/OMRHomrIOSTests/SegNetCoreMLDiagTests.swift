@@ -5,7 +5,60 @@ import XCTest
 /// SegNet on the CoreML EP vs the CPU EP (OMR iOS saw every pixel = class 0 on the iOS simulator).
 /// Diagnostic, not a gate: prints one `[segnet-diag]` line per configuration (raw output stats on one
 /// C-scale tile + full-page class counts vs CPU). Needs ORT + models; the CoreML rows run on Apple only.
+/// Skipped unless `OMR_SEGNET_DIAG=1` or `OMR_SEGNET_DIAG_VERBOSE=1` (manual `coreml-diag.yml` sets them;
+/// on the simulator via `TEST_RUNNER_…`): 16 CoreML session creates take minutes, normal CI stays fast.
+/// Result that fixed SegNet (run 36275275275): NeuralNetwork 0x000 = CPU EP exactly; MLProgram = all zeros.
 final class SegNetCoreMLDiagTests: XCTestCase {
+    static var enabled: Bool {
+        let env = ProcessInfo.processInfo.environment
+        return env["OMR_SEGNET_DIAG"] == "1" || env["OMR_SEGNET_DIAG_VERBOSE"] == "1"
+    }
+
+    /// Always on (cheap, no ORT session): the SegNet plan is NeuralNetwork 0x000 with no cache in any form.
+    func testSegNetSessionPlanIsNeuralNetworkWithoutCache() {
+        #if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
+        XCTAssertEqual(SegNetSession.coreMLLegacyFlags, 0x000)
+        let plan = SegNetSession.sessionPlan(provider: .coreML, intraOpThreads: 1)
+        XCTAssertEqual(plan.coreMLLegacyFlags, 0x000)
+        XCTAssertEqual(plan.coreMLModelFormat, "NeuralNetwork")
+        XCTAssertNil(plan.coreMLProviderOptions, "provider options would bypass the legacy flags")
+        XCTAssertNil(plan.cacheDirectory)
+        XCTAssertTrue(plan.embedCacheKey == nil, "SegNet is opened by path (no COREML_CACHE_KEY)")
+        XCTAssertTrue(plan.freeDimensionOverrides.isEmpty)
+        let cpu = SegNetSession.sessionPlan(provider: .cpu, intraOpThreads: 1)
+        XCTAssertNil(cpu.coreMLLegacyFlags)
+        XCTAssertNil(cpu.coreMLModelFormat)
+        // Encoder default stays MLProgram (Gate 1 12/12 with 0x030).
+        XCTAssertEqual(ORTCSession.SessionPlan(provider: .coreML, intraOpThreads: 1).coreMLModelFormat, "MLProgram")
+        #endif
+    }
+
+    /// `segnetCacheDirectory` / `cacheDirectory` for SegNet is a silent no-op: no throw, nothing created.
+    func testSegNetCacheDirectoryIsIgnored() throws {
+        #if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
+        let model = try CoreMLModelCacheTests.model(CoreMLModelCacheTests.segnetName)
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("segnet-nocache-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let cpu = try SegNetSession.openBackend(modelURL: model, provider: .cpu, cacheDirectory: dir)
+        XCTAssertEqual(cpu.provider, .cpu)
+        XCTAssertNil(cpu.coreMLCacheDirectory)
+        XCTAssertNil(cpu.coreMLCacheKey)
+        #if canImport(CONNXRuntimeApple)
+        let t0 = Date()
+        let ml = try SegNetSession.openBackend(modelURL: model, provider: .coreML, cacheDirectory: dir)
+        print(String(format: "[segnet-diag] SegNetSession.openBackend(.coreML) create %.0f ms, format %@",
+                     Date().timeIntervalSince(t0) * 1000, ml.coreMLModelFormat ?? "nil"))
+        XCTAssertEqual(ml.provider, .coreML)
+        XCTAssertEqual(ml.coreMLModelFormat, "NeuralNetwork")
+        XCTAssertNil(ml.coreMLCacheDirectory)
+        XCTAssertNil(ml.coreMLCacheKey)
+        #endif
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.path), "SegNet must not touch the cache folder")
+        #else
+        throw XCTSkip("ORT not linked")
+        #endif
+    }
+
     struct Stats: CustomStringConvertible {
         var type: ORTElementType
         var shape: [Int]
@@ -75,6 +128,9 @@ final class SegNetCoreMLDiagTests: XCTestCase {
     }
 
     func testSegNetCoreMLVsCPU() throws {
+        guard Self.enabled else {
+            throw XCTSkip("SegNet CoreML diag: set OMR_SEGNET_DIAG=1 (coreml-diag.yml) to run all variants")
+        }
         #if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
         let model = try CoreMLModelCacheTests.model(CoreMLModelCacheTests.segnetName)
         let pngURL = try WriterOnlyFixtureTests.fixturesRoot()
@@ -116,6 +172,8 @@ final class SegNetCoreMLDiagTests: XCTestCase {
         cached.embedCacheKey = .some(CoreMLModelCacheTests.segnetSHA256)
         let diagVerbose = ProcessInfo.processInfo.environment["OMR_SEGNET_DIAG_VERBOSE"] == "1"
         let variants = cpuVariant + [
+            Variant(name: "SegNetSession.openBackend (shipping: legacy 0x000 NeuralNetwork ALL)",
+                    plan: SegNetSession.sessionPlan(provider: .coreML, intraOpThreads: 1), batch: nil),
             Variant(name: "legacy 0x030 MLProgram CPUAndGPU (app default)", plan: plan(.coreML, verbose: diagVerbose), batch: nil),
             Variant(name: "legacy 0x010 MLProgram ALL", plan: plan(.coreML, flags: 0x010), batch: nil),
             Variant(name: "legacy 0x011 MLProgram CPUOnly", plan: plan(.coreML, flags: 0x011), batch: nil),

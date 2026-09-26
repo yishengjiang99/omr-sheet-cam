@@ -10,9 +10,8 @@ import SwiftUI
 ///
 /// Variants, built only through OMRHomrIOS's public API:
 /// - `mlProgram`: `ORTCSession(modelURL:provider: .coreML)` (legacy flags MLProgram | CPUAndGPU).
-/// - `neuralNetwork`: production path after OMR Core's SegNet fix. Not buildable at 8c4c445: the format
-///   switch (`ORTCSession.SessionPlan.coreMLLegacyFlags` / `coreMLProviderOptions`, `init(modelURL:plan:)`)
-///   is internal, so this row logs "unavailable: …".
+/// - `neuralNetwork`: production path: `SegNetSession.openBackend(modelURL:provider: .coreML)` (CoreML EP
+///   NeuralNetwork, legacy flags 0x000), the same call `ModelWarmup` uses.
 /// - `cpu`: `ORTCSession(modelURL:provider: .cpu)`, diagnostic reference only (recognition never uses it).
 enum SegNetSelfTest {
     enum Variant: String, CaseIterable, Sendable {
@@ -104,7 +103,8 @@ enum SegNetSelfTest {
         case .mlProgram:
             return .session(try ORTCSession(modelURL: model, provider: .coreML))
         case .neuralNetwork:
-            return .unavailable("unavailable: OMRHomrIOS has no public way to pick the CoreML NeuralNetwork format (ORTCSession.SessionPlan.coreMLLegacyFlags / coreMLProviderOptions and init(modelURL:plan:) are internal)")
+            // Same call as ModelWarmup: CoreML EP NeuralNetwork, legacy flags 0x000 (OMRHomrIOS picks them).
+            return .session(try SegNetSession.openBackend(modelURL: model, provider: .coreML))
         case .cpu:
             return .session(try ORTCSession(modelURL: model, provider: .cpu))
         }

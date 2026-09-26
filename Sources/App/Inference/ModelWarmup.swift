@@ -6,7 +6,9 @@ import os
 /// Launch-time background warmup of the three pinned homr models (models.lock), bundled into
 /// `<App>.app/models/` by the "Bundle ONNX models" build phase.
 ///
-/// - SegNet fp16 + Encoder fp16: `ORTCSession(provider: .coreML)` (CoreML EP, CPU EP fallback).
+/// - SegNet fp16: `SegNetSession.openBackend(provider: .coreML)` (CoreML EP NeuralNetwork, all compute
+///   units, CPU EP fallback; MLProgram returns all zeros for SegNet). Encoder fp16:
+///   `ORTCSession(provider: .coreML)` (MLProgram CPU+GPU, CPU EP fallback).
 /// - Decoder fp32: `ORTCSession(provider: .cpu)` (locked rule; `DecoderSession` enforces it).
 /// - One cheap dummy inference each: SegNet zeros `[1,3,320,320]`, Encoder zeros staff tile
 ///   `[1,1,256,1280]`, Decoder one step (BOS) over that encoder context.
@@ -155,9 +157,9 @@ final class ModelWarmup: ObservableObject {
             log.notice("\(name, privacy: .public) provider=\(String(describing: provider), privacy: .public) create=\(createMs, format: .fixed(precision: 1)) ms firstRun=\(runMs, format: .fixed(precision: 1)) ms footprint=\(mb, format: .fixed(precision: 1)) MB")
         }
 
-        // SegNet fp16, CoreML EP. homr input: `input` [batch, 3, 320, 320].
+        // SegNet fp16, CoreML EP NeuralNetwork (OMRHomrIOS picks the flags). homr input: `input` [batch, 3, 320, 320].
         let segURL = try modelFile("segnet_", in: dir)
-        let (seg, segCreate) = try timed { try ORTCSession(modelURL: segURL, provider: .coreML) }
+        let (seg, segCreate) = try timed { try SegNetSession.openBackend(modelURL: segURL, provider: .coreML) }
         guard let segIn = seg.inputInfo.first, let segType = segIn.elementType else {
             throw WarmupError.badModel("SegNet has no tensor input")
         }

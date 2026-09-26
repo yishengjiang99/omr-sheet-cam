@@ -48,6 +48,8 @@ import Foundation
 //   format / compute units + `ModelCacheDirectory`, model loaded from bytes with `COREML_CACHE_KEY`
 //   (see `CoreMLModelCache`). Built and tested on macOS CI (ios-sim workflow). `.coreML` is for
 //   encoder / SegNet sessions only: `DecoderSession` rejects any backend whose provider is not `.cpu`.
+//   SegNet must NOT use these MLProgram defaults (all-zero output on ORT 1.24.2): open it with
+//   `SegNetSession.openBackend(modelURL:provider:cacheDirectory:)` (NeuralNetwork, legacy flags 0x000).
 // - Moves RAW little-endian, row-major bytes tagged with their element type (float32, float16 via
 //   ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16, int64, int32). It never converts dtypes; the single
 //   fp16 -> fp32 cast lives in `EncoderContext.castToFP32ForDecoder()`.
@@ -121,6 +123,9 @@ public final class ORTCSession: ORTSessionBackend, ORTCoreMLCacheableBackend, OR
     /// `COREML_CACHE_KEY` embedded in the model for the CoreML cache (nil when opened by path).
     /// ORT's cache entry is `<coreMLCacheDirectory>/<coreMLCacheKey>/`.
     public let coreMLCacheKey: String?
+    /// CoreML EP model format this session asked for: `"MLProgram"` or `"NeuralNetwork"`; nil for `.cpu`.
+    /// SegNet = `"NeuralNetwork"` (`SegNetSession.coreMLLegacyFlags`), encoder = `"MLProgram"`. For diagnostics.
+    public let coreMLModelFormat: String?
     public let inputNames: [String]
     public let outputNames: [String]
     public let inputInfo: [IOInfo]
@@ -241,6 +246,17 @@ public final class ORTCSession: ORTSessionBackend, ORTCoreMLCacheableBackend, OR
             self.provider = provider
             self.intraOpThreads = intraOpThreads
         }
+
+        /// `"MLProgram"` / `"NeuralNetwork"` as ORT will build it; nil for `.cpu`.
+        var coreMLModelFormat: String? {
+            guard case .coreML = provider else { return nil }
+            if let options = coreMLProviderOptions {
+                // ORT's provider-options default is NeuralNetwork when ModelFormat is absent.
+                return options.last { $0.key == CoreMLModelCache.modelFormatOption }?.value ?? "NeuralNetwork"
+            }
+            let flags = coreMLLegacyFlags ?? CoreMLModelCache.legacyCoreMLFlags
+            return flags & CoreMLModelCache.createMLProgramFlag != 0 ? "MLProgram" : "NeuralNetwork"
+        }
     }
 
     init(modelURL: URL, plan: SessionPlan) throws {
@@ -250,6 +266,7 @@ public final class ORTCSession: ORTSessionBackend, ORTCoreMLCacheableBackend, OR
         self.modelURL = modelURL
         self.provider = plan.provider
         self.coreMLCacheDirectory = plan.cacheDirectory
+        self.coreMLModelFormat = plan.coreMLModelFormat
 
         var options: OpaquePointer?
         try ORTCRuntime.check(api, api.CreateSessionOptions!(&options), "CreateSessionOptions")
