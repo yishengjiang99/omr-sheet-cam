@@ -4,8 +4,6 @@ DerivedData/
 *.xcuserstate
 .build/
 Packages/omr-homr-ios/.build/
-# Large ONNX weights — use Git LFS or release assets; do not commit by accident without LFS
-# Models/*.onnx
 *.ipa
 .env
 .env.*
@@ -16,3 +14,5 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+# ONNX checkpoints fetched by scripts/fetch-models
+models/

@@ -52,6 +52,10 @@ From [homr onnx_checkpoints](https://github.com/liebharc/homr/releases/tag/onnx_
 - Encoder fp16 (~26.5 MB)
 - Decoder fp32 (~47 MB) — do **not** requantize; ORT CPU only
 
+Fetch the pinned files into `models/` (git-ignored) with `scripts/fetch-models`; exact
+asset names + SHA-256 live in `models.lock` (`<sha256>  <filename>  <url>`). The script is
+idempotent and exits non-zero on any download or hash mismatch. ONNX files are never committed.
+
 Oracle workspace (exporter only, not iOS runtime): `~/workspace/homr-research`
 
 ## AGPL notice
