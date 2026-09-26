@@ -80,7 +80,7 @@ https://grepawk.com/music-reader/privacy.html
 
 ## TestFlight: What to Test
 ```
-Early build. The app opens a diagnostics screen that checks the bundled recognition models and MIDI playback. Camera capture and the score player are not in this build yet.
+Early build. The app opens a diagnostics screen: it loads the bundled recognition models in the background and shows warm-up timings and memory, plus a MIDI playback check. Please report crashes or slow warm-up. Camera capture and the score player are not in this build yet.
 ```
 
 ## URLs: publishing status

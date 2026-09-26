@@ -31,7 +31,7 @@ Priority is **implementation first**. Keep test tooling to what's needed to prov
 - [ ] **Yisheng**: When the Mac is online, add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture.
 - [ ] **Yisheng**: Get the app target compiled once with `xcodebuild test` on a Mac or CI (still never compiled).
 - [ ] **OMR iOS**: bundle models into app for on-device run (step 2: warmup + memory). In progress: build phase bundles models.lock files into `OMRSheetCam.app/models/` (fails if missing, except test-only builds with `OMR_MODELS_DIR`); `ModelWarmup` (detached task: SegNet/Encoder `.coreML`, Decoder `.cpu`, one dummy run each; `Logger` category `warmup`, `phys_footprint` MB) + debug line; `ModelWarmupTests`. ios-sim.yml pending.
-- [ ] **TestFlight**: `ios-testflight.yml` archives + uploads build 1.0 (models bundled via `scripts/fetch-models` into `OMRSheetCam.app/models/` by the "Bundle ONNX models" phase), internal group with yisheng.jiang@gmail.com, ASC listing + screenshots in `docs/asc/`.
+- [x] **TestFlight**: build 3 (1.0, commit `a4c2e06`) VALID and in internal testing (group Internal Testers, yisheng.jiang@gmail.com invited). `ios-testflight.yml` bundles models via `scripts/fetch-models`, fails unless ASC processing is VALID. Listing + screenshots pushed to ASC (`docs/asc/`). Open: publish support/privacy pages (`docs/asc/web/`), then run `docs/asc/push_listing.py`.
 
 ## Later (build order 3–5, blocked until Gate 1 passes)
 - [ ] Geometry and SegNet tiling in the AGPL package
