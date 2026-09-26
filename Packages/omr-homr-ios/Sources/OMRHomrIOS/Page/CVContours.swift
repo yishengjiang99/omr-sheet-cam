@@ -197,7 +197,7 @@ enum CVContours {
                 fetchContour(start: start, nbd: CVContours.maskNew, node: &node)
             } else {
                 let lval = nbdIO
-                var n = Int(nbdIO + 1) & CVContours.maskLVal
+                var n = (Int(nbdIO) + 1) & CVContours.maskLVal  // C: int promotion before the mask
                 if n == 0 { n = 3 }
                 nbdIO = Int8(n)
                 fetchContour(start: start, nbd: lval, node: &node)

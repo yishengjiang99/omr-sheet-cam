@@ -332,9 +332,10 @@ public enum SMFHeaderInspector {
     }
 
     private static func u32(_ data: Data, _ offset: Int) -> UInt32 {
-        UInt32(data[offset]) << 24
-            | UInt32(data[offset + 1]) << 16
-            | UInt32(data[offset + 2]) << 8
-            | UInt32(data[offset + 3])
+        let b0: UInt32 = UInt32(data[offset]) << 24
+        let b1: UInt32 = UInt32(data[offset + 1]) << 16
+        let b2: UInt32 = UInt32(data[offset + 2]) << 8
+        let b3: UInt32 = UInt32(data[offset + 3])
+        return b0 | b1 | b2 | b3
     }
 }

@@ -19,6 +19,10 @@
 //       and merge (PagePipeline). With --compare (fixtures/oracle.pages/<id>): resized/preprocessed pixel
 //       mismatches and per-class SegNet mismatch counts vs segnet.png. 0 = preprocessing identical
 //       (SegNet mismatches are reported, not gated). --threads = SegNet ORT intra-op threads (default: cores).
+//   omr-test detect-staffs <ORACLE_DIR>
+//       homr staff detection (PagePipeline.detectStaffs) on ORACLE_DIR/segnet.png; compares symbol boxes,
+//       note-head height, staff grids, multi-staffs / grand staffs, ensured rows and per-staff geometry
+//       against ORACLE_DIR/stages.json. 0 = identical to homr, 1 = any difference.
 //   omr-test prepare-staff <page.png> --geometry <geometry.json> [--compare prepared.npy] [--out prepared.npy]
 //       homr prepare_staff_image (crop + dewarp, StaffPrepare) on a grayscale page with explicit staff
 //       geometry; with --compare prints max abs diff (gray levels) and count(|diff| > 1). 0 = identical.
@@ -60,6 +64,7 @@ usage: omr-test --no-onnx [--fixtures DIR] [--tier TIER] [fixtures/<id> | <id> .
        omr-test preprocess-staff <staff.png> [--compare staff.npy] [--out staff.npy]
        omr-test prepare-staff <page.png> --geometry <geometry.json> [--compare prepared.npy] [--out prepared.npy]
        omr-test segnet-page <page.png> [--compare ORACLE_DIR] [--threads N] [--models DIR]
+       omr-test detect-staffs <ORACLE_DIR>   (homr staff detection on ORACLE_DIR/segnet.png vs stages.json)
 exit: 0 pass · 1 fail · 2 usage/input error · 3 ONNX path not runnable on this platform yet
 """
 
@@ -472,6 +477,28 @@ if positional.first == "segnet-page" {
     }
     #endif
     exit(failed ? 1 : 0)
+}
+
+if positional.first == "detect-staffs" {
+    guard positional.count == 2 else { exitUsage("detect-staffs needs exactly one oracle directory") }
+    let dir = URL(fileURLWithPath: positional[1], relativeTo: cwd)
+    guard let sd = try? Data(contentsOf: dir.appendingPathComponent("segnet.png")),
+          let seg = try? PagePipeline.decodeGrayPNG(sd) else { exitUsage("segnet.png missing in \(dir.path)") }
+    let stages: StaffLayoutCompare.Stages
+    do { stages = try StaffLayoutCompare.load(dir.appendingPathComponent("stages.json")) } catch {
+        exitUsage("stages.json missing/unreadable in \(dir.path): \(error)")
+    }
+    let t0 = Date()
+    let layout: PageStaffLayout
+    do { layout = try PagePipeline.detectStaffs(segmentation: seg.pixels, width: seg.width, height: seg.height) } catch {
+        err("omr-test: detect-staffs failed: \(error)"); exit(1)
+    }
+    out("detect-staffs: \(dir.standardizedFileURL.path) \(seg.width)x\(seg.height) "
+        + "(\(String(format: "%.0f", Date().timeIntervalSince(t0) * 1000)) ms)")
+    let report = StaffLayoutCompare.compare(layout, stages)
+    for line in report.lines { out(line) }
+    out(report.ok ? "PASS identical to homr" : "FAIL differs from homr")
+    exit(report.ok ? 0 : 1)
 }
 
 if positional.first == "prepare-staff" {
