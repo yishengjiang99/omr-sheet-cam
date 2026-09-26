@@ -1,0 +1,83 @@
+# iOS simulator build + app tests (incl. Gate-1 CoreML: Tests/Gate1StaffTokenMatchTests.swift).
+name: iOS Simulator
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-sim-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: OMRSheetCamTests (simulator)
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache models
+        uses: actions/cache@v4
+        with:
+          path: models
+          key: models-${{ hashFiles('models.lock') }}
+
+      - name: Fetch models (idempotent, SHA-256 verified)
+        run: scripts/fetch-models && ls -l models
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Xcode info
+        run: |
+          xcodebuild -version
+          xcodebuild -list -project OMRSheetCam.xcodeproj
+
+      - name: Resolve simulator (newest iOS runtime, first iPhone)
+        id: sim
+        run: |
+          set -euo pipefail
+          name=$(xcrun simctl list devices available -j | python3 -c '
+          import json, re, sys
+          d = json.load(sys.stdin)["devices"]
+          ios = [r for r in d if ".SimRuntime.iOS-" in r and any("iPhone" in x["name"] for x in d[r])]
+          if not ios: sys.exit("no iOS runtime with an iPhone simulator")
+          rt = max(ios, key=lambda r: [int(n) for n in re.findall(r"\d+", r.split("iOS-")[1])])
+          prefer = ["iPhone 17", "iPhone 16", "iPhone 16 Pro", "iPhone 15"]
+          names = [x["name"] for x in d[rt] if "iPhone" in x["name"]]
+          print(next((p for p in prefer if p in names), names[0]))
+          ')
+          echo "Using simulator: $name"
+          echo "destination=platform=iOS Simulator,name=$name,OS=latest" >> "$GITHUB_OUTPUT"
+
+      - name: xcodebuild test
+        env:
+          # xcodebuild strips TEST_RUNNER_ and forwards to the simulator test process.
+          TEST_RUNNER_OMR_MODELS_DIR: ${{ github.workspace }}/models
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project OMRSheetCam.xcodeproj \
+            -scheme OMRSheetCam \
+            -destination "${{ steps.sim.outputs.destination }}" \
+            -resultBundlePath "$RUNNER_TEMP/OMRSheetCam.xcresult" \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee "$RUNNER_TEMP/xcodebuild.log"
+
+      - name: Gate-1 summary
+        if: always()
+        run: grep -E "Gate1StaffTokenMatchTests|Gate-1" "$RUNNER_TEMP/xcodebuild.log" || echo "no Gate-1 lines"
+
+      - name: Upload xcresult
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OMRSheetCam-xcresult
+          path: |
+            ${{ runner.temp }}/OMRSheetCam.xcresult
+            ${{ runner.temp }}/xcodebuild.log
+          if-no-files-found: ignore

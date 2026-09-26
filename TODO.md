@@ -13,6 +13,7 @@ Priority is **implementation first**. Keep test tooling to what's needed to prov
 - [x] **iOS**: Point `Tests/Gate1StaffTokenMatchTests.swift` at `fixtures/oracle.c_scale_staff/`, loading `staff.npy` and running `decodeStaff` over `ORTObjCSession` (encoder `OMR_ENCODER_PROVIDER` coreml|cpu, decoder cpu; CoreML mismatch logs CPU-encoder max-abs diff). Typechecked + run on Linux via ORTCSession harness; never compiled for iOS.
 - [ ] **Core**: `ORTObjCSession` throws `unsupportedElementType` for float16 (onnxruntime-objc has no fp16 element type), so the pinned fp16 encoder can't run on iOS and the app Gate-1 test skips. Needs an fp16 path or fp32 encoder.
 - [ ] **OMR iOS**: run Gate1StaffTokenMatchTests via xcodebuild on Mac simulator + physical iPhone (needs Mac online)
+- [ ] **OMR iOS**: CI iOS simulator build + Gate-1 CoreML test (macos-latest). `.github/workflows/ios-sim.yml` + shared scheme `OMRSheetCam`; tick when green.
 
 ## Next
 - [x] **Core**: Pin Apple SPM onnxruntime exactly. Now `exact: "1.24.2"` (was `from:`). 1.30.0 is **not tagged** on onnxruntime-swift-package-manager; newest tag is 1.24.2, see docs/ORT-LINUX.md "iOS version gap".
