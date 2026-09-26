@@ -3,28 +3,18 @@ import XCTest
 import OMRHomrIOS
 
 /// Gate 1 on iOS / macOS: `fixtures/oracle.c_scale_staff/staff.npy` → `decodeStaff(tensor:)` over
-/// `ORTObjCSession` (encoder `.coreML` + CPU fallback, decoder `.cpu`) must equal
-/// `expected.tokens.json` on all six fields. Mirrors the package's Linux `Gate1ORTCTests`.
+/// `ORTCSession` (ORT C API; encoder `.coreML` = CoreML EP + CPU fallback, or `.cpu`; decoder fp32
+/// `.cpu` only) must equal `expected.tokens.json` on all six fields. Mirrors the package's Linux
+/// `Gate1ORTCTests`.
 ///
 /// Env: `OMR_MODELS_DIR` (default `<repo>/models`, from `scripts/fetch-models`),
 /// `OMR_ENCODER_PROVIDER` = `coreml` (default) | `cpu`. Under xcodebuild pass them as
 /// `TEST_RUNNER_OMR_MODELS_DIR` / `TEST_RUNNER_OMR_ENCODER_PROVIDER`.
-/// Skips when fixtures, models or onnxruntime-objc are unavailable (e.g. a device without files).
+/// Skips only when the pinned models are absent (e.g. a device without files).
 final class Gate1StaffTokenMatchTests: XCTestCase {
 
     func testCScaleOracleTokenMatch() throws {
-        #if canImport(OnnxRuntimeBindings) || canImport(onnxruntime_objc)
-        let provider = try Self.encoderProvider()
-        do {
-            try Self.runGate1(ORTObjCSession.self, encoderProvider: provider)
-        } catch ORTObjCSessionError.unsupportedElementType(let detail) {
-            throw XCTSkip(
-                "ORTObjCSession cannot run the pinned fp16 encoder (\(detail)); OMR Core package gap"
-            )
-        }
-        #else
-        throw XCTSkip("ORTObjCSession not compiled: onnxruntime-objc (OnnxRuntimeBindings) unavailable")
-        #endif
+        try Self.runGate1(encoderProvider: Self.encoderProvider())
     }
 
     // MARK: - Gate 1
@@ -49,8 +39,7 @@ final class Gate1StaffTokenMatchTests: XCTestCase {
         }
     }
 
-    static func runGate1<Backend: ORTSessionBackend>(
-        _: Backend.Type,
+    static func runGate1(
         encoderProvider: ORTProvider,
         repoRoot: URL = Gate1StaffTokenMatchTests.repoRoot,
         env: [String: String] = ProcessInfo.processInfo.environment
@@ -60,7 +49,7 @@ final class Gate1StaffTokenMatchTests: XCTestCase {
         let npy = dir.appendingPathComponent("staff.npy")
         let json = dir.appendingPathComponent("expected.tokens.json")
         guard fm.fileExists(atPath: npy.path), fm.fileExists(atPath: json.path) else {
-            throw XCTSkip("Gate-1 fixtures missing: \(npy.path) / expected.tokens.json (device without repo files?)")
+            throw ConfigError(description: "Gate-1 fixtures missing: \(npy.path) / expected.tokens.json")
         }
         let models = try modelURLs(repoRoot: repoRoot, env: env)
 
@@ -68,27 +57,35 @@ final class Gate1StaffTokenMatchTests: XCTestCase {
         XCTAssertFalse(expected.isEmpty, "expected.tokens.json has no symbols")
         let tensor = try StaffTensor.loadNPY(npy)
         let session = try StaffInferenceSession(
-            encoder: Backend(modelURL: models.encoder, provider: encoderProvider),
-            decoder: Backend(modelURL: models.decoder, provider: .cpu),
+            encoder: ORTCSession(modelURL: models.encoder, provider: encoderProvider),
+            decoder: ORTCSession(modelURL: models.decoder, provider: .cpu),
             vocabulary: TokenizerLoader.loadVocabulary()
         )
         let got = try session.decodeStaff(tensor: tensor)
 
         var note = ""
-        if encoderProvider == .coreML, let idx = firstMismatch(got, expected) {
-            note = cpuEncoderDiagnostics(
-                Backend.self, session: session, encoderModel: models.encoder,
-                tensor: tensor, expected: expected, coreMLDivergence: idx
-            )
+        if let idx = firstMismatch(got, expected) {
+            if encoderProvider == .coreML {
+                note = cpuEncoderDiagnostics(
+                    session: session, encoderModel: models.encoder,
+                    tensor: tensor, expected: expected, coreMLDivergence: idx
+                )
+            } else {
+                note = "Gate-1 CPU mismatch: decode first diverges @\(idx)"
+            }
             print(note)
+        } else {
+            print(
+                "Gate-1 PASS: \(got.count)/\(expected.count) symbols match oracle "
+                    + "(ORT \(ORTCSession.runtimeVersion), encoder \(encoderProvider), decoder cpu)"
+            )
         }
         assertSymbolsEqual(got, expected, note: note)
     }
 
     /// Mismatch under CoreML: re-run the encoder on `.cpu`, diff fp32 contexts, decode the CPU
     /// context. Never throws; the caller still fails on the CoreML mismatch.
-    static func cpuEncoderDiagnostics<Backend: ORTSessionBackend>(
-        _: Backend.Type,
+    static func cpuEncoderDiagnostics(
         session: StaffInferenceSession,
         encoderModel: URL,
         tensor: StaffTensor,
@@ -99,7 +96,7 @@ final class Gate1StaffTokenMatchTests: XCTestCase {
         do {
             let input = tensor.float32LEData
             let cpuEncoder = try EncoderSession(
-                backend: Backend(modelURL: encoderModel, provider: .cpu),
+                backend: ORTCSession(modelURL: encoderModel, provider: .cpu),
                 provider: .cpuFallback,
                 inputElementType: .float16,
                 modelURL: encoderModel
