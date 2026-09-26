@@ -10,7 +10,9 @@ Priority is **implementation first**. Keep test tooling to what's needed to prov
 - [x] **iOS** (merged by **Core** into `main`): Linux ONNX Runtime C wrapper `ORTCSession` on `ios/ort-c-linux`. It conforms to `ORTSessionBackend`, runs on CPU only, returns fp16 bytes uncast, and gets the ORT library through a pinned fetch.
 - [x] **Core**: Merge `ios/ort-c-linux`, then run `omr-test decode-staff fixtures/oracle.c_scale_staff/staff.npy` on Linux and post the raw tokens (12 symbols, token_edit=0, exit 0).
 - [x] **Core**: Gate 1 passes when `decodeStaff(tensor:)` output equals the 12 tokens in `fixtures/oracle.c_scale_staff/expected.tokens.json`, with a real exit code. PASSED on Linux ORT 1.30.0 CPU: exact match (all 6 fields), `omr-test` exit 0; `Gate1ORTCTests` in `swift test` (52/52).
-- [ ] **iOS**: Point `Tests/Gate1StaffTokenMatchTests.swift` at `fixtures/oracle.c_scale_staff/`, loading `staff.npy` and running `decodeStaff`.
+- [x] **iOS**: Point `Tests/Gate1StaffTokenMatchTests.swift` at `fixtures/oracle.c_scale_staff/`, loading `staff.npy` and running `decodeStaff` over `ORTObjCSession` (encoder `OMR_ENCODER_PROVIDER` coreml|cpu, decoder cpu; CoreML mismatch logs CPU-encoder max-abs diff). Typechecked + run on Linux via ORTCSession harness; never compiled for iOS.
+- [ ] **Core**: `ORTObjCSession` throws `unsupportedElementType` for float16 (onnxruntime-objc has no fp16 element type), so the pinned fp16 encoder can't run on iOS and the app Gate-1 test skips. Needs an fp16 path or fp32 encoder.
+- [ ] **OMR iOS**: run Gate1StaffTokenMatchTests via xcodebuild on Mac simulator + physical iPhone (needs Mac online)
 
 ## Next
 - [x] **Core**: Pin Apple SPM onnxruntime exactly. Now `exact: "1.24.2"` (was `from:`). 1.30.0 is **not tagged** on onnxruntime-swift-package-manager; newest tag is 1.24.2, see docs/ORT-LINUX.md "iOS version gap".
@@ -18,7 +20,7 @@ Priority is **implementation first**. Keep test tooling to what's needed to prov
 - [ ] **Core**: Port homr's staff preprocessing. `staff.png` to tensor must match `staff.npy`; report the max abs diff.
 - [ ] **Yisheng**: When the Mac is online, add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture.
 - [ ] **Yisheng**: Get the app target compiled once with `xcodebuild test` on a Mac or CI (still never compiled).
-- [ ] Bundle the models in the app, plus warmup and memory on a real device (build-order step 2).
+- [ ] **OMR iOS**: bundle models into app for on-device run (step 2: warmup + memory)
 
 ## Later (build order 3–5, blocked until Gate 1 passes)
 - [ ] Geometry and SegNet tiling in the AGPL package

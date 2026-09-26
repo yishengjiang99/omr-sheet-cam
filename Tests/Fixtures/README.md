@@ -1,16 +1,9 @@
 # App test fixtures
 
-## C-scale staff oracle (Gate-1)
+Gate-1 (`Tests/Gate1StaffTokenMatchTests.swift`) reads the repo-root fixture directly via `#filePath`:
 
-Prefer the package fixture path (source of truth):
+- `fixtures/oracle.c_scale_staff/staff.npy`: NCHW `[1,1,256,1280]` staff tensor
+- `fixtures/oracle.c_scale_staff/expected.tokens.json`: homr oracle symbols (six fields)
+- models: `<repo>/models/` from `scripts/fetch-models` (names in `models.lock`), or `OMR_MODELS_DIR` (`TEST_RUNNER_OMR_MODELS_DIR` under xcodebuild)
 
-`Packages/omr-homr-ios/Tests/OMRHomrIOSTests/Fixtures/c_scale_staff_oracle/`
-
-| File | Purpose |
-|------|---------|
-| `staff.png` | Single engraved staff (C major scale) |
-| `oracle_tokens.json` | Ordered `EncodedSymbol` dicts from Python homr |
-
-App tests look there first, then fall back to `Tests/Fixtures/c_scale_staff_oracle/` if you copy fixtures locally for the Xcode test target.
-
-Do **not** invent tokens to force a match. Export from `~/workspace/homr-research`.
+Works on Mac / simulator (checkout readable). Skips on a device without these files. Do not copy or invent tokens here.

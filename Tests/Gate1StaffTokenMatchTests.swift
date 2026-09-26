@@ -1,160 +1,202 @@
+import Foundation
 import XCTest
 import OMRHomrIOS
-@testable import OMRSheetCam
 
-/// Staff-only Gate-1 unit/device tests against `OMRHomrIOS.parseSheetMusicWithLayout`.
-/// Does not invent tokens. Oracle assert skips until fixtures + ORT models land.
+/// Gate 1 on iOS / macOS: `fixtures/oracle.c_scale_staff/staff.npy` → `decodeStaff(tensor:)` over
+/// `ORTObjCSession` (encoder `.coreML` + CPU fallback, decoder `.cpu`) must equal
+/// `expected.tokens.json` on all six fields. Mirrors the package's Linux `Gate1ORTCTests`.
+///
+/// Env: `OMR_MODELS_DIR` (default `<repo>/models`, from `scripts/fetch-models`),
+/// `OMR_ENCODER_PROVIDER` = `coreml` (default) | `cpu`. Under xcodebuild pass them as
+/// `TEST_RUNNER_OMR_MODELS_DIR` / `TEST_RUNNER_OMR_ENCODER_PROVIDER`.
+/// Skips when fixtures, models or onnxruntime-objc are unavailable (e.g. a device without files).
 final class Gate1StaffTokenMatchTests: XCTestCase {
 
-    /// Proves the app/test targets link `OMRHomrIOS` and hit the public API.
-    func testParseSheetMusicAPIIsReachable() {
-        let png = Gate1RootView.tinyPNG
-        XCTAssertFalse(png.isEmpty)
-
-        XCTAssertThrowsError(
-            try OMRHomrIOS.parseSheetMusicWithLayout(
-                input: ParseSheetMusicInput(imageData: png, staffOnly: true)
-            )
-        ) { error in
-            guard let omr = error as? OMRError else {
-                return XCTFail("expected OMRError, got \(error)")
-            }
-            switch omr {
-            case .staffOnlyGate1NotReady, .modelsNotBundled:
-                break // expected until models + oracle are wired
-            default:
-                XCTFail("unexpected OMRError case: \(omr)")
-            }
-        }
-    }
-
-    /// Gate-1 stop condition: decoded symbol sequence string-equal to C-scale oracle.
-    /// XCTSkip when fixtures are missing. When present but inference still stubbed, skip
-    /// (do not invent tokens). When parse succeeds with symbols exposed, assert field equality.
     func testCScaleOracleTokenMatch() throws {
-        guard let staffURL = Self.oracleFileURL(named: "staff.png"),
-              let oracleURL = Self.oracleFileURL(named: "oracle_tokens.json")
-        else {
+        #if canImport(OnnxRuntimeBindings) || canImport(onnxruntime_objc)
+        let provider = try Self.encoderProvider()
+        do {
+            try Self.runGate1(ORTObjCSession.self, encoderProvider: provider)
+        } catch ORTObjCSessionError.unsupportedElementType(let detail) {
             throw XCTSkip(
-                "Fixtures/c_scale_staff_oracle/{staff.png,oracle_tokens.json} missing — export from ~/workspace/homr-research (see Packages/omr-homr-ios/.../Fixtures/README.md)"
+                "ORTObjCSession cannot run the pinned fp16 encoder (\(detail)); OMR Core package gap"
             )
         }
+        #else
+        throw XCTSkip("ORTObjCSession not compiled: onnxruntime-objc (OnnxRuntimeBindings) unavailable")
+        #endif
+    }
 
-        let png = try Data(contentsOf: staffURL)
-        XCTAssertFalse(png.isEmpty, "staff.png must be non-empty")
-        let expected = try Self.loadOracleSymbols(from: oracleURL)
-        XCTAssertFalse(expected.isEmpty, "oracle_tokens.json must list symbols")
+    // MARK: - Gate 1
 
-        let result: ParseSheetMusicResult
-        do {
-            result = try OMRHomrIOS.parseSheetMusicWithLayout(
-                input: ParseSheetMusicInput(imageData: png, staffOnly: true)
+    /// `<repo>` = parent of `Tests/`. Valid wherever the checkout is readable (Mac, simulator).
+    static let repoRoot = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent() // Tests/
+        .deletingLastPathComponent() // repo root
+
+    struct ConfigError: Error, CustomStringConvertible {
+        var description: String
+    }
+
+    /// `OMR_ENCODER_PROVIDER`: `coreml` (default) | `cpu`. Decoder is always `.cpu`.
+    static func encoderProvider(
+        _ env: [String: String] = ProcessInfo.processInfo.environment
+    ) throws -> ORTProvider {
+        switch env["OMR_ENCODER_PROVIDER"]?.lowercased() ?? "coreml" {
+        case "coreml": return .coreML
+        case "cpu": return .cpu
+        case let other: throw ConfigError(description: "OMR_ENCODER_PROVIDER must be coreml|cpu, got '\(other)'")
+        }
+    }
+
+    static func runGate1<Backend: ORTSessionBackend>(
+        _: Backend.Type,
+        encoderProvider: ORTProvider,
+        repoRoot: URL = Gate1StaffTokenMatchTests.repoRoot,
+        env: [String: String] = ProcessInfo.processInfo.environment
+    ) throws {
+        let fm = FileManager.default
+        let dir = repoRoot.appendingPathComponent("fixtures/oracle.c_scale_staff")
+        let npy = dir.appendingPathComponent("staff.npy")
+        let json = dir.appendingPathComponent("expected.tokens.json")
+        guard fm.fileExists(atPath: npy.path), fm.fileExists(atPath: json.path) else {
+            throw XCTSkip("Gate-1 fixtures missing: \(npy.path) / expected.tokens.json (device without repo files?)")
+        }
+        let models = try modelURLs(repoRoot: repoRoot, env: env)
+
+        let expected = try loadExpectedSymbols(from: json)
+        XCTAssertFalse(expected.isEmpty, "expected.tokens.json has no symbols")
+        let tensor = try StaffTensor.loadNPY(npy)
+        let session = try StaffInferenceSession(
+            encoder: Backend(modelURL: models.encoder, provider: encoderProvider),
+            decoder: Backend(modelURL: models.decoder, provider: .cpu),
+            vocabulary: TokenizerLoader.loadVocabulary()
+        )
+        let got = try session.decodeStaff(tensor: tensor)
+
+        var note = ""
+        if encoderProvider == .coreML, let idx = firstMismatch(got, expected) {
+            note = cpuEncoderDiagnostics(
+                Backend.self, session: session, encoderModel: models.encoder,
+                tensor: tensor, expected: expected, coreMLDivergence: idx
             )
-        } catch let error as OMRError {
-            switch error {
-            case .staffOnlyGate1NotReady, .modelsNotBundled, .sessionNotConfigured:
-                throw XCTSkip(
-                    "Oracle fixtures present; staff-only decode not ready yet: \(error)"
-                )
-            default:
-                throw error
+            print(note)
+        }
+        assertSymbolsEqual(got, expected, note: note)
+    }
+
+    /// Mismatch under CoreML: re-run the encoder on `.cpu`, diff fp32 contexts, decode the CPU
+    /// context. Never throws; the caller still fails on the CoreML mismatch.
+    static func cpuEncoderDiagnostics<Backend: ORTSessionBackend>(
+        _: Backend.Type,
+        session: StaffInferenceSession,
+        encoderModel: URL,
+        tensor: StaffTensor,
+        expected: [EncodedSymbol],
+        coreMLDivergence: Int
+    ) -> String {
+        let head = "Gate-1 CoreML mismatch: CoreML decode first diverges @\(coreMLDivergence)"
+        do {
+            let input = tensor.float32LEData
+            let cpuEncoder = try EncoderSession(
+                backend: Backend(modelURL: encoderModel, provider: .cpu),
+                provider: .cpuFallback,
+                inputElementType: .float16,
+                modelURL: encoderModel
+            )
+            let coreMLCtx = try session.encoder.generateContext(staffImageNormalized: input).castToFP32ForDecoder()
+            let cpuCtx = try cpuEncoder.generateContext(staffImageNormalized: input).castToFP32ForDecoder()
+            let diff = maxAbsDiff(fp32LE: coreMLCtx.bytes, cpuCtx.bytes)
+            let cpuGot = try session.decoderLoop.generate(
+                context: cpuCtx, stepRunner: session.decoder.makeStepRunner(context: cpuCtx)
+            )
+            let cpuVerdict = firstMismatch(cpuGot, expected).map { "no (diverges @\($0))" } ?? "yes"
+            return "\(head); encoder context max|coreML-cpu| (fp32) = \(diff) "
+                + "(shapes \(coreMLCtx.shape) vs \(cpuCtx.shape)); CPU-encoder decode matches oracle: \(cpuVerdict)"
+        } catch {
+            return "\(head); CPU-encoder diagnostics failed: \(error)"
+        }
+    }
+
+    // MARK: - Models / fixtures
+
+    /// `<OMR_MODELS_DIR | repo/models>/<models.lock encoder_*, decoder_*>`; skips if absent.
+    static func modelURLs(repoRoot: URL, env: [String: String]) throws -> (encoder: URL, decoder: URL) {
+        let dir = env["OMR_MODELS_DIR"].flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0, isDirectory: true) }
+            ?? repoRoot.appendingPathComponent("models")
+        let names = pinnedModelNames(lock: repoRoot.appendingPathComponent("models.lock"))
+        let enc = dir.appendingPathComponent(names.encoder)
+        let dec = dir.appendingPathComponent(names.decoder)
+        let missing = [enc, dec].filter { !FileManager.default.fileExists(atPath: $0.path) }
+        guard missing.isEmpty else {
+            throw XCTSkip(
+                "pinned models missing (\(missing.map(\.lastPathComponent))) in \(dir.path); "
+                    + "run scripts/fetch-models or set OMR_MODELS_DIR"
+            )
+        }
+        return (enc, dec)
+    }
+
+    /// Filenames from `models.lock` (`<sha256>  <filename>  <url>`); pinned fallback if unreadable.
+    static func pinnedModelNames(lock: URL) -> (encoder: String, decoder: String) {
+        let stem = "pytorch_model_465-597144cab54c8f6d0f6c9619df5c5312694eadd6"
+        var encoder = "encoder_\(stem)_fp16.onnx"
+        var decoder = "decoder_\(stem).onnx"
+        guard let text = try? String(contentsOf: lock, encoding: .utf8) else { return (encoder, decoder) }
+        let files = text.split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && !$0.hasPrefix("#") }
+            .compactMap { $0.split(whereSeparator: \.isWhitespace).dropFirst().first.map(String.init) }
+        if let e = files.first(where: { $0.hasPrefix("encoder_") }) { encoder = e }
+        if let d = files.first(where: { $0.hasPrefix("decoder_") }) { decoder = d }
+        return (encoder, decoder)
+    }
+
+    private struct ExpectedTokensFile: Decodable {
+        var symbols: [OracleSymbolFields]
+    }
+
+    static func loadExpectedSymbols(from url: URL) throws -> [EncodedSymbol] {
+        try JSONDecoder().decode(ExpectedTokensFile.self, from: Data(contentsOf: url))
+            .symbols.map { EncodedSymbol(oracleFields: $0) }
+    }
+
+    // MARK: - Compare
+
+    static func firstMismatch(_ got: [EncodedSymbol], _ expected: [EncodedSymbol]) -> Int? {
+        let n = min(got.count, expected.count)
+        if let i = (0..<n).first(where: { got[$0].oracleFields != expected[$0].oracleFields }) { return i }
+        return got.count == expected.count ? nil : n
+    }
+
+    static func maxAbsDiff(fp32LE a: Data, _ b: Data) -> Float {
+        guard a.count == b.count, a.count % 4 == 0 else { return .infinity }
+        func floats(_ d: Data) -> [Float] {
+            d.withUnsafeBytes { raw in
+                (0..<(d.count / 4)).map {
+                    Float(bitPattern: UInt32(littleEndian: raw.loadUnaligned(fromByteOffset: $0 * 4, as: UInt32.self)))
+                }
             }
         }
-
-        // Public ParseSheetMusicResult exposes midi + noteLayout only (AGPL isolation).
-        // Token-level Gate-1 match uses StaffInferenceSession.decodeStaffSymbols once ORT
-        // step runner is bound. Until symbols are obtainable, require non-empty MIDI as a
-        // coarse readiness signal and skip the field-level assert with a clear pointer.
-        _ = result
-        let session = try StaffInferenceSession.makeDefault()
-        do {
-            // Unconfigured path throws until ORT lands — then compare to oracle.
-            let decoded = try session.decodeStaffSymbols(
-                normalizedStaffImage: png,
-                stepRunner: UnconfiguredDecoderStepRunner()
-            )
-            Self.assertSymbolsEqual(decoded, expected)
-        } catch let error as OMRError {
-            switch error {
-            case .sessionNotConfigured, .modelsNotBundled, .staffOnlyGate1NotReady:
-                throw XCTSkip(
-                    "parse returned but decodeStaffSymbols not ready for token assert: \(error)"
-                )
-            default:
-                throw error
-            }
-        }
+        return zip(floats(a), floats(b)).reduce(0) { max($0, abs($1.0 - $1.1)) }
     }
 
-    // MARK: - Oracle loading
-
-    private static func oracleFileURL(named fileName: String) -> URL? {
-        let candidates: [URL] = [
-            // Package source-of-truth (checked out next to the app)
-            URL(fileURLWithPath: #filePath)
-                .deletingLastPathComponent() // Tests/
-                .deletingLastPathComponent() // repo root
-                .appendingPathComponent(
-                    "Packages/omr-homr-ios/Tests/OMRHomrIOSTests/Fixtures/c_scale_staff_oracle/\(fileName)"
-                ),
-            // Optional app-local copy
-            URL(fileURLWithPath: #filePath)
-                .deletingLastPathComponent()
-                .appendingPathComponent("Fixtures/c_scale_staff_oracle/\(fileName)"),
-            Bundle(for: Gate1StaffTokenMatchTests.self)
-                .url(forResource: fileName, withExtension: nil, subdirectory: "Fixtures/c_scale_staff_oracle"),
-            Bundle(for: Gate1StaffTokenMatchTests.self)
-                .url(forResource: (fileName as NSString).deletingPathExtension,
-                     withExtension: (fileName as NSString).pathExtension,
-                     subdirectory: "Fixtures/c_scale_staff_oracle"),
-        ].compactMap { $0 }
-
-        return candidates.first { FileManager.default.fileExists(atPath: $0.path) }
-    }
-
-    private struct OracleFile: Decodable {
-        var symbols: [OracleSymbol]
-    }
-
-    private struct OracleSymbol: Decodable {
-        var rhythm: String
-        var pitch: String?
-        var lift: String?
-        var articulation: String?
-        var slur: String?
-        var position: String?
-    }
-
-    private static func loadOracleSymbols(from url: URL) throws -> [EncodedSymbol] {
-        let data = try Data(contentsOf: url)
-        let file = try JSONDecoder().decode(OracleFile.self, from: data)
-        return file.symbols.map { s in
-            EncodedSymbol(
-                rhythm: s.rhythm,
-                pitch: s.pitch ?? EncodedSymbol.nonote,
-                lift: s.lift ?? EncodedSymbol.nonote,
-                articulation: s.articulation ?? EncodedSymbol.nonote,
-                slur: s.slur ?? EncodedSymbol.nonote,
-                position: s.position ?? EncodedSymbol.nonote
-            )
-        }
-    }
-
-    private static func assertSymbolsEqual(
+    static func assertSymbolsEqual(
         _ got: [EncodedSymbol],
         _ expected: [EncodedSymbol],
+        note: String = "",
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
-        XCTAssertEqual(got.count, expected.count, "symbol count", file: file, line: line)
-        let n = min(got.count, expected.count)
-        for i in 0..<n {
-            XCTAssertEqual(got[i].rhythm, expected[i].rhythm, "rhythm @\(i)", file: file, line: line)
-            XCTAssertEqual(got[i].pitch, expected[i].pitch, "pitch @\(i)", file: file, line: line)
-            XCTAssertEqual(got[i].lift, expected[i].lift, "lift @\(i)", file: file, line: line)
-            XCTAssertEqual(got[i].articulation, expected[i].articulation, "articulation @\(i)", file: file, line: line)
-            XCTAssertEqual(got[i].slur, expected[i].slur, "slur @\(i)", file: file, line: line)
-            XCTAssertEqual(got[i].position, expected[i].position, "position @\(i)", file: file, line: line)
+        let ctx = note.isEmpty ? "" : " | \(note)"
+        XCTAssertEqual(got.count, expected.count, "symbol count\(ctx)", file: file, line: line)
+        for i in 0..<min(got.count, expected.count) {
+            XCTAssertEqual(got[i].rhythm, expected[i].rhythm, "rhythm @\(i)\(ctx)", file: file, line: line)
+            XCTAssertEqual(got[i].pitch, expected[i].pitch, "pitch @\(i)\(ctx)", file: file, line: line)
+            XCTAssertEqual(got[i].lift, expected[i].lift, "lift @\(i)\(ctx)", file: file, line: line)
+            XCTAssertEqual(got[i].articulation, expected[i].articulation, "articulation @\(i)\(ctx)", file: file, line: line)
+            XCTAssertEqual(got[i].slur, expected[i].slur, "slur @\(i)\(ctx)", file: file, line: line)
+            XCTAssertEqual(got[i].position, expected[i].position, "position @\(i)\(ctx)", file: file, line: line)
         }
     }
 }
