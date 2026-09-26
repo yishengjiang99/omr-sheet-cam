@@ -141,6 +141,7 @@
 				S10000000000000000000001 /* Sources */,
 				F10000000000000000000001 /* Frameworks */,
 				R10000000000000000000001 /* Resources */,
+				R10000000000000000000002 /* Bundle ONNX models */,
 			);
 			buildRules = (
 			);
@@ -226,6 +227,29 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		R10000000000000000000002 /* Bundle ONNX models */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle ONNX models";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Copies homr ONNX weights fetched by scripts/fetch-models (gitignored models/) into\n# <App>.app/models/. No-op when models/ is absent so local builds still work.\n# Set OMR_REQUIRE_MODELS=1 (CI TestFlight) to fail the build if they are missing.\nset -eu\nSRC=\"${SRCROOT}/models\"\nDST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/models\"\nif ls \"$SRC\"/*.onnx >/dev/null 2>&1; then\n  mkdir -p \"$DST\"\n  cp -f \"$SRC\"/*.onnx \"$DST\"/\n  echo \"Bundled ONNX models: $(ls \"$DST\")\"\nelif [ \"${OMR_REQUIRE_MODELS:-0}\" = \"1\" ]; then\n  echo \"error: models/*.onnx missing; run scripts/fetch-models\" >&2\n  exit 1\nelse\n  echo \"warning: models/ not found; app built without ONNX weights (run scripts/fetch-models)\"\nfi\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		S10000000000000000000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -306,10 +330,15 @@
 				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGNING_ALLOWED = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 83D36RPMUM;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "AI Camera - Music Reader";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AI Camera - Music Reader uses the camera to photograph sheet music so it can be read and played back on this device.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AI Camera - Music Reader can open a photo of sheet music from your library to read and play it back on this device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -337,10 +366,15 @@
 				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGNING_ALLOWED = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 83D36RPMUM;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "AI Camera - Music Reader";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AI Camera - Music Reader uses the camera to photograph sheet music so it can be read and played back on this device.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AI Camera - Music Reader can open a photo of sheet music from your library to read and play it back on this device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -367,7 +401,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGNING_ALLOWED = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 83D36RPMUM;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
@@ -387,7 +421,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGNING_ALLOWED = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 83D36RPMUM;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
