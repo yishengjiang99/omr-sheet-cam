@@ -9,3 +9,10 @@ Packages/omr-homr-ios/.build/
 *.ipa
 .env
 .env.*
+# ONNX weights are fetched by scripts/fetch-models (pinned in models.lock); never commit them
+*.onnx
+# Python tooling caches / local venvs
+__pycache__/
+*.pyc
+.venv/
+venv/

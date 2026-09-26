@@ -3,7 +3,15 @@ match_tier: midi_distance
 clef: treble
 key: C
 time: "4/4"
-source: TBD camera photo of mono.c_major_scale ~15°
+source: synthetic camera render of mono.c_major_scale/input.png (tools/fixtures/render_fixtures.py make_deskew)
 license: CC0 synthetic
 midi_distance_threshold: 2
-notes: Threshold ≤2 events per 16 sounding notes. notes.csv mirrors scale GT; image follow-up.
+synthetic:
+  base: mono.c_major_scale
+  rotation_deg: 15
+  keystone: 0.04   # top edge pulled in 4% (PIL PERSPECTIVE)
+  illumination: radial falloff 12%
+  noise_sigma: 6.0
+  blur_radius: 0.8
+  seed: 15
+notes: Threshold ≤2 events per 16 sounding notes. notes.csv mirrors scale GT. Not a real photo.

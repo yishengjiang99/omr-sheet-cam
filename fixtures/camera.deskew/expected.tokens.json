@@ -1,7 +1,7 @@
 {
-  "source": "TBD LilyPond + ~15\u00b0 deskew photo",
+  "source": "synthetic render of mono.c_major_scale (~15° rotation + keystone); tier midi_distance",
   "staff": "camera.deskew",
   "status": "stub",
   "symbols": [],
-  "todo": "Generate input.jpg (~15\u00b0 rotation of mono.c_major_scale) in follow-up"
+  "todo": "Token GT not required for midi_distance tier; compare Layer B vs expected.notes.csv"
 }

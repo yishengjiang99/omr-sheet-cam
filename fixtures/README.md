@@ -58,14 +58,17 @@ Canonicalize (Layer B): C4=MIDI 60; lift `#` +1 / `b` −1; `note_4`=480 TPQ tic
 
 | ID | Tier | Tokens | Notes CSV | Image |
 |----|------|--------|-----------|-------|
-| `mono.c_major_scale` | exact_tokens | complete (writer GT) | complete | TODO LilyPond |
-| `mono.sharps_flats` | exact_tokens | complete | complete | TODO |
-| `mono.rhythms` | exact_tokens | complete | complete | TODO |
-| `mono.rests` | exact_tokens | complete | complete | TODO |
-| `poly.chord` | exact_tokens | complete | complete | TODO |
-| `clefs.bass` | exact_tokens | complete | complete | TODO |
-| `piano.grand` | exact_midi | complete | complete | TODO |
-| `camera.deskew` | midi_distance (≤2 / 16 notes) | stub | complete (scale mirror) | TODO ~15° photo |
+| `mono.c_major_scale` | exact_tokens | complete (writer GT) | complete | LilyPond `input.png` (200 dpi gray) |
+| `mono.sharps_flats` | exact_tokens | complete | complete | LilyPond `input.png` (200 dpi gray) |
+| `mono.rhythms` | exact_tokens | complete | complete | LilyPond `input.png` (200 dpi gray) |
+| `mono.rests` | exact_tokens | complete | complete | LilyPond `input.png` (200 dpi gray) |
+| `poly.chord` | exact_tokens | complete | complete | LilyPond `input.png` (200 dpi gray) |
+| `clefs.bass` | exact_tokens | complete | complete | LilyPond `input.png` (200 dpi gray) |
+| `piano.grand` | exact_midi | complete | complete | LilyPond `input.png` (200 dpi gray) |
+| `camera.deskew` | midi_distance (≤2 / 16 notes) | stub | complete (scale mirror) | synthetic ~15° rotate + keystone of scale |
 | `oracle.c_scale_staff` | exact_tokens (22/22 gate) | awaiting_oracle_export | empty | blocked onnx/homr-research |
 
-LilyPond/Verovio image generation and live Layer A oracle compare are follow-ups.
+Images are rendered from `fixtures/<id>/source.ly` by `tools/fixtures/render_fixtures.py`
+(LilyPond 2.24, A4, 200 dpi grayscale). The script also checks LilyPond's MIDI for the same
+source against `expected.notes.csv`, and derives `camera.deskew/input.png` deterministically
+(seed 15). Live Layer A oracle compare is a follow-up.
