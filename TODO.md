@@ -13,7 +13,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] TestFlight build 4 in internal testing: Run Gate-1 (npy + png) + warmup diagnostics — OMR iOS — `c2950ae`, run 36265488038, VALID 12:21 PM PT
 - [ ] SF2 player wired into the app (Result "Play sample" + Diagnostics → `PlayerView`, bundled sweden.midi + GeneralUser-GS.sf2): waiting on ios-sim — OMR iOS — `466c22d` + this commit
 - [ ] Page pipeline port (homr 7d97c3c `detect_staffs_in_image` + `parse_staffs`): page → SegNet → staffs → per-staff decode → SMF + noteLayout — OMR Core — oracle fixtures in `9839f13`
-  - [ ] M1: page preprocessing (autocrop, PIL bicubic resize, CLAHE) + SegNet tiling/merge, exact vs oracle
+  - [x] M1: page preprocessing (autocrop, PIL bicubic resize, CLAHE) + SegNet tiling/merge: all 9 oracle pages byte-identical (crop, resized, CLAHE) and 0 SegNet class mismatches; `omr-test segnet-page --compare` — `5fd4ff3`
   - [ ] M2: symbol boxes + staff detection + brace/grand-staff → `StaffGeometry`
   - [ ] M3: `parseSheetMusicWithLayout` page path (PNG + `gray8:width:height:`) + `omr-test parse-page`
   - [ ] M4 gate: C-scale page end-to-end, 12/12 tokens, valid SMF; edit distances vs homr on other fixtures
@@ -36,6 +36,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] Page pipeline M1 (`PagePipeline.preprocess(gray8:width:height:)`, `SegNetSession`): exact vs homr on 9 pages, 92 tests — `5fd4ff3` — 2026-09-26
 - [x] `Packages/SF2Player` (non-AGPL gbk port): c_scale + sweden render bit-identical PCM to gbk (SHA-256), 44 Linux tests; GeneralUser-GS.sf2 pinned in models.lock — `466c22d` — 2026-09-26
 - [x] homr page-pipeline oracle fixtures: 8 fixtures + synthetic 12 MP page-on-table (`tools/oracle/export_page_pipeline.py`) — `9839f13` — 2026-09-26
 - [x] Camera → Result → Player flow: AVCaptureSession, tap focus/expose, torch, PhotosPicker, "Recognition coming soon" stub, Play sample (C scale), Diagnostics sheet; Player is a placeholder — `b1df33e`, ios-sim run 36268276336 16/16 — 2026-09-26
