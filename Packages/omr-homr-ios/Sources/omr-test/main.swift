@@ -193,8 +193,13 @@ func findModels() -> ModelFiles? {
 func decodeStaff(tensor: StaffTensor, models: ModelFiles, vocab: HomrVocabulary) throws -> [EncodedSymbol] {
     #if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
     #if canImport(CoreML) && canImport(CONNXRuntimeApple)
-    let encoder = (try? PlatformORTBackend(modelURL: models.encoderFP16, provider: .coreML))
-        ?? (try PlatformORTBackend(modelURL: models.encoderFP16, provider: .cpu))
+    // Not `(try? a) ?? (try b)`: `??` is rethrows, so that form needs an outer `try` (macOS build error).
+    let encoder: PlatformORTBackend
+    if let coreML = try? PlatformORTBackend(modelURL: models.encoderFP16, provider: .coreML) {
+        encoder = coreML
+    } else {
+        encoder = try PlatformORTBackend(modelURL: models.encoderFP16, provider: .cpu)
+    }
     #else
     let encoder = try PlatformORTBackend(modelURL: models.encoderFP16, provider: .cpu)
     #endif
