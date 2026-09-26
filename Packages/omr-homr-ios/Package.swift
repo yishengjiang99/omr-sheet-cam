@@ -58,14 +58,20 @@ let package = Package(
                 .copy("Resources/Vocab"),
             ]
         ),
+        // Pure-Swift PNG reader (inflate + unfilter) for omr-test and tests only; not a product,
+        // not part of the iOS API (the app decodes images with ImageIO).
+        .target(
+            name: "OMRPNG",
+            path: "Sources/OMRPNG"
+        ),
         .executableTarget(
             name: "omr-test",
-            dependencies: ["OMRHomrIOS"],
+            dependencies: ["OMRHomrIOS", "OMRPNG"],
             path: "Sources/omr-test"
         ),
         .testTarget(
             name: "OMRHomrIOSTests",
-            dependencies: ["OMRHomrIOS"],
+            dependencies: ["OMRHomrIOS", "OMRPNG"],
             path: "Tests/OMRHomrIOSTests",
             resources: [
                 .copy("Fixtures"),

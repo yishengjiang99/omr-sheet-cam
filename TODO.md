@@ -17,7 +17,8 @@ Priority is **implementation first**. Keep test tooling to what's needed to prov
 ## Next
 - [x] **Core**: Pin Apple SPM onnxruntime exactly. Now `exact: "1.24.2"` (was `from:`). 1.30.0 is **not tagged** on onnxruntime-swift-package-manager; newest tag is 1.24.2, see docs/ORT-LINUX.md "iOS version gap".
 - [ ] **Core**: iOS/Linux ORT gap: iOS SPM is 1.24.2 and `ort.lock` is 1.30.0 (1.24.2 encoder context differed by up to 0.0039). Bump to `exact: "1.30.0"` once upstream tags it (open PR microsoft/onnxruntime-swift-package-manager#46).
-- [ ] **Core**: Port homr's staff preprocessing. `staff.png` to tensor must match `staff.npy`; report the max abs diff.
+- [x] **Core**: Port homr's staff preprocessing (`StaffTensor.fromStaffImage`: homr canvas + cv2 INTER_LINEAR port + `ConvertToArray`; pure Swift). `omr-test preprocess-staff staff.png --compare staff.npy`: max/mean abs diff **0/0** (bit-exact), tolerance one gray level (0.0225639). `decode-staff staff.png` gives the 12 tokens exactly, exit 0. Resize and gray conversion are bit-exact against cv2 5.0.0 on 11 cases.
+- [ ] **Core**: The staff crop and dewarp (`prepare_staff_image`: region, dewarp, `remove_black_contours_at_edges_of_image`) is not ported yet. Only canvas + normalize are, so input must already be a cropped staff.
 - [ ] **Yisheng**: When the Mac is online, add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture.
 - [ ] **Yisheng**: Get the app target compiled once with `xcodebuild test` on a Mac or CI (still never compiled).
 - [ ] **OMR iOS**: bundle models into app for on-device run (step 2: warmup + memory)

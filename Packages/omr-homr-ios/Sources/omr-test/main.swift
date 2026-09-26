@@ -8,11 +8,16 @@
 //       StaffTensor → StaffInferenceSession.decodeStaff (encoder fp16 → cast → decoder fp32 CPU);
 //       prints raw rhythm/pitch/lift/articulation per symbol + token edit distance vs
 //       expected.tokens.json (default: next to the input). 0 = exact match, 1 = mismatch.
+//       A .png input is preprocessed in Swift first (StaffTensor.fromStaffImage, homr canvas + ConvertToArray).
+//   omr-test preprocess-staff <staff.png> [--compare staff.npy] [--out staff.npy]
+//       PNG → cv2-equivalent grayscale → StaffTensor.fromStaffImage; prints shape and, with --compare,
+//       max/mean abs diff and count(|diff| > 1e-3). 0 = max abs diff <= one gray level (~1/(255*0.1738)).
 //
 // Exit codes: 0 all selected fixtures passed (SKIP does not fail) · 1 a fixture failed ·
 //             2 usage / input error · 3 ONNX path not runnable on this platform yet.
 import Foundation
 import OMRHomrIOS
+import OMRPNG
 
 #if canImport(OnnxRuntimeBindings) || canImport(onnxruntime_objc)
 typealias PlatformORTBackend = ORTObjCSession
@@ -44,7 +49,8 @@ func exitNotRunnable(_ detail: String) -> Never {
 let usage = """
 usage: omr-test --no-onnx [--fixtures DIR] [--tier TIER] [fixtures/<id> | <id> ...]
        omr-test [--fixtures DIR] [--models DIR] [fixtures/<id> ...]       (ONNX path)
-       omr-test decode-staff <staff.npy|staff.f32> [--models DIR] [--expected FILE] [--json]
+       omr-test decode-staff <staff.npy|staff.f32|staff.png> [--models DIR] [--expected FILE] [--json]
+       omr-test preprocess-staff <staff.png> [--compare staff.npy] [--out staff.npy]
 exit: 0 pass · 1 fail · 2 usage/input error · 3 ONNX path not runnable on this platform yet
 """
 
@@ -57,6 +63,8 @@ var modelsOverride: String?
 var tierFilter: String?
 var jsonOut = false
 var expectedOverride: String?
+var compareNPY: String?
+var outNPY: String?
 var positional: [String] = []
 while !args.isEmpty {
     let a = args.removeFirst()
@@ -72,6 +80,12 @@ while !args.isEmpty {
     case "--expected":
         guard !args.isEmpty else { exitUsage("--expected needs a file") }
         expectedOverride = args.removeFirst()
+    case "--compare":
+        guard !args.isEmpty else { exitUsage("--compare needs a .npy file") }
+        compareNPY = args.removeFirst()
+    case "--out":
+        guard !args.isEmpty else { exitUsage("--out needs a .npy path") }
+        outNPY = args.removeFirst()
     case "--tier":
         guard !args.isEmpty else { exitUsage("--tier needs a value") }
         tierFilter = args.removeFirst()
@@ -188,14 +202,34 @@ func loadStaffTensor(_ path: String) -> StaffTensor {
         do { return try StaffTensor(values: values, shape: StaffInputSpec.nchwShape) } catch { exitUsage("\(path): \(error)") }
     case "npy":
         do { return try StaffTensor.loadNPY(url) } catch { exitUsage("\(path): \(error)") }
-    case "png", "jpg", "jpeg":
-        exitUsage("""
-        \(path): image decode is not built into omr-test. Convert first (homr canvas + ConvertToArray):
-          python3 tools/oracle/staff_png_to_tensor.py \(path) staff.npy && omr-test decode-staff staff.npy
-        """)
+    case "png":
+        return preprocessPNG(path)
     default:
         exitUsage("\(path): expected .npy, .f32 or .png")
     }
+}
+
+/// PNG → grayscale (cv2 imread + BGR2GRAY semantics) → `StaffTensor.fromStaffImage`.
+func preprocessPNG(_ path: String) -> StaffTensor {
+    let url = URL(fileURLWithPath: path, relativeTo: cwd)
+    let img: PNGImage
+    do { img = try PNGDecoder.decode(contentsOf: url) } catch { exitUsage("\(path): \(error)") }
+    do {
+        return try StaffTensor.fromStaffImage(grayscale: img.grayscale(), width: img.width, height: img.height)
+    } catch { exitUsage("\(path): \(error)") }
+}
+
+/// Minimal `.npy` v1 writer (`<f4`, C order) for `preprocess-staff --out`.
+func writeNPY(_ t: StaffTensor, to path: String) throws {
+    var header = "{'descr': '<f4', 'fortran_order': False, 'shape': (\(t.shape.map(String.init).joined(separator: ", ")))}, }"
+    let total = 10 + header.utf8.count + 1
+    header += String(repeating: " ", count: (64 - total % 64) % 64) + "\n"
+    var d = Data([0x93]) + Data("NUMPY".utf8) + Data([1, 0])
+    let hl = UInt16(header.utf8.count)
+    d.append(contentsOf: [UInt8(hl & 0xFF), UInt8(hl >> 8)])
+    d.append(Data(header.utf8))
+    d.append(t.float32LEData)
+    try d.write(to: URL(fileURLWithPath: path, relativeTo: cwd))
 }
 
 // MARK: - Fixtures
@@ -331,6 +365,36 @@ do {
 } catch {
     err("omr-test: cannot load vocabulary: \(error)")
     exit(2)
+}
+
+if positional.first == "preprocess-staff" {
+    guard positional.count == 2 else { exitUsage("preprocess-staff needs exactly one .png") }
+    guard positional[1].lowercased().hasSuffix(".png") else { exitUsage("preprocess-staff: \(positional[1]) is not a .png") }
+    let t0 = Date()
+    let tensor = preprocessPNG(positional[1])
+    let ms = Date().timeIntervalSince(t0) * 1000
+    out("preprocess-staff: \(URL(fileURLWithPath: positional[1], relativeTo: cwd).standardizedFileURL.path)")
+    out("shape: \(tensor.shape) fp32 (\(String(format: "%.1f", ms)) ms)")
+    if let o = outNPY {
+        do { try writeNPY(tensor, to: o) } catch { exitUsage("--out \(o): \(error)") }
+        out("wrote: \(o)")
+    }
+    guard let cmp = compareNPY else { exit(0) }
+    let ref: StaffTensor
+    do { ref = try StaffTensor.loadNPY(URL(fileURLWithPath: cmp, relativeTo: cwd)) } catch { exitUsage("\(cmp): \(error)") }
+    let d = StaffTensorDiff(tensor, ref)
+    out("compare: \(cmp) shape \(ref.shape)")
+    out(String(format: "max_abs_diff=%.9g mean_abs_diff=%.9g count_gt_1e-3=%d / %d",
+               d.maxAbs, d.meanAbs, d.countAbove1e3, d.count))
+    out(String(format: "tolerance: max_abs_diff <= %.9g (one gray level after ConvertToArray: largest fp32 step "
+               + "of (p/255-0.7931)/0.1738, nominal 1/(255*0.1738) = %.9g)",
+               StaffTensorDiff.oneGrayLevel, 1.0 / (255.0 * 0.1738)))
+    if d.withinOneGrayLevel {
+        out("PASS within tolerance")
+        exit(0)
+    }
+    out("FAIL exceeds tolerance")
+    exit(1)
 }
 
 if positional.first == "decode-staff" {
