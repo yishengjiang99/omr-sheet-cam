@@ -32,214 +32,165 @@ enum BundledSoundFont {
     }
 }
 
-/// SF2 player: play/pause, seek (elapsed / total), prev/next through the playlist, tempo, live
-/// output level meter. Opened on a playlist entry (Result "Play", Playlist, samples) or on ad-hoc
-/// SMF bytes. Transport events are recorded in `DiagnosticsLog` (category playback).
+/// Now Playing (redesign 04-player): artwork, title, live level meter, seek with times,
+/// prev / play-pause / next, tempo and instrument chips. Drives the shared `PlaybackController`,
+/// so playback continues in the Library mini-player after you leave.
 struct PlayerView: View {
-    @ObservedObject private var store: PlaylistStore
-    @StateObject private var player = SF2MIDIPlayer()
-    @State private var current: PlayerRoute
-    @State private var status = "Loading SoundFont…"
-    @State private var ready = false
+    @ObservedObject private var controller: PlaybackController
+    @ObservedObject private var player: SF2MIDIPlayer
+    @ObservedObject private var settings: AppSettings
+    private let route: PlayerRoute
     @State private var scrub: Double?
-    @State private var showPlaylist = false
-
-    /// `store` nil → `PlaylistStore.shared`.
-    @MainActor
-    init(route: PlayerRoute, store: PlaylistStore? = nil) {
-        _current = State(initialValue: route)
-        _store = ObservedObject(wrappedValue: store ?? PlaylistStore.shared)
-    }
+    @State private var showLibrary = false
 
     @MainActor
-    init(midi: Data, title: String = "Player", store: PlaylistStore? = nil) {
-        self.init(route: PlayerRoute(midi: midi, title: title, autoplay: false), store: store)
+    init(route: PlayerRoute, controller: PlaybackController? = nil) {
+        let c = controller ?? PlaybackController.shared
+        self.route = route
+        _controller = ObservedObject(wrappedValue: c)
+        _player = ObservedObject(wrappedValue: c.player)
+        _settings = ObservedObject(wrappedValue: c.settings)
     }
 
-    private var entryID: String? {
-        if case let .playlist(id) = current.item { return id }
-        return nil
+    @MainActor
+    init(midi: Data, title: String = "Player") {
+        self.init(route: PlayerRoute(midi: midi, title: title, autoplay: false))
     }
-
-    private var title: String { entryID.flatMap { store.entry(id: $0)?.title } ?? current.title }
-    private var previous: PlayerRoute? { entryID.flatMap { store.neighbor(of: $0, offset: -1) }.map { PlayerRoute(entry: $0) } }
-    private var next: PlayerRoute? { entryID.flatMap { store.neighbor(of: $0, offset: 1) }.map { PlayerRoute(entry: $0) } }
 
     var body: some View {
-        List {
-            Section {
+        ScrollView {
+            VStack(spacing: 20) {
+                Text(controller.isFromLibrary ? "PLAYING FROM LIBRARY" : "NOW PLAYING")
+                    .font(.caption.weight(.semibold)).tracking(1.2).foregroundStyle(.secondary)
+                ArtworkView(image: controller.artwork, cornerRadius: 24, glyphSize: 72)
+                    .aspectRatio(1, contentMode: .fit)
+                    .frame(maxWidth: 340)
+                    .shadow(color: Theme.coral.opacity(0.25), radius: 20, y: 10)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(title).font(.headline).lineLimit(2).accessibilityIdentifier("player.title")
-                    Text(status).font(.footnote).foregroundStyle(ready ? Color.secondary : Color.orange)
-                }
-            }
-            Section("Playback") {
-                transport
-                Slider(value: Binding(get: { scrub ?? player.position.seconds }, set: { scrub = $0 }),
-                       in: 0 ... max(player.duration, 0.01)) { editing in
-                    if !editing, let s = scrub {
-                        player.seek(to: s)
-                        scrub = nil
-                        logEvent("seek", ["to": String(format: "%.2f", s)])
+                    Text(controller.title).font(.title2.weight(.bold)).lineLimit(2)
+                        .accessibilityIdentifier("player.title")
+                    Text(controller.subtitle).font(.subheadline).foregroundStyle(.secondary)
+                    if !controller.status.isEmpty {
+                        Text(controller.status).font(.footnote).foregroundStyle(controller.ready ? Color.secondary : Theme.coral)
                     }
                 }
-                .disabled(!ready)
-                .accessibilityIdentifier("player.seek")
-                HStack {
-                    Text(Self.clock(scrub ?? player.position.seconds)).accessibilityIdentifier("player.elapsed")
-                    Spacer()
-                    Text("tick \(Int(player.position.tick))").foregroundStyle(.tertiary)
-                    Spacer()
-                    Text(Self.clock(player.duration)).accessibilityIdentifier("player.total")
-                }
-                .font(.footnote.monospacedDigit())
-                .foregroundStyle(.secondary)
-            }
-            Section("Level") {
+                .frame(maxWidth: .infinity, alignment: .leading)
                 LevelMeterView(meter: player.meter, active: player.isPlaying)
-                    .padding(.vertical, 4)
+                seekBar
+                transport
+                chips
             }
-            Section("Tempo") {
-                Slider(value: $player.tempoScale, in: 0.5 ... 2.0, step: 0.05) { editing in
-                    if !editing { logEvent("tempo", ["scale": String(format: "%.2f", player.tempoScale)]) }
-                }
-                Text(String(format: "%.2f×", player.tempoScale)).font(.footnote.monospacedDigit())
-            }
-            Section {
-                NavigationLink("Acknowledgements") { AcknowledgementsView() }
-            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
         }
-        .navigationTitle("Player")
+        .background(LinearGradient(colors: [Theme.coralSoft, Theme.cream], startPoint: .top, endPoint: .center).ignoresSafeArea())
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { showPlaylist = true } label: { Label("Playlist", systemImage: "music.note.list") }
-                    .accessibilityIdentifier("player.playlist")
+                Button { showLibrary = true } label: { Label("Library", systemImage: "music.note.list") }
+                    .accessibilityIdentifier("player.library")
             }
         }
-        .sheet(isPresented: $showPlaylist) {
+        .sheet(isPresented: $showLibrary) {
             NavigationStack {
-                PlaylistScreen(store: store, currentID: entryID) { entry in
-                    showPlaylist = false
-                    switchTo(PlayerRoute(entry: entry), reason: "playlist")
+                LibraryScreen(showsMiniPlayer: false) { entry in
+                    showLibrary = false
+                    var r = PlayerRoute(entry: entry)
+                    r.autoplay = true
+                    controller.open(r, reason: "library")
                 }
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Done") { showPlaylist = false } }
-                }
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { showLibrary = false } } }
             }
         }
-        .task(id: current) { await load() }
-        .onAppear {
-            // Cleared in onDisappear (the closure holds the view, which holds the player).
-            player.onFinished = {
-                logEvent("finished", [:])
-                if let next { switchTo(next, reason: "auto-next") }
+        .onAppear { controller.open(route) }
+    }
+
+    private var seekBar: some View {
+        VStack(spacing: 4) {
+            Slider(value: Binding(get: { scrub ?? player.position.seconds }, set: { scrub = $0 }),
+                   in: 0 ... max(player.duration, 0.01)) { editing in
+                if !editing, let s = scrub {
+                    controller.seek(to: s)
+                    scrub = nil
+                }
             }
-        }
-        .onDisappear {
-            if player.isPlaying { logEvent("stop", ["why": "left player"]) }
-            player.onFinished = nil
-            player.stop()
+            .tint(Color.primary)
+            .disabled(!controller.ready)
+            .accessibilityIdentifier("player.seek")
+            HStack {
+                Text(Self.clock(scrub ?? player.position.seconds)).accessibilityIdentifier("player.elapsed")
+                Spacer()
+                Text(Self.clock(player.duration)).accessibilityIdentifier("player.total")
+            }
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(.secondary)
         }
     }
 
     private var transport: some View {
         HStack {
-            Button { previousTapped() } label: {
-                Label("Previous", systemImage: "backward.end.fill").labelStyle(.iconOnly).font(.title2)
+            Button { controller.previous() } label: {
+                Image(systemName: "backward.fill").font(.title)
             }
-            .disabled(!ready)
+            .accessibilityLabel("Previous")
             .accessibilityIdentifier("player.previous")
             Spacer()
-            Button { togglePlay() } label: {
-                Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 56))
-                    .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
+            Button { controller.togglePlay() } label: {
+                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 34, weight: .bold))
+                    .frame(width: 88, height: 88)
             }
-            .disabled(!ready)
+            .buttonStyle(CoralButtonStyle())
+            .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
             .accessibilityIdentifier("player.playPause")
             Spacer()
-            Button { if let next { switchTo(next, reason: "next") } } label: {
-                Label("Next", systemImage: "forward.end.fill").labelStyle(.iconOnly).font(.title2)
+            Button { controller.next() } label: {
+                Image(systemName: "forward.fill").font(.title)
             }
-            .disabled(!ready || next == nil)
+            .disabled(controller.nextRoute == nil)
+            .accessibilityLabel("Next")
             .accessibilityIdentifier("player.next")
         }
-        .buttonStyle(.borderless)
-        .padding(.horizontal, 24)
-        .padding(.vertical, 4)
+        .foregroundStyle(Color.primary)
+        .disabled(!controller.ready)
+        .padding(.horizontal, 28)
     }
 
-    // MARK: Actions
-
-    private func togglePlay() {
-        if player.isPlaying {
-            player.pause()
-            logEvent("pause", [:])
-        } else {
-            player.play()
-            logEvent(player.isPlaying ? "play" : "play_failed", [:])
-        }
-    }
-
-    /// Restarts the track if more than 3 s in (or at the top of the list), else goes to the previous entry.
-    private func previousTapped() {
-        if player.position.seconds > 3 || previous == nil {
-            player.seek(to: 0)
-            logEvent("restart", [:])
-        } else if let previous {
-            switchTo(previous, reason: "previous")
-        }
-    }
-
-    private func switchTo(_ route: PlayerRoute, reason: String) {
-        var r = route
-        r.autoplay = true
-        logEvent("track_change", ["reason": reason, "to": r.title])
-        if r.item == current.item {
-            player.seek(to: 0)
-            player.play()
-        } else {
-            current = r
-        }
-    }
-
-    private func load() async {
-        ready = false
-        scrub = nil
-        let route = current
-        do {
-            let sf = try await BundledSoundFont.load()
-            let midi: Data
-            switch route.item {
-            case let .midi(d): midi = d
-            case let .playlist(id):
-                guard let e = store.entry(id: id) else { throw PlaylistStore.StoreError.notFound(id) }
-                midi = try store.midiData(for: e)
+    private var chips: some View {
+        HStack(spacing: 12) {
+            Menu {
+                Picker("Tempo", selection: $settings.tempo) {
+                    ForEach(AppSettings.tempoChoices, id: \.self) { Text(AppSettings.tempoLabel($0)).tag($0) }
+                }
+            } label: {
+                chip(icon: "metronome", text: AppSettings.tempoLabel(settings.tempo))
             }
-            try player.load(soundFont: sf)
-            try player.load(midi: midi)
-            ready = true
-            status = "\(sf.info["INAM"] ?? "SoundFont") · \(midi.count) B SMF · \(player.song?.tracks.count ?? 0) track(s)"
-            logEvent("load", ["bytes": "\(midi.count)", "duration": String(format: "%.2f", player.duration)])
-            if route.autoplay {
-                player.play()
-                logEvent(player.isPlaying ? "play" : "play_failed", ["auto": "1"])
+            .accessibilityIdentifier("player.tempo")
+            Menu {
+                Picker("Instrument", selection: $settings.instrument) {
+                    ForEach(Instrument.all) { Text($0.name).tag($0) }
+                }
+            } label: {
+                chip(icon: "pianokeys", text: settings.instrument.name)
             }
-        } catch {
-            status = "Player unavailable: \(error)"
-            DiagnosticsLog.shared.record(error: error, category: .playback, context: "PlayerView load \(route.title)")
+            .accessibilityIdentifier("player.instrument")
         }
     }
 
-    private func logEvent(_ kind: String, _ extra: [String: String]) {
-        var p = extra
-        p["kind"] = kind
-        p["track"] = entryID ?? "adhoc"
-        p["position"] = String(format: "%.2f", player.position.seconds)
-        let details = extra.sorted { $0.key < $1.key }.map { kv in "\(kv.key)=\(kv.value)" }.joined(separator: " ")
-        let message = details.isEmpty ? "player \(kind): \(title)" : "player \(kind): \(title) \(details)"
-        DiagnosticsLog.shared.record(.info, .playback, message, payload: p)
+    private func chip(icon: String, text: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+            Text(text)
+            Image(systemName: "chevron.down").font(.caption2)
+        }
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(Color.primary)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(.background, in: Capsule())
+        .overlay(Capsule().stroke(Color.primary.opacity(0.08)))
     }
 
     static func clock(_ s: Double) -> String {

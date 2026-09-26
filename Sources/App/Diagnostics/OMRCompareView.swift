@@ -16,6 +16,8 @@ struct OMRCompareView: View {
     var symbolCount: Int? = nil
     @Binding var feedback: OMRFeedback
     @Binding var toast: String?
+    /// "Copy as prompt" etc. (Developer screens only; consumer Result hides them).
+    var showsDeveloperTools = false
 
     enum Display: String, CaseIterable { case overlay = "Overlay", list = "List" }
     enum TapMode: String, CaseIterable { case inspect = "Inspect", markWrong = "Mark wrong" }
@@ -25,7 +27,7 @@ struct OMRCompareView: View {
     @State private var tapMode: TapMode = .inspect
     @State private var selected: Int?
 
-    static let palette: [Color] = [.blue, .green, .orange, .purple, .pink, .teal, .brown, .indigo]
+    static let palette: [Color] = [Theme.coral, .orange, .teal, .indigo, .pink, .green, .brown, .blue]
     static func color(staff: Int) -> Color { palette[((staff % palette.count) + palette.count) % palette.count] }
 
     private struct StaffGroup: Identifiable {
@@ -249,7 +251,9 @@ struct OMRCompareView: View {
                 .lineLimit(2...6)
             Button("Save feedback") { save() }
                 .disabled(feedback.isEmpty)
-            CopyPromptButton(captureName: captureName, feedback: feedback, toast: $toast)
+            if showsDeveloperTools {
+                CopyPromptButton(captureName: captureName, feedback: feedback, toast: $toast)
+            }
         }
     }
 

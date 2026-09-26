@@ -2,7 +2,7 @@ name: iOS simulator screenshots
 
 # Builds the app for the simulator and captures real screenshots at the App Store sizes (iPhone
 # 6.9" 1320x2868, iPad 13" 2064x2752): launch, then Result (demo scan), Player (sweden sample,
-# playing) and Playlist via Debug-only launch args. Artifacts only; copy into docs/asc/screenshots/.
+# playing), Library and Settings via Debug-only launch args. Artifacts only; copy into docs/asc/screenshots/.
 
 on:
   workflow_dispatch:
@@ -59,7 +59,7 @@ jobs:
             sips -g pixelWidth -g pixelHeight "shots/${label}-01-launch.png"
             # Debug-only deep links (Sources/App/ScreenshotDemo.swift): -OMRScreenshot <route>
             local n=2
-            for route in result player playlist; do
+            for route in result player library settings; do
               xcrun simctl terminate "$id" com.ragnus.vp || true
               xcrun simctl launch "$id" com.ragnus.vp -OMRScreenshot "$route"
               sleep 10

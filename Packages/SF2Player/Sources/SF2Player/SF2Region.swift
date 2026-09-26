@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import Foundation
 
 /// Immutable Float32 sample storage with a stable pointer (the render thread reads it without ARC).

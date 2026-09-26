@@ -35,7 +35,7 @@ struct Gate1CompareScreen: View {
             if let image {
                 OMRCompareView(
                     image: image, details: details, captureName: Self.captureName, symbolCount: symbols.count,
-                    feedback: $feedback, toast: $toast
+                    feedback: $feedback, toast: $toast, showsDeveloperTools: true
                 )
             }
             Section("Tokens · \(source)") {

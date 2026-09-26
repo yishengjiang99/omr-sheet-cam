@@ -1,52 +1,57 @@
 import SwiftUI
 
-/// Root flow: Camera → Result → Player; Playlist → Player. Diagnostics (Gate1RootView) from the toolbar.
+/// Root flow (redesign, no tab bar): Scan is home; Library and Player are pushed from it and
+/// Settings is a sheet. Scan → Reading/Result → Player. Developer tools live in Settings behind
+/// the hidden Developer section.
 struct RootFlowView: View {
     enum Route: Hashable {
         case result(CapturedPhoto)
         case player(PlayerRoute)
-        case log
-        case playlist
+        case library
     }
 
     @State private var path: [Route] = Self.initialPath()
-    @State private var showDiagnostics = false
+    @State private var showSettings = Self.initialSettings()
 
     var body: some View {
         NavigationStack(path: $path) {
-            CameraScreen { photo in path.append(.result(photo)) }
-                .navigationTitle("AI Camera - Music Reader")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button { path.append(.log) } label: { Label("Log", systemImage: "list.bullet.rectangle") }
-                    }
-                    ToolbarItemGroup(placement: .topBarTrailing) {
-                        Button { path.append(.playlist) } label: { Label("Playlist", systemImage: "music.note.list") }
-                            .accessibilityIdentifier("camera.playlist")
-                        Button("Diagnostics") { showDiagnostics = true }
-                    }
-                }
-                .navigationDestination(for: Route.self) { route in
-                    switch route {
-                    case let .result(photo):
-                        ResultScreen(photo: photo, service: Self.recognition) { path.append(.player($0)) }
-                    case let .player(p):
-                        PlayerDestination.view(for: p)
-                    case .log:
-                        LogScreen()
-                    case .playlist:
-                        PlaylistScreen(store: .shared, currentID: nil) { path.append(.player(PlayerRoute(entry: $0))) }
+            CameraScreen(
+                onSettings: { showSettings = true },
+                onLibrary: { path.append(.library) },
+                onPhoto: { photo in path.append(.result(photo)) }
+            )
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(for: Route.self) { route in
+                switch route {
+                case let .result(photo):
+                    ResultScreen(photo: photo, service: Self.recognition) { path.append(.player($0)) }
+                case let .player(p):
+                    PlayerDestination.view(for: p)
+                case .library:
+                    LibraryScreen(onOpenPlayer: { openNowPlaying() }) { entry in
+                        path.append(.player(PlayerRoute(entry: entry)))
                     }
                 }
+            }
         }
-        .sheet(isPresented: $showDiagnostics) {
-            Gate1RootView()
-                .overlay(alignment: .topLeading) {
-                    Button("Done") { showDiagnostics = false }
-                        .padding()
-                }
-        }
+        .tint(Theme.coral)
+        .sheet(isPresented: $showSettings) { SettingsView() }
+    }
+
+    /// Mini-player tap: show the Player on whatever is loaded (without reloading it).
+    private func openNowPlaying() {
+        guard let current = PlaybackController.shared.current else { return }
+        var r = current
+        r.autoplay = false
+        path.append(.player(r))
+    }
+
+    private static func initialSettings() -> Bool {
+        #if DEBUG
+        return ScreenshotDemo.route == "settings"
+        #else
+        return false
+        #endif
     }
 
     @MainActor

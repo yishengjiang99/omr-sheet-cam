@@ -1,30 +1,42 @@
 import SF2Player
 import SwiftUI
 
-/// Live stereo output meter: RMS bars + held peak ticks, drawn from `SF2LevelMeter` (lock-free
-/// reads of the render thread's accumulator) at ~30 Hz. Stops ticking ~2.5 s after playback
-/// stops, once the bars have fallen to the floor.
+/// Live output level (redesign 04-player): a scrolling row of coral bars, one per ~33 ms frame,
+/// height = RMS level (dBFS → 0…1), newest on the right, with the held peak as a thin marker.
+/// Reads `SF2LevelMeter` (lock-free drain of the render thread's accumulator) from a 30 Hz
+/// `TimelineView`; stops ticking ~2.5 s after playback stops.
 struct LevelMeterView: View {
     let meter: SF2LevelMeter
     var active: Bool
+    var barCount = 40
 
     @State private var decaying = false
+    @State private var history = LevelHistory()
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !active && !decaying)) { ctx in
             let lv = meter.update(now: ctx.date.timeIntervalSinceReferenceDate)
-            VStack(alignment: .leading, spacing: 4) {
-                MeterBar(label: "L", rms: lv.rmsL, peak: lv.peakL)
-                MeterBar(label: "R", rms: lv.rmsR, peak: lv.peakR)
-                HStack {
-                    Text("−60").frame(maxWidth: .infinity, alignment: .leading)
-                    Text("−30")
-                    Text("0 dBFS").frame(maxWidth: .infinity, alignment: .trailing)
+            let bars = history.push(SF2LevelMath.fraction(db: max(lv.rmsL, lv.rmsR)), capacity: barCount)
+            let peak = CGFloat(SF2LevelMath.fraction(db: max(lv.peakL, lv.peakR)))
+            GeometryReader { geo in
+                let w = geo.size.width / CGFloat(barCount)
+                ZStack(alignment: .bottom) {
+                    HStack(alignment: .center, spacing: 0) {
+                        ForEach(0 ..< barCount, id: \.self) { i in
+                            let f = CGFloat(i < bars.count ? bars[i] : 0)
+                            Capsule()
+                                .fill(LinearGradient(colors: [Theme.coral.opacity(0.55), Theme.coral], startPoint: .bottom, endPoint: .top))
+                                .frame(width: max(1, w * 0.55), height: max(3, f * geo.size.height))
+                                .frame(width: w, height: geo.size.height)
+                        }
+                    }
+                    Rectangle()
+                        .fill(Theme.coralDeep.opacity(peak > 0 ? 0.6 : 0))
+                        .frame(height: 1.5)
+                        .offset(y: -peak * geo.size.height)
                 }
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .padding(.leading, 16)
             }
+            .frame(height: 44)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Output level")
             .accessibilityValue(Self.accessibilityValue(lv))
@@ -43,33 +55,16 @@ struct LevelMeterView: View {
     }
 }
 
-private struct MeterBar: View {
-    let label: String
-    let rms: Float
-    let peak: Float
+/// Fixed-size history of bar heights (0…1), oldest first. Reference type so the TimelineView
+/// closure can append without triggering a SwiftUI state update.
+final class LevelHistory {
+    private(set) var values: [Float] = []
 
-    var body: some View {
-        HStack(spacing: 6) {
-            Text(label).font(.caption2.monospaced()).foregroundStyle(.secondary).frame(width: 10)
-            GeometryReader { geo in
-                let w = geo.size.width
-                let fill = CGFloat(SF2LevelMath.fraction(db: rms)) * w
-                let tick = CGFloat(SF2LevelMath.fraction(db: peak)) * w
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.secondary.opacity(0.15))
-                    LinearGradient(colors: [.green, .green, .yellow, .red], startPoint: .leading, endPoint: .trailing)
-                        .frame(width: w)
-                        .mask(alignment: .leading) { Rectangle().frame(width: fill) }
-                        .clipShape(Capsule())
-                    if peak > SF2LevelMath.floorDB {
-                        Rectangle()
-                            .fill(peak > -1 ? Color.red : Color.primary.opacity(0.8))
-                            .frame(width: 2)
-                            .offset(x: max(0, tick - 2))
-                    }
-                }
-            }
-            .frame(height: 8)
-        }
+    @discardableResult
+    func push(_ v: Float, capacity: Int) -> [Float] {
+        values.append(min(1, max(0, v.isFinite ? v : 0)))
+        if values.count > capacity { values.removeFirst(values.count - capacity) }
+        if values.count < capacity { return [Float](repeating: 0, count: capacity - values.count) + values }
+        return values
     }
 }

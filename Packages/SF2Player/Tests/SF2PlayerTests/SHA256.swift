@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import Foundation
 
 /// Tiny SHA-256 (tests only; CryptoKit is unavailable on Linux).

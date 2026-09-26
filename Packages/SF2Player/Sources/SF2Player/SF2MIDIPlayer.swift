@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 #if canImport(AVFoundation)
 import AVFoundation
 import Combine
@@ -41,6 +42,14 @@ public final class SF2MIDIPlayer: ObservableObject {
             let c = min(4, max(0.25, tempoScale.isFinite ? tempoScale : 1))
             if c != tempoScale { tempoScale = c; return }
             core?.setTempoScale(c)
+        }
+    }
+    /// General MIDI program (0-127, bank 0) for every track; nil = the file's own instruments.
+    /// Changing it recompiles the schedule and keeps the position / play state.
+    @Published public var program: Int? {
+        didSet {
+            if let p = program, !(0 ... 127).contains(p) { program = min(127, max(0, p)); return }
+            if program != oldValue { applyProgramChange() }
         }
     }
     public var notePositions: [SF2NotePosition] = []
@@ -96,7 +105,7 @@ public final class SF2MIDIPlayer: ObservableObject {
     private func compile() throws {
         guard let sf = soundFont, let song else { return }
         let c = try prepareCore()
-        let plan = try SF2SequenceBuilder.plan(song: song, soundFont: sf, sampleRate: c.sampleRate)
+        let plan = try SF2SequenceBuilder.plan(song: song, soundFont: sf, sampleRate: c.sampleRate, programOverride: program)
         let seq = SF2CompiledSequence(plan: plan)
         sequence = seq
         c.setSequence(seq)
@@ -105,6 +114,19 @@ public final class SF2MIDIPlayer: ObservableObject {
         isPlaying = false
         position = SF2PlaybackPosition()
         activeNoteIDs = []
+    }
+
+    private func applyProgramChange() {
+        guard song != nil, soundFont != nil else { return }
+        let wasPlaying = isPlaying
+        let at = position.seconds
+        do {
+            try compile()
+            if at > 0 { seek(to: at) }
+            if wasPlaying { play() }
+        } catch {
+            isPlaying = false
+        }
     }
 
     // MARK: Transport

@@ -4,7 +4,7 @@ import SwiftUI
 import UIKit
 
 /// Debug-only launch hook for the ios-screenshots workflow:
-/// `simctl launch <sim> com.ragnus.vp -OMRScreenshot playlist|player|result`.
+/// `simctl launch <sim> com.ragnus.vp -OMRScreenshot result|player|library|settings`.
 /// "result" shows the bundled Gate-1 staff as a recognized scan (oracle tokens → SMFWriter MIDI).
 enum ScreenshotDemo {
     static var route: String? { UserDefaults.standard.string(forKey: "OMRScreenshot") }
@@ -12,8 +12,8 @@ enum ScreenshotDemo {
     @MainActor
     static func initialPath() -> [RootFlowView.Route] {
         switch route {
-        case "playlist": return [.playlist]
-        case "player": return [.player(.sample("sweden", title: "Sample: Sweden"))]
+        case "library", "playlist": return [.library]
+        case "player": return [.player(.sample("sweden", title: "Sweden (sample)"))]
         case "result":
             guard let photo = try? gate1Photo() else { return [] }
             return [.result(photo)]

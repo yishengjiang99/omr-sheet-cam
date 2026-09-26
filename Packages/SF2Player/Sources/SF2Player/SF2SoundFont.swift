@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import Foundation
 
 // Port of gbk sf2-parser.ts (parseSF2, getPreset, buildRegionsForPreset, makeRegionFromMerged,

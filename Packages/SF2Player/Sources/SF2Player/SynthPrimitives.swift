@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import Foundation
 
 // Port of the DSP pieces of gbk src/sf2-renderer.ts. All math in Double like JS numbers;

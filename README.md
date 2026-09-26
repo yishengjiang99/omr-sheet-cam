@@ -22,6 +22,7 @@ Camera / Photos → optional Vision crop → SegNet fp16 (CoreML) → staff geom
 | Package | License | Contents |
 |---------|---------|----------|
 | `omr-homr-ios` | AGPL-3.0 | OMR, geometry, tokenizers, decode loop, MIDI writer |
+| `SF2Player` | AGPL-3.0-or-later | SoundFont 2 synth (gbk port), SMF reader, AVAudioEngine player, level meter |
 | App (`OMRSheetCam`) | AGPL-3.0-or-later | Capture, player, diagnostics; consumes `midi` + `noteLayout` |
 
 ## Stable API

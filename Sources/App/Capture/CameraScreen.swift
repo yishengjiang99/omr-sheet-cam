@@ -2,9 +2,12 @@ import AVFoundation
 import PhotosUI
 import SwiftUI
 
-/// Root capture screen: live camera (when available + authorized), tap-to-focus, torch, shutter,
-/// and "Choose from Photos". Hands an upright `CapturedPhoto` to `onPhoto`.
+/// Scan (home, redesign 01-scan): live camera (when available + authorized), tap-to-focus,
+/// Settings (gear) and torch on top, Photos · shutter · Library at the bottom. Hands an upright
+/// `CapturedPhoto` to `onPhoto`.
 struct CameraScreen: View {
+    var onSettings: () -> Void = {}
+    var onLibrary: () -> Void = {}
     var onPhoto: (CapturedPhoto) -> Void
 
     @StateObject private var camera = CameraController()
@@ -21,14 +24,16 @@ struct CameraScreen: View {
             Color.black.ignoresSafeArea()
             content
             VStack {
-                if let msg = camera.statusMessage ?? error {
-                    Text(msg)
-                        .font(.footnote)
-                        .padding(8)
-                        .background(.ultraThinMaterial, in: Capsule())
-                        .padding(.top, 8)
-                }
+                topBar
                 Spacer()
+                if cameraLive {
+                    Text("Hold steady over one page")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16).padding(.vertical, 8)
+                        .background(.black.opacity(0.35), in: Capsule())
+                        .padding(.bottom, 12)
+                }
                 controls
             }
         }
@@ -95,48 +100,80 @@ struct CameraScreen: View {
 
     private var cameraLive: Bool { camera.isCameraAvailable && camera.authorization == .authorized }
 
+    private var topBar: some View {
+        HStack {
+            circleButton("gearshape", label: "Settings", action: onSettings)
+                .accessibilityIdentifier("scan.settings")
+            Spacer()
+            if let msg = camera.statusMessage ?? error {
+                Text(msg)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .padding(.horizontal, 12).padding(.vertical, 7)
+                    .background(.black.opacity(0.4), in: Capsule())
+            }
+            Spacer()
+            if cameraLive && camera.torchAvailable {
+                circleButton(camera.torchOn ? "bolt.fill" : "bolt", label: "Torch") { camera.setTorch(!camera.torchOn) }
+            } else {
+                Color.clear.frame(width: 44, height: 44)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+    }
+
+    private func circleButton(_ icon: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .background(.black.opacity(0.35), in: Circle())
+                .overlay(Circle().stroke(.white.opacity(0.25)))
+        }
+        .accessibilityLabel(label)
+    }
+
     private var controls: some View {
         HStack(alignment: .center) {
             PhotosPicker(selection: $pickerItem, matching: .images, photoLibrary: .shared()) {
-                Group {
-                    if cameraLive {
-                        Label("Choose from Photos", systemImage: "photo.on.rectangle").labelStyle(.iconOnly)
-                    } else {
-                        Label("Choose from Photos", systemImage: "photo.on.rectangle")
-                    }
-                }
-                    .font(.title3)
-                    .padding(12)
-                    .background(.ultraThinMaterial, in: Capsule())
+                bottomItem(icon: "photo.on.rectangle", title: "Photos")
             }
             .disabled(loadingPick)
-            if cameraLive {
-                Spacer()
-                Button(action: shoot) {
-                    Circle()
-                        .strokeBorder(.white, lineWidth: 4)
-                        .background(Circle().fill(camera.isCapturing ? .gray : .white).padding(6))
-                        .frame(width: 76, height: 76)
-                }
-                .disabled(camera.isCapturing || !camera.isRunning)
-                .accessibilityLabel("Shutter")
-                Spacer()
-                if camera.torchAvailable {
-                    Button { camera.setTorch(!camera.torchOn) } label: {
-                        Image(systemName: camera.torchOn ? "flashlight.on.fill" : "flashlight.off.fill")
-                            .font(.title3)
-                            .padding(12)
-                            .background(.ultraThinMaterial, in: Circle())
-                    }
-                    .accessibilityLabel("Torch")
-                } else {
-                    Color.clear.frame(width: 48, height: 48)
-                }
+            .accessibilityIdentifier("scan.photos")
+            Spacer()
+            Button(action: shoot) {
+                Circle()
+                    .strokeBorder(.white, lineWidth: 5)
+                    .background(Circle().fill(camera.isCapturing ? .gray : .white).padding(8))
+                    .frame(width: 84, height: 84)
             }
+            .disabled(!cameraLive || camera.isCapturing || !camera.isRunning)
+            .opacity(cameraLive ? 1 : 0.35)
+            .accessibilityLabel("Shutter")
+            Spacer()
+            Button(action: onLibrary) {
+                bottomItem(icon: "music.note.list", title: "Library")
+            }
+            .accessibilityIdentifier("scan.library")
         }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 24)
+        .padding(.horizontal, 28)
+        .padding(.bottom, 20)
         .foregroundStyle(.white)
+    }
+
+    private func bottomItem(icon: String, title: String) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .semibold))
+                .frame(width: 52, height: 52)
+                .background(.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(.white.opacity(0.25)))
+            Text(title).font(.caption.weight(.semibold))
+        }
+        .frame(width: 72)
     }
 
     private func messageView(icon: String, title: String, detail: String) -> some View {

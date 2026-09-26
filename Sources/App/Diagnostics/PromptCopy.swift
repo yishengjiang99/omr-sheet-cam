@@ -6,6 +6,7 @@ struct CopyPromptButton: View {
     var captureName: String? = nil
     var feedback: OMRFeedback? = nil
     @Binding var toast: String?
+    var title = "Copy as prompt"
 
     var body: some View {
         Button {
@@ -16,7 +17,7 @@ struct CopyPromptButton: View {
             DiagnosticsLog.shared.record(.info, .app, "copied prompt (\(text.utf8.count) bytes)")
             toast = "Copied prompt (\(text.utf8.count) bytes)"
         } label: {
-            Label("Copy as prompt", systemImage: "doc.on.clipboard")
+            Label(title, systemImage: "doc.on.clipboard")
         }
     }
 }

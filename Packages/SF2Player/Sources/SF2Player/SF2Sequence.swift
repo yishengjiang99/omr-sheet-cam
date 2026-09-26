@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import Foundation
 
 // Song -> synth render plan, mirroring gbk src/midireader.tsx onExportWav with UI state at its
@@ -40,16 +41,19 @@ public enum SF2SequenceBuilder {
     @inline(__always) static func jsRound(_ x: Double) -> Int { Int((x + 0.5).rounded(.down)) }
 
     /// Builds gbk's export plan. `fallbackPreset` = gbk `fallbackPresetIndex` (effective preset, 0).
+    /// `programOverride` (not in gbk): play every track with this General MIDI program (bank 0),
+    /// ignoring the file's program changes; nil = the file's own instruments (gbk behavior).
     public static func plan(song: SMFSong, soundFont: SF2SoundFont, sampleRate: Double, tailSec: Double = 3,
-                            fallbackPreset: Int = 0) throws -> SF2RenderPlan {
+                            fallbackPreset: Int = 0, programOverride: Int? = nil) throws -> SF2RenderPlan {
         var tracks: [SF2TrackState] = []
         var events: [SF2SynthEvent] = []
+        let overrideIndex = programOverride.map { soundFont.resolvePresetIndex(program: $0, bank: 0) ?? fallbackPreset }
         for track in song.tracks {
             var defaultPreset: Int?
             for ev in track.playEvents {
                 if case let .program(p, b) = ev.kind { defaultPreset = soundFont.resolvePresetIndex(program: p, bank: b); break }
             }
-            let presetIndex = defaultPreset ?? fallbackPreset
+            let presetIndex = overrideIndex ?? defaultPreset ?? fallbackPreset
             let pan = resolveOrchestraPan(track.instrumentName, track.name, soundFont.presetName(presetIndex))
             tracks.append(SF2TrackState(trackIndex: track.index, regions: try soundFont.regionList(forPreset: presetIndex),
                                         cc7Volume: 100, cc10Pan: 64, cc11Expression: 127, pan: pan ?? 0, gain: 1))
@@ -61,7 +65,7 @@ public enum SF2SequenceBuilder {
                 case let .noteOff(n):
                     events.append(.init(kind: .noteOff, frame: frame, seq: ev.seq, trackIndex: track.index, channel: ev.channel, note: n))
                 case let .program(p, b):
-                    let idx = soundFont.resolvePresetIndex(program: p, bank: b) ?? fallbackPreset
+                    let idx = overrideIndex ?? soundFont.resolvePresetIndex(program: p, bank: b) ?? fallbackPreset
                     events.append(.init(kind: .setPreset, frame: frame, seq: ev.seq, trackIndex: track.index,
                                         regions: try soundFont.regionList(forPreset: idx), presetIndex: idx))
                 }

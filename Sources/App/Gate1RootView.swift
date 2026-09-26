@@ -18,8 +18,22 @@ struct Gate1RootView: View {
     @State private var gate1Verdict: String?
     @State private var gate1Detail: String?
 
+    /// true when pushed inside another NavigationStack (Settings → Developer).
+    let embedded: Bool
+
+    init(embedded: Bool = false) {
+        self.embedded = embedded
+    }
+
     var body: some View {
-        NavigationStack {
+        if embedded {
+            content
+        } else {
+            NavigationStack { content }
+        }
+    }
+
+    private var content: some View {
             List {
                 Section("Tools") {
                     NavigationLink {
@@ -91,7 +105,7 @@ struct Gate1RootView: View {
 
                 Section("SF2 player") {
                     NavigationLink("Play sample (sweden.midi, GeneralUser GS)") {
-                        PlayerView(route: .sample("sweden", title: "Sample: Sweden", autoplay: false))
+                        PlayerView(route: .sample("sweden", title: "Sweden (sample)", autoplay: false))
                     }
                     Text(BundledSoundFont.url() == nil ? "GeneralUser-GS.sf2 missing" : "GeneralUser-GS.sf2 bundled")
                         .font(.footnote.monospaced())
@@ -110,8 +124,7 @@ struct Gate1RootView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("AI Camera - Music Reader")
-        }
+            .navigationTitle(embedded ? "Model self-test" : "AI Camera - Music Reader")
     }
 
     /// Waits for the warmup, then runs Gate 1 off the main thread on the warmed sessions.

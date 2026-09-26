@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// Captured / picked page: saves it to Documents/captures, runs `AppServices.recognition`
-/// (full-page `PageRecognitionService`), then shows the visual compare + accuracy feedback, or
-/// "Couldn't read this page" with Try again. A
-/// recognized scan's MIDI is saved to the playlist right away, and a pinned, highlighted Play
-/// button (always visible above the home indicator) opens the Player on it. Every step is
-/// recorded in `DiagnosticsLog`.
+/// Captured / picked page (redesign 02-reading → 03-result): saves it to Documents/captures and
+/// shows the Reading progress screen while `AppServices.recognition` runs, then "Ready to play" (or "Couldn't read this page" with Try again):
+/// editable title, the visual compare + feedback, and a pinned coral Play button (always visible
+/// above the home indicator) with "Save to Library". A recognized scan's MIDI is saved to the
+/// Library right away. Every step is recorded in `DiagnosticsLog`.
 struct ResultScreen: View {
     let photo: CapturedPhoto
     var service: any RecognitionService = AppServices.recognition
@@ -23,13 +22,81 @@ struct ResultScreen: View {
     /// Saved capture bytes (reused by Try again) and the attempt counter that re-runs `.task`.
     @State private var input: Data?
     @State private var attempt = 0
+    @State private var titleText = ""
+    @State private var savedToLibrary = false
+    @Environment(\.dismiss) private var dismiss
+
+    /// Pinned bottom actions for an outcome; the view renders exactly these.
+    enum PinnedAction: String { case play, saveToLibrary }
+
+    static func pinnedActions(for outcome: RecognitionOutcome?) -> [PinnedAction] {
+        if case .recognized = outcome { return [.play, .saveToLibrary] }
+        return []
+    }
+
+    /// "Found 4 staves · 52 notes · about 0:24".
+    static func summary(_ d: RecognitionDetails, duration: Double?) -> String {
+        var parts = ["Found \(d.staffCount) stave\(d.staffCount == 1 ? "" : "s")", "\(d.notes.count) note\(d.notes.count == 1 ? "" : "s")"]
+        if let duration, duration > 0 { parts.append("about \(PlayerView.clock(duration))") }
+        return parts.joined(separator: " · ")
+    }
 
     /// Capture file name used to tie log events + feedback together.
     private var captureName: String { savedURL?.lastPathComponent ?? "unsaved-\(photo.id.uuidString.prefix(8))" }
 
     var body: some View {
+        Group {
+            if outcome == nil {
+                ReadingView(image: photo.image) { dismiss() }
+            } else {
+                resultList
+            }
+        }
+        .navigationBarBackButtonHidden(true)
+        .toolbar(outcome == nil ? .hidden : .visible, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button { dismiss() } label: {
+                    HStack(spacing: 4) { Image(systemName: "chevron.left"); Text("Retake") }
+                }
+                .accessibilityIdentifier("result.retake")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                if let url = playlistEntry?.fileName.map({ PlaylistStore.shared.directory.appendingPathComponent($0) }) {
+                    ShareLink(item: url) { Image(systemName: "square.and.arrow.up") }
+                        .accessibilityLabel("Share MIDI")
+                }
+            }
+        }
+        .navigationTitle(Self.pinnedActions(for: outcome).isEmpty ? "Result" : "Ready to play")
+        .navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .bottom) {
+            if case let .recognized(details) = outcome {
+                pinnedBar(details)
+            }
+        }
+        .toast($toast)
+        .task(id: attempt) { await process() }
+    }
+
+    private var resultList: some View {
         List {
             if case let .recognized(details) = outcome {
+                Section {
+                    HStack {
+                        TextField("Title", text: $titleText)
+                            .font(.title3.weight(.semibold))
+                            .submitLabel(.done)
+                            .onSubmit { renameScan() }
+                            .accessibilityIdentifier("result.title")
+                        Image(systemName: "pencil").foregroundStyle(.secondary)
+                    }
+                    Label(Self.summary(details, duration: playlistEntry?.duration), systemImage: "checkmark.circle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .symbolRenderingMode(.multicolor)
+                    if let playlistError { Text(playlistError).font(.footnote).foregroundStyle(.red) }
+                }
                 OMRCompareView(
                     image: photo.image, details: details, captureName: captureName,
                     feedback: $feedback, toast: $toast
@@ -42,61 +109,59 @@ struct ResultScreen: View {
                         .frame(maxWidth: .infinity)
                         .listRowInsets(EdgeInsets())
                 }
-            }
-            Section("Recognition") {
-                switch outcome {
-                case nil:
-                    HStack { ProgressView(); Text("Reading…") }
-                    Text("Finding staffs and notes on the page. This takes a few seconds.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                case .comingSoon:
-                    Label("Recognition coming soon", systemImage: "hourglass")
-                    Text("Full-page reading is being built. Your photo is saved for later. Try Diagnostics → Compare Gate-1 staff to preview the compare view.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                case .recognized:
-                    if let playlistEntry {
-                        Label("Saved to playlist: \(playlistEntry.title)", systemImage: "music.note.list")
-                            .font(.footnote)
-                    } else if let playlistError {
-                        Text(playlistError).font(.footnote).foregroundStyle(.red)
+                Section("Recognition") {
+                    switch outcome {
+                    case .failed(let msg):
+                        Label("Couldn't read this page", systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                            .accessibilityIdentifier("result.error")
+                        Text("Make sure the whole page is in frame, flat and well lit, then try again.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        Button { retry() } label: { Label("Try again", systemImage: "arrow.clockwise") }
+                            .accessibilityIdentifier("result.retry")
+                        DisclosureGroup("Details") {
+                            Text(msg).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                        }
+                    default:
+                        Label("Recognition coming soon", systemImage: "sparkles")
+                        Text("Your photo is saved on this iPhone. Meanwhile, try a sample song.")
+                            .font(.footnote).foregroundStyle(.secondary)
                     }
-                case let .failed(msg):
-                    Label("Couldn't read this page", systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.orange)
-                        .accessibilityIdentifier("result.error")
-                    Text("Make sure the whole page is in frame, flat and well lit, then try again.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                    Button { retry() } label: { Label("Try again", systemImage: "arrow.clockwise") }
-                        .accessibilityIdentifier("result.retry")
-                    DisclosureGroup("Details") {
-                        Text(msg).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
-                    }
+                    Button { playSample() } label: { Label("Play a sample", systemImage: "play.circle") }
+                    if let sampleError { Text(sampleError).font(.footnote).foregroundStyle(.red) }
                 }
-                Button("Play sample") { playSample() }
-                if let sampleError { Text(sampleError).font(.footnote).foregroundStyle(.red) }
-                CopyPromptButton(captureName: captureName, feedback: feedback, toast: $toast)
             }
-            Section("Saved") {
-                if let savedURL {
-                    Text("captures/\(savedURL.lastPathComponent)").font(.footnote.monospaced())
+            Section {
+                if savedURL != nil {
+                    Label("Photo saved on this iPhone", systemImage: "checkmark.circle").font(.footnote).foregroundStyle(.secondary)
                 } else if let saveError {
                     Text(saveError).font(.footnote).foregroundStyle(.red)
-                } else {
-                    Text("saving…").font(.footnote).foregroundStyle(.secondary)
                 }
-                Text("\(Int(photo.image.size.width))×\(Int(photo.image.size.height)) from \(photo.source.rawValue)")
-                    .font(.caption2.monospaced()).foregroundStyle(.secondary)
             }
         }
-        .safeAreaInset(edge: .bottom) {
-            if case let .recognized(details) = outcome {
-                PinnedPlayButton { playScan(details) }
+    }
+
+    private func pinnedBar(_ details: RecognitionDetails) -> some View {
+        VStack(spacing: 6) {
+            ForEach(Self.pinnedActions(for: outcome), id: \.self) { action in
+                switch action {
+                case .play:
+                    PinnedPlayButton { playScan(details) }
+                case .saveToLibrary:
+                    Button { saveToLibrary(details) } label: {
+                        Label(savedToLibrary ? "Saved to Library" : "Save to Library",
+                              systemImage: savedToLibrary ? "checkmark.circle.fill" : "tray.and.arrow.down")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .tint(Theme.coral)
+                    .disabled(savedToLibrary)
+                    .accessibilityIdentifier("result.saveToLibrary")
+                }
             }
         }
-        .navigationTitle("Result")
-        .navigationBarTitleDisplayMode(.inline)
-        .toast($toast)
-        .task(id: attempt) { await process() }
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity)
+        .background(.bar)
     }
 
     private var pixelSize: String {
@@ -171,6 +236,7 @@ struct ResultScreen: View {
         do {
             let e = try PlaylistStore.shared.addScan(midi: d.midi, captureName: savedURL?.lastPathComponent)
             playlistEntry = e
+            if titleText.isEmpty { titleText = e.title }
             playlistError = nil
             return e
         } catch {
@@ -180,8 +246,27 @@ struct ResultScreen: View {
         }
     }
 
-    /// Pinned Play: make sure the scan is in the playlist, then open the Player on it.
+    /// Title field edits apply to the Library entry.
+    private func renameScan() {
+        guard let e = playlistEntry, titleText != e.title else { return }
+        do {
+            playlistEntry = try PlaylistStore.shared.rename(e, to: titleText)
+        } catch {
+            DiagnosticsLog.shared.record(error: error, category: .playback, context: "rename scan")
+        }
+    }
+
+    /// "Save to Library": the scan is already saved; this confirms it under the edited title.
+    private func saveToLibrary(_ d: RecognitionDetails) {
+        guard saveToPlaylist(d) != nil else { toast = "Could not save to Library"; return }
+        renameScan()
+        savedToLibrary = true
+        toast = "Saved to Library"
+    }
+
+    /// Pinned Play: make sure the scan is in the Library, then open the Player on it.
     private func playScan(_ d: RecognitionDetails) {
+        renameScan()
         if let e = saveToPlaylist(d) {
             openPlayer(PlayerRoute(entry: e))
         } else {
@@ -243,18 +328,15 @@ struct PinnedPlayButton: View {
             Label("Play", systemImage: "play.fill")
                 .font(.title3.weight(.bold))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
+                .padding(.vertical, 18)
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .buttonBorderShape(.capsule)
-        .shadow(color: Color.accentColor.opacity(pulse ? 0.55 : 0.15), radius: pulse ? 16 : 6)
-        .scaleEffect(pulse ? 1.03 : 1)
-        .padding(.horizontal)
-        .padding(.vertical, 10)
-        .background(.bar)
+        .buttonStyle(CoralButtonStyle())
+        .shadow(color: Theme.coral.opacity(pulse ? 0.55 : 0.2), radius: pulse ? 18 : 8)
+        .scaleEffect(pulse ? 1.02 : 1)
+        .padding(.horizontal, 20)
+        .padding(.top, 10)
         .accessibilityIdentifier("result.play")
-        .accessibilityHint("Adds this scan to the playlist and opens the player")
+        .accessibilityHint("Adds this scan to your Library and plays it")
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { pulse = true }

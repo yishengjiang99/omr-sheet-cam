@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import Foundation
 
 // Port of gbk src/midi-timer.worker.ts parseMidiBuffer (SMF format 0/1, PPQ division):

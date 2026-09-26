@@ -2,7 +2,7 @@
 
 SoundFont 2 playback for MIDI `Data`: SF2 parser, voice synth, SMF reader (formats 0/1, tempo map),
 sample-accurate scheduler and an `AVAudioEngine` player. Swift port of
-[yishengjiang99/gbk](https://github.com/yishengjiang99/gbk) @ `b43f004`. Not AGPL (see `LICENSE`).
+[yishengjiang99/gbk](https://github.com/yishengjiang99/gbk) @ `b43f004`. Licensed AGPL-3.0-or-later like the rest of the app (see `LICENSE`).
 
 ```swift
 import SF2Player

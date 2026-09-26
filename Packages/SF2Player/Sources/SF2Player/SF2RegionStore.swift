@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import Foundation
 
 /// Flat, pointer-addressed copy of the region parameters the synth needs (no references, so the

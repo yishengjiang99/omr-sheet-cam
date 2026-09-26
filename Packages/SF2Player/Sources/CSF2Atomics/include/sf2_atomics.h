@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 #ifndef SF2_ATOMICS_H
 #define SF2_ATOMICS_H
 #include <stdint.h>

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Third-party notices shown in the app (Player → Acknowledgements).
+/// Third-party notices shown in the app (Settings → Source code & license → Acknowledgements).
 enum Acknowledgements {
     /// GeneralUser GS 2.0.2 by S. Christian Collins, bundled as `models/GeneralUser-GS.sf2`
     /// (pinned in models.lock). Text copied verbatim from the bank's own INFO/ICMT chunk; same
@@ -46,13 +46,64 @@ enum Acknowledgements {
     ]
 }
 
+/// One NOTICE entry ("1. homr …", "Appendix A: …") or a bundled third-party notice file.
+struct NoticeEntry: Identifiable, Hashable {
+    var title: String
+    var text: String
+    var id: String { title }
+}
+
+enum NoticeParser {
+    /// Splits the repo NOTICE into its preamble, numbered third-party entries and appendices.
+    static func entries(_ notice: String) -> [NoticeEntry] {
+        var out: [NoticeEntry] = []
+        var title = "About this app"
+        var body: [Substring] = []
+        func flush() {
+            let text = body.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty { out.append(NoticeEntry(title: title, text: text)) }
+            body = []
+        }
+        for line in notice.split(separator: "\n", omittingEmptySubsequences: false) {
+            if line.hasPrefix("=====") { continue }
+            let isNumbered = line.first?.isNumber == true && line.range(of: #"^\d+\. "#, options: .regularExpression) != nil
+            let isAppendix = line.hasPrefix("Appendix ")
+            if isNumbered || isAppendix {
+                flush()
+                title = String(line).trimmingCharacters(in: .whitespaces)
+                continue
+            }
+            if line.trimmingCharacters(in: .whitespaces) == "Third-party components" { continue }
+            body.append(line)
+        }
+        flush()
+        return out
+    }
+}
+
+/// Settings → Source code & license → Acknowledgements: every NOTICE entry, the GeneralUser GS
+/// license, and ONNX Runtime's license + ThirdPartyNotices (v1.24.2, the version the app links).
 struct AcknowledgementsView: View {
+    private let notice = NoticeParser.entries(LicenseTexts.notice())
+
     var body: some View {
         List {
-            ForEach(Acknowledgements.entries) { entry in
-                Section(entry.title) {
-                    Text(entry.text).font(.footnote).textSelection(.enabled)
+            Section("NOTICE") {
+                ForEach(notice) { e in
+                    NavigationLink(e.title) { LicenseTextScreen(title: e.title, text: e.text) }
                 }
+            }
+            Section("Bundled components") {
+                ForEach(Acknowledgements.entries) { entry in
+                    NavigationLink(entry.title) { LicenseTextScreen(title: entry.title, text: entry.text) }
+                }
+                NavigationLink("ONNX Runtime (MIT)") {
+                    LicenseTextScreen(title: "ONNX Runtime", text: LicenseTexts.resource("ONNXRuntime-LICENSE"))
+                }
+                NavigationLink("ONNX Runtime third-party notices") {
+                    LicenseTextScreen(title: "ONNX Runtime notices", text: LicenseTexts.resource("ONNXRuntime-ThirdPartyNotices"))
+                }
+                .accessibilityIdentifier("ack.ortNotices")
             }
         }
         .navigationTitle("Acknowledgements")

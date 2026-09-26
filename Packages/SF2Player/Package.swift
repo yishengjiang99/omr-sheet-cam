@@ -1,7 +1,8 @@
 // swift-tools-version:5.9
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // SF2Player: SoundFont 2 parser + synth + SMF scheduler + AVAudioEngine player.
 // Swift port of yishengjiang99/gbk (sf2-parser.ts, src/sf2-renderer.ts, src/midi-timer.worker.ts).
-// Separate from the AGPL omr-homr-ios package: consumes only MIDI Data. See LICENSE.
+// AGPL-3.0-or-later (see LICENSE). Independent of omr-homr-ios: consumes only MIDI Data.
 import PackageDescription
 
 let package = Package(

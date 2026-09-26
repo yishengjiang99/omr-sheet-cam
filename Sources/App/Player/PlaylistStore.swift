@@ -29,13 +29,13 @@ struct PlaylistSample {
 
     /// gbk's sweden.midi and the Gate-1 C-major scale written by our own `SMFWriter`.
     static var bundled: [PlaylistSample] { [
-        PlaylistSample(key: "sweden", title: "Sample: Sweden") { try SampleMIDI.sweden() },
-        PlaylistSample(key: "c-major-scale", title: "Sample: C major scale") { try SampleMIDI.cMajorScale() },
+        PlaylistSample(key: "sweden", title: "Sweden (sample)") { try SampleMIDI.sweden() },
+        PlaylistSample(key: "c-major-scale", title: "C major scale (sample)") { try SampleMIDI.cMajorScale() },
     ] }
 }
 
-/// Playlist = bundled samples (always present, not deletable) followed by saved scans in the
-/// order they were added. Scans live in `<directory>/<name>.mid` with `<directory>/index.json`
+/// Library = saved scans (newest first in `entries`) followed by the bundled samples (always
+/// present, not deletable). `scans` keeps the order they were added. Scans live in `<directory>/<name>.mid` with `<directory>/index.json`
 /// (`[PlaylistEntry]`, scans only). Missing files and a corrupt index are tolerated on reload.
 @MainActor
 final class PlaylistStore: ObservableObject {
@@ -62,8 +62,8 @@ final class PlaylistStore: ObservableObject {
     private let sampleSources: [PlaylistSample]
     private let log: DiagnosticsLog
 
-    /// Samples first, then scans (oldest → newest). This is the prev/next order.
-    var entries: [PlaylistEntry] { samples + scans }
+    /// Library order (also prev/next): your scans newest first, then the samples.
+    var entries: [PlaylistEntry] { scans.reversed() + samples }
 
     init(directory: URL, samples: [PlaylistSample] = PlaylistSample.bundled, log: DiagnosticsLog = .shared) {
         self.directory = directory
@@ -157,6 +157,24 @@ final class PlaylistStore: ObservableObject {
     }
 
     func entry(id: String) -> PlaylistEntry? { entries.first { $0.id == id } }
+
+    /// Renames a scan (the Result title field / Save to Library).
+    @discardableResult
+    func rename(_ entry: PlaylistEntry, to title: String) throws -> PlaylistEntry {
+        let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard entry.isDeletable, !t.isEmpty else { return entry }
+        guard let i = scans.firstIndex(where: { $0.id == entry.id }) else { throw StoreError.notFound(entry.id) }
+        let old = scans[i]
+        scans[i].title = t
+        do { try saveIndex() } catch { scans[i] = old; throw error }
+        return scans[i]
+    }
+
+    /// Case-insensitive title filter over `entries` (Library search).
+    func search(_ query: String) -> [PlaylistEntry] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        return q.isEmpty ? entries : entries.filter { $0.title.localizedCaseInsensitiveContains(q) }
+    }
 
     func midiData(for entry: PlaylistEntry) throws -> Data {
         switch entry.source {
