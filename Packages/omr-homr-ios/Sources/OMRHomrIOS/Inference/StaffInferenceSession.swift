@@ -5,6 +5,9 @@ import Foundation
 /// Pipeline (locked): Encoder fp16 CoreML EP → cast fp16→fp32 → Decoder fp32 ORT CPU
 /// → symbols → SMF + noteLayout.
 ///
+/// Staff tile assumption: NCHW `[1,1,256,1280]` after `StaffInputSpec` normalize
+/// (upstream `ConvertToArray` / `Config.max_height|max_width`).
+///
 /// SegNet tiling / full-page geometry are explicitly out of scope here.
 public final class StaffInferenceSession: @unchecked Sendable {
     public let vocabulary: HomrVocabulary
@@ -45,17 +48,20 @@ public final class StaffInferenceSession: @unchecked Sendable {
             throw OMRError.staffOnlyGate1NotReady("Empty staff imageData")
         }
 
-        // Intentionally do not fake model runs.
+        // Intentionally do not fake model runs. Preserve clear Gate-1 error for app shell.
         throw OMRError.staffOnlyGate1NotReady(
             """
-            Gate-1 scaffold: tokenizer + SMF hooks ready; encoder/decoder ORT sessions and \
-            C-scale oracle fixtures not yet wired. Stop condition is staff-only C-scale oracle \
-            token match before UI/geometry work.
+            Gate-1: tokenizer + decode-loop + SMF hooks ready; encoder/decoder ORT sessions and \
+            C-scale oracle fixtures not yet wired. Staff input assumption NCHW \
+            \(StaffInputSpec.nchwShape). Stop condition is staff-only C-scale oracle token match \
+            before UI/geometry work.
             """
         )
     }
 
-    /// Hook for oracle-driven token compare once fixtures land.
+    /// Hook for oracle-driven token compare once fixtures + ORT step runner land.
+    ///
+    /// Casts encoder context fp16→fp32 at the seam, then runs `DecoderLoop.generate`.
     public func decodeStaffSymbols(
         normalizedStaffImage: Data,
         stepRunner: DecoderStepRunning
@@ -63,5 +69,17 @@ public final class StaffInferenceSession: @unchecked Sendable {
         let context = try encoder.generateContext(staffImageNormalized: normalizedStaffImage)
         let fp32 = context.castToFP32ForDecoder()
         return try decoderLoop.generate(context: fp32, stepRunner: stepRunner)
+    }
+
+    /// Public oracle-facing sequence (field strings only — no invented vocab).
+    public func decodeStaffOracleSequence(
+        normalizedStaffImage: Data,
+        stepRunner: DecoderStepRunning
+    ) throws -> OracleSymbolSequence {
+        let symbols = try decodeStaffSymbols(
+            normalizedStaffImage: normalizedStaffImage,
+            stepRunner: stepRunner
+        )
+        return OracleSymbolSequence(encoded: symbols)
     }
 }
