@@ -28,3 +28,7 @@ tokenizers, MIDI writer. Never copy into a proprietary target.
 2. Wire ORT Swift sessions (CPU decoder; CoreML encoder)
 3. Drop C-scale oracle fixtures from `~/workspace/homr-research`
 4. Match tokens; only then proceed past gate-1
+
+## Token efficiency
+
+Follow the rules in [`AGENTS.md`](../../AGENTS.md) (repo root).
