@@ -1,5 +1,5 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-09-26 PT by OMR iOS_
+_Last updated: 2026-09-26 PT by OMR Core_
 
 Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`.
 
@@ -20,6 +20,8 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] In-app diagnostics: `DiagnosticsLog` (JSONL in Application Support, 2000 entries / 5 MB cap, os_log mirror; warmup, Gate-1, capture, camera, recognition, playback, feedback), Log screen (filters, Clear), "Copy as prompt" (≤4 KB Markdown), visual OMR compare + accuracy feedback on Result + Diagnostics → Compare Gate-1 staff — OMR iOS — `e853f3c` pushed, not yet built on CI (Actions billing block below)
 
 ## Next
+- [ ] iOS: 'Source code & license' row in Settings/About (AGPL-3.0-or-later, link to https://github.com/yishengjiang99/omr-sheet-cam, show NOTICE) — OMR iOS
+- [x] iOS: 'Open source (AGPL-3.0)' line in the ASC description + `docs/asc/COPY.md` — OMR iOS — `391c898`
 - [ ] ASC screenshots from build 6 consumer UI, 1320x2868, upload via workflow, no submit — OMR iOS
 - [ ] Swap in post-ship ASO copy (`docs/asc/COPY.md` → PENDING table) as recognition / highlighting / library / level meter / instrument ship; rerun `docs/asc/check_copy.py` — OMR iOS
 - [ ] SF2Player gaps inherited from gbk: pitch bend, drum channel 10, the file's own CC7/10/11, SF2 modulators, filter Q; gbk export's master dynamics not ported — OMR iOS
@@ -30,14 +32,16 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 ## Blocked / waiting on user
 - [ ] GitHub Actions jobs not starting: "recent account payments have failed or your spending limit needs to be increased" (Billing & plans). ios-sim runs 36268535216 (`9839f13`), 36269031273 (`f38272a`), 36269132629 (`e853f3c`, re-run too) never started — User — resolved: ios-sim run 36269240737 on `7432a87` green 1:41 PM PT
 - [ ] SF2 playback on a real device (latency, interruptions, headphone unplug, route changes, level meter, playlist prev/next) — User
-- [ ] Pick a license for SF2Player / gbk (gbk has no LICENSE; package is "all rights reserved" for now) — User
+- [ ] Pick a license for SF2Player / gbk (gbk has no LICENSE; package is "all rights reserved" for now) — User — the app is now AGPL-3.0-or-later, but `Packages/SF2Player/LICENSE` still says "all rights reserved" / "not covered by the GNU AGPL"
 - [ ] Build 4 Warmup + Gate-1 screenshots from a real device — User
 - [ ] Publish Support/Privacy pages? Drafts in docs/asc/web/, proposed at grepawk.com/music-reader/ — User
-- [ ] AGPL implications before going public — User
+- [x] AGPL implications before going public — User — decided: repo public, whole app AGPL-3.0-or-later (root LICENSE + NOTICE, this commit)
+- [ ] Optional: written OK from the homr authors (liebharc) for App Store distribution of the AGPL port + ONNX weights — Yisheng
 - [ ] Replace marketing screenshots with real captures before App Store submission — User
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] Root license: `LICENSE` = verbatim GNU AGPL-3.0 (gnu.org text), `NOTICE` = app copyright (AGPL-3.0-or-later, source URL) + third-party credits (homr, homr ONNX weights, oemer, Polyphonic-TrOMR, GeneralUser GS, ONNX Runtime, OpenCV/Pillow/NumPy ports), README `## License` — OMR Core — this commit — 2026-09-26
 - [x] Playlist (samples + every recognized scan saved to Application Support/playlist, swipe-delete scans), Player prev/next + elapsed/total + lock-free live level meter, pinned pulsing Play on Result, Debug screenshot deep links — `fea6193`, ios-sim run 36271239029 green (app 39/39, SF2Player 55/55) — 2026-09-26
 - [x] ASC copy: "Open source (AGPL-3.0)." in description (metadata, LISTING.md, COPY.md post-ship), check_copy.py re-run — this commit — 2026-09-26
 - [x] ASO copy: upload-ready `docs/asc/metadata/en-US/` (fastlane layout) = `LISTING.md`, shipped-now claims only (capture, import, sample SF2 playback, tempo, model self-test); post-ship copy + pending gates + screenshot captions in `docs/asc/COPY.md`; `check_copy.py` — OMR iOS — this commit — 2026-09-26

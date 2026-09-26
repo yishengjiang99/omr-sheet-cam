@@ -22,7 +22,7 @@ Camera / Photos → optional Vision crop → SegNet fp16 (CoreML) → staff geom
 | Package | License | Contents |
 |---------|---------|----------|
 | `omr-homr-ios` | AGPL-3.0 | OMR, geometry, tokenizers, decode loop, MIDI writer |
-| App (`OMRSheetCam`) | TBD (separate from AGPL) | Gate-1 shell; consumes `midi` + `noteLayout` only |
+| App (`OMRSheetCam`) | AGPL-3.0-or-later | Capture, player, diagnostics; consumes `midi` + `noteLayout` |
 
 ## Stable API
 
@@ -58,6 +58,10 @@ idempotent and exits non-zero on any download or hash mismatch. ONNX files are n
 
 Oracle workspace (exporter only, not iOS runtime): `~/workspace/homr-research`
 
-## AGPL notice
+## License
 
-A line-by-line port of geometry / tokenizers / decode loop is AGPL. App Store distribution is legally messy under AGPL; see `Packages/omr-homr-ios/NOTICE` and product decision Option A. Do not copy homr into a proprietary target silently.
+The whole app is licensed under the [GNU AGPL-3.0](LICENSE) (or later), because it links the AGPL
+package `OMRHomrIOS`, whose OMR engine is ported from [liebharc/homr](https://github.com/liebharc/homr).
+Third-party credits and licenses (homr, its ONNX models, oemer, Polyphonic-TrOMR, GeneralUser GS,
+ONNX Runtime, OpenCV/Pillow/NumPy ports) are in [NOTICE](NOTICE). Corresponding source:
+https://github.com/yishengjiang99/omr-sheet-cam
