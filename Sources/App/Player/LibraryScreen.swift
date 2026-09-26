@@ -1,23 +1,24 @@
 import SF2Player
 import SwiftUI
 
-/// Library (redesign 05-library): search, "Your scans" (newest first, swipe or ⋯ to delete) and
-/// "Samples" (always there, not deletable). Tap a row to play it. A mini-player sits at the
-/// bottom while something is loaded.
+/// Library / playlist (redesign 05-library): search, "Your scans" (newest first; swipe, long-press
+/// or ⋯ to rename / delete) then "Samples" (always there, not editable). Tap a row to play it.
+/// A mini-player sits at the bottom while something is loaded.
 struct LibraryScreen: View {
     @ObservedObject private var store: PlaylistStore
-    @ObservedObject private var controller: PlaybackController
+    @EnvironmentObject private var controller: PlaybackController
     var showsMiniPlayer = true
     var onSelect: (PlaylistEntry) -> Void
     var onOpenPlayer: (() -> Void)?
 
     @State private var query = ""
     @State private var deleteError: String?
+    @State private var renaming: PlaylistEntry?
+    @State private var renameText = ""
 
     @MainActor
     init(showsMiniPlayer: Bool = true, onOpenPlayer: (() -> Void)? = nil, onSelect: @escaping (PlaylistEntry) -> Void) {
         _store = ObservedObject(wrappedValue: PlaylistStore.shared)
-        _controller = ObservedObject(wrappedValue: PlaybackController.shared)
         self.showsMiniPlayer = showsMiniPlayer
         self.onOpenPlayer = onOpenPlayer
         self.onSelect = onSelect
@@ -34,8 +35,15 @@ struct LibraryScreen: View {
                     Text(query.isEmpty ? "No scans yet. Scan a page and it shows up here." : "No scans match “\(query)”.")
                         .font(.subheadline).foregroundStyle(.secondary)
                 }
-                ForEach(scans) { row($0) }
-                    .onDelete { offsets in delete(offsets.map { scans[$0] }) }
+                ForEach(scans) { e in
+                    row(e)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) { delete([e]) } label: { Label("Delete", systemImage: "trash") }
+                            Button { beginRename(e) } label: { Label("Rename", systemImage: "pencil") }
+                                .tint(.indigo)
+                        }
+                        .contextMenu { editMenu(e) }
+                }
             } header: {
                 header("Your scans", count: store.scans.count)
             } footer: {
@@ -59,6 +67,39 @@ struct LibraryScreen: View {
             }
         }
         .accessibilityIdentifier("library.list")
+        .alert("Rename", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+            TextField("Title", text: $renameText)
+                .accessibilityIdentifier("library.renameField")
+            Button("Cancel", role: .cancel) { renaming = nil }
+            Button("Save") { commitRename() }
+        }
+    }
+
+    @ViewBuilder
+    private func editMenu(_ e: PlaylistEntry) -> some View {
+        Button { onSelect(e) } label: { Label("Play", systemImage: "play.fill") }
+        if e.isDeletable {
+            Button { beginRename(e) } label: { Label("Rename", systemImage: "pencil") }
+            Button(role: .destructive) { delete([e]) } label: { Label("Delete", systemImage: "trash") }
+        }
+    }
+
+    private func beginRename(_ e: PlaylistEntry) {
+        renameText = e.title
+        renaming = e
+    }
+
+    /// Updates the title in index.json; the .mid file keeps its name.
+    private func commitRename() {
+        guard let e = renaming else { return }
+        renaming = nil
+        do {
+            try store.rename(e, to: renameText)
+            deleteError = nil
+        } catch {
+            deleteError = "Rename failed: \(error)"
+            DiagnosticsLog.shared.record(error: error, category: .playback, context: "library rename")
+        }
     }
 
     private func header(_ title: String, count: Int) -> some View {
@@ -92,8 +133,7 @@ struct LibraryScreen: View {
                         .accessibilityLabel("Now playing")
                 } else if e.isDeletable {
                     Menu {
-                        Button { onSelect(e) } label: { Label("Play", systemImage: "play.fill") }
-                        Button(role: .destructive) { delete([e]) } label: { Label("Delete", systemImage: "trash") }
+                        editMenu(e)
                     } label: {
                         Image(systemName: "ellipsis").foregroundStyle(.secondary).frame(width: 32, height: 32)
                     }
@@ -104,7 +144,6 @@ struct LibraryScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("library.row.\(e.id)")
-        .deleteDisabled(!e.isDeletable)
     }
 
     static func isNew(_ e: PlaylistEntry, now: Date = Date()) -> Bool {

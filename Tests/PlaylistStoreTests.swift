@@ -146,6 +146,7 @@ final class PlaylistStoreTests: XCTestCase {
         let a = try store.addScan(midi: try scanMIDI(), captureName: "a.jpg")
         let renamed = try store.rename(a, to: "  Minuet in G  ")
         XCTAssertEqual(renamed.title, "Minuet in G")
+        XCTAssertEqual(renamed.fileName, a.fileName, "rename edits index.json only; the file keeps its name")
         XCTAssertEqual(makeStore().scans.first?.title, "Minuet in G", "rename persisted")
         XCTAssertEqual(try store.rename(store.samples[0], to: "x").title, "Sweden (sample)", "samples keep their title")
         XCTAssertEqual(store.search("minuet").map(\.id), [a.id])

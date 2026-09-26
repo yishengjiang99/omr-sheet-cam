@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct OMRSheetCamApp: App {
+    // The ONE app-wide player (PlaybackController.shared) is injected below via .environmentObject.
     init() {
         DiagnosticsLog.installUncaughtExceptionHandler()
         let device = DeviceInfo.current
@@ -16,6 +17,7 @@ struct OMRSheetCamApp: App {
     var body: some Scene {
         WindowGroup {
             RootFlowView()
+                .environmentObject(PlaybackController.shared)
         }
     }
 }

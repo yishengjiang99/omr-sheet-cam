@@ -33,9 +33,25 @@ enum BundledSoundFont {
 }
 
 /// Now Playing (redesign 04-player): artwork, title, live level meter, seek with times,
-/// prev / play-pause / next, tempo and instrument chips. Drives the shared `PlaybackController`,
-/// so playback continues in the Library mini-player after you leave.
+/// prev / play-pause / next, tempo and instrument chips. Drives the ONE app-wide
+/// `PlaybackController` (injected by `OMRSheetCamApp` via `.environmentObject`), so playback
+/// continues across navigation and shows in the mini-player on Scan and Library.
 struct PlayerView: View {
+    @EnvironmentObject private var controller: PlaybackController
+    let route: PlayerRoute
+
+    init(route: PlayerRoute) { self.route = route }
+
+    init(midi: Data, title: String = "Player") {
+        self.init(route: PlayerRoute(midi: midi, title: title, autoplay: false))
+    }
+
+    var body: some View { PlayerScreen(route: route, controller: controller) }
+
+    private static func clock(_ s: Double) -> String { PlayerView.clock(s) }
+}
+
+struct PlayerScreen: View {
     @ObservedObject private var controller: PlaybackController
     @ObservedObject private var player: SF2MIDIPlayer
     @ObservedObject private var settings: AppSettings
@@ -43,18 +59,11 @@ struct PlayerView: View {
     @State private var scrub: Double?
     @State private var showLibrary = false
 
-    @MainActor
-    init(route: PlayerRoute, controller: PlaybackController? = nil) {
-        let c = controller ?? PlaybackController.shared
+    init(route: PlayerRoute, controller: PlaybackController) {
         self.route = route
-        _controller = ObservedObject(wrappedValue: c)
-        _player = ObservedObject(wrappedValue: c.player)
-        _settings = ObservedObject(wrappedValue: c.settings)
-    }
-
-    @MainActor
-    init(midi: Data, title: String = "Player") {
-        self.init(route: PlayerRoute(midi: midi, title: title, autoplay: false))
+        _controller = ObservedObject(wrappedValue: controller)
+        _player = ObservedObject(wrappedValue: controller.player)
+        _settings = ObservedObject(wrappedValue: controller.settings)
     }
 
     var body: some View {
@@ -103,6 +112,7 @@ struct PlayerView: View {
                 }
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { showLibrary = false } } }
             }
+            .environmentObject(controller)
         }
         .onAppear { controller.open(route) }
     }
@@ -193,8 +203,5 @@ struct PlayerView: View {
         .overlay(Capsule().stroke(Color.primary.opacity(0.08)))
     }
 
-    static func clock(_ s: Double) -> String {
-        let t = max(0, Int(s.rounded(.down)))
-        return String(format: "%d:%02d", t / 60, t % 60)
-    }
+    private static func clock(_ s: Double) -> String { PlayerView.clock(s) }
 }

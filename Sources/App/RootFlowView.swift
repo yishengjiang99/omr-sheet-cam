@@ -12,12 +12,14 @@ struct RootFlowView: View {
 
     @State private var path: [Route] = Self.initialPath()
     @State private var showSettings = Self.initialSettings()
+    @EnvironmentObject private var playback: PlaybackController
 
     var body: some View {
         NavigationStack(path: $path) {
             CameraScreen(
                 onSettings: { showSettings = true },
                 onLibrary: { path.append(.library) },
+                onOpenPlayer: { openNowPlaying() },
                 onPhoto: { photo in path.append(.result(photo)) }
             )
             .toolbar(.hidden, for: .navigationBar)
@@ -35,12 +37,12 @@ struct RootFlowView: View {
             }
         }
         .tint(Theme.coral)
-        .sheet(isPresented: $showSettings) { SettingsView() }
+        .sheet(isPresented: $showSettings) { SettingsView().environmentObject(playback) }
     }
 
     /// Mini-player tap: show the Player on whatever is loaded (without reloading it).
     private func openNowPlaying() {
-        guard let current = PlaybackController.shared.current else { return }
+        guard let current = playback.current else { return }
         var r = current
         r.autoplay = false
         path.append(.player(r))

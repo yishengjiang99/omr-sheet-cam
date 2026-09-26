@@ -4,10 +4,12 @@ import SwiftUI
 
 /// Scan (home, redesign 01-scan): live camera (when available + authorized), tap-to-focus,
 /// Settings (gear) and torch on top, Photos · shutter · Library at the bottom. Hands an upright
-/// `CapturedPhoto` to `onPhoto`.
+/// `CapturedPhoto` to `onPhoto`. The app-wide mini-player shows above the controls while
+/// something is loaded.
 struct CameraScreen: View {
     var onSettings: () -> Void = {}
     var onLibrary: () -> Void = {}
+    var onOpenPlayer: () -> Void = {}
     var onPhoto: (CapturedPhoto) -> Void
 
     @StateObject private var camera = CameraController()
@@ -18,6 +20,7 @@ struct CameraScreen: View {
     @State private var error: String?
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
+    @EnvironmentObject private var playback: PlaybackController
 
     var body: some View {
         ZStack {
@@ -33,6 +36,12 @@ struct CameraScreen: View {
                         .padding(.horizontal, 16).padding(.vertical, 8)
                         .background(.black.opacity(0.35), in: Capsule())
                         .padding(.bottom, 12)
+                }
+                if playback.current != nil {
+                    MiniPlayer(controller: playback, onOpen: onOpenPlayer)
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, 8)
+                        .environment(\.colorScheme, .light)
                 }
                 controls
             }
