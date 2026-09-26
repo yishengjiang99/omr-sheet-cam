@@ -1,0 +1,8 @@
+id: oracle.c_scale_staff
+match_tier: exact_tokens
+clef: treble
+key: C
+time: "4/4"
+source: homr-research / Python Staff2Score (22/22 hard gate)
+license: see upstream
+notes: Pre-cropped staff [1,1,256,1280]; tokens must match Python homr exactly.
