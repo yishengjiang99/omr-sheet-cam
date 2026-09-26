@@ -62,8 +62,14 @@ final class PlaylistStore: ObservableObject {
     private let sampleSources: [PlaylistSample]
     private let log: DiagnosticsLog
 
-    /// Library order (also prev/next): your scans newest first, then the samples.
-    var entries: [PlaylistEntry] { scans.reversed() + samples }
+    /// Library order (also prev/next): your scans newest first (by date, then most recently
+    /// added), then the samples.
+    var entries: [PlaylistEntry] {
+        let newestFirst = scans.enumerated()
+            .sorted { ($0.element.date, $0.offset) > ($1.element.date, $1.offset) }
+            .map(\.element)
+        return newestFirst + samples
+    }
 
     init(directory: URL, samples: [PlaylistSample] = PlaylistSample.bundled, log: DiagnosticsLog = .shared) {
         self.directory = directory

@@ -138,6 +138,9 @@ final class PlaylistStoreTests: XCTestCase {
         XCTAssertEqual(store.neighbor(of: a.id, offset: 1)?.id, "sample:sweden")
         XCTAssertNil(store.neighbor(of: "sample:c-major-scale", offset: 1))
         XCTAssertNil(store.neighbor(of: "missing", offset: 1))
+        let old = try store.addScan(midi: try scanMIDI(), captureName: "old.jpg", date: Date(timeIntervalSinceNow: -86400))
+        XCTAssertEqual(store.entries.first?.id, b.id, "ordered by date, not insertion")
+        XCTAssertEqual(store.entries[2].id, old.id)
     }
 
     @MainActor

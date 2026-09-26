@@ -38,7 +38,7 @@ enum ScreenshotDemo {
                 _ = try? store.addScan(midi: midi, title: "Demo scan: warm-up scale", date: now.addingTimeInterval(-600))
             }
         }
-        if let first = store.scans.last {
+        if let first = store.entries.first(where: { $0.source == .scan }) {
             var r = PlayerRoute(entry: first)
             r.autoplay = false
             PlaybackController.shared.open(r, reason: "screenshot")
