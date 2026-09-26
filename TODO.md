@@ -21,6 +21,8 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] In-app diagnostics: `DiagnosticsLog` (JSONL in Application Support, 2000 entries / 5 MB cap, os_log mirror; warmup, Gate-1, capture, camera, recognition, playback, feedback), Log screen (filters, Clear), "Copy as prompt" (≤4 KB Markdown), visual OMR compare + accuracy feedback on Result + Diagnostics → Compare Gate-1 staff — OMR iOS — `e853f3c` pushed, not yet built on CI (Actions billing block below)
 
 ## Next
+- [ ] ASC screenshots from build 6 consumer UI, 1320x2868, upload via workflow, no submit — OMR iOS
+- [ ] Swap in post-ship ASO copy (`docs/asc/COPY.md` → PENDING table) as recognition / highlighting / library / level meter / instrument ship; rerun `docs/asc/check_copy.py` — OMR iOS
 - [ ] SF2Player gaps inherited from gbk: pitch bend, drum channel 10, the file's own CC7/10/11, SF2 modulators, filter Q; gbk export's master dynamics not ported — OMR iOS
 - [ ] SF2Player seek doesn't retrigger notes held across the seek point — OMR iOS
 - [ ] CoreML compiled-model cache: package `cacheDirectory: URL?`; app uses `<AppSupport>/coreml-cache/<sha256>/`, excluded from backup — OMR iOS + OMR Core — on hold until the real-device warmup number is in
@@ -37,6 +39,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] ASO copy: upload-ready `docs/asc/metadata/en-US/` (fastlane layout) = `LISTING.md`, shipped-now claims only (capture, import, sample SF2 playback, tempo, model self-test); post-ship copy + pending gates + screenshot captions in `docs/asc/COPY.md`; `check_copy.py` — OMR iOS — this commit — 2026-09-26
 - [x] Page pipeline M3 + M4 (`parseSheetMusicWithLayout(gray8:width:height:)`, `PageInferenceSession`, `omr-test parse-page`): all 9 oracle pages identical to homr end to end, 110 tests — this commit — 2026-09-26
 - [x] SF2 player wired into the app (Result "Play sample" + Diagnostics → `PlayerView`, bundled sweden.midi + GeneralUser-GS.sf2), ios-sim green — `f38272a`, run 36269240737 — 2026-09-26
 - [x] Page pipeline M2 (`PagePipeline.detectStaffs(segmentation:width:height:)` → `PageStaffLayout`): identical to homr staff detection on 9 pages, 104 tests — this commit — 2026-09-26

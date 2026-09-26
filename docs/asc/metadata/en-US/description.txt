@@ -1,0 +1,16 @@
+Photograph pages of sheet music with your camera, and play the included sample song on a built-in synthesizer, all on your device.
+
+AI Camera - Music Reader is a private, offline camera and music player for musicians. Capture a page or import one from your photo library. Open the player to hear the sample song performed with the GeneralUser GS SoundFont, and slow it down or speed it up while you listen.
+
+WHAT YOU CAN DO
+• Capture sheet music with the camera: tap to focus, torch for dim rooms
+• Import a page from your photo library
+• Play the bundled sample song on a General MIDI synthesizer
+• Play, pause, stop and seek
+• Change tempo from half speed to double speed
+
+PRIVATE BY DESIGN
+Everything runs on your device. No account, no sign-in, and no internet connection needed. Your photos are never uploaded.
+
+BUILT ON OPEN SOURCE
+The app bundles an optical music recognition model based on homr, an open-source project, and runs it entirely on your device. A built-in self-test reads a sample staff of music with it. The recognition engine is licensed under AGPL-3.0.

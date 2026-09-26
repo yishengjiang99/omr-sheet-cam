@@ -4,6 +4,11 @@ Source of truth for the ASC listing. `docs/asc/push_listing.py` reads the fenced
 and pushes them to App Store Connect (app `6816476323`, `com.ragnus.vp`). Limits are Apple's.
 Never use the word "Grok" anywhere in the listing (Apple rejected it before).
 
+The fenced Subtitle / Promotional text / Keywords / Description blocks are the **upload-ready,
+shipped-now** copy and must equal `metadata/en-US/*.txt` (fastlane deliver layout). Post-ship copy
+and the lines gated on unshipped features (recognition, highlighting, library, level meter,
+instrument): `COPY.md`. Check: `python3 docs/asc/check_copy.py`.
+
 Status: **early build**. Capture UI and player UI are still in progress, so the screenshots in
 `docs/asc/screenshots/` are illustrative marketing frames built from the repo's own LilyPond
 fixtures. Replace them with real simulator captures before App Store submission. Do not submit
@@ -16,43 +21,37 @@ AI Camera - Music Reader
 
 ## Subtitle (30)
 ```
-Scan sheet music, hear it play
+Sheet music capture & playback
 ```
 
 ## Promotional text (170)
 ```
-Photograph printed sheet music and hear it played back, with each note highlighted as it sounds. Recognition runs on your device, so your scores stay private.
+Capture sheet music with your camera or import a photo, then play the included sample song on a built-in synthesizer. Private and offline. No account needed.
 ```
 
 ## Keywords (100, comma-separated)
 ```
-sheet music,scanner,OMR,score,notes,MIDI,piano,sight reading,practice,playback,notation,read music
+scanner,scan,OMR,MIDI,piano,notes,score,notation,sight,reading,practice,tempo,synth,choir,band,learn
 ```
 
 ## Description (4000)
 ```
-AI Camera - Music Reader turns a photo of printed sheet music into sound.
+Photograph pages of sheet music with your camera, and play the included sample song on a built-in synthesizer, all on your device.
 
-Take a picture of a score and the app reads the notation and plays it back as MIDI, highlighting each note as it sounds, so you can hear how a passage goes before you play it.
+AI Camera - Music Reader is a private, offline camera and music player for musicians. Capture a page or import one from your photo library. Open the player to hear the sample song performed with the GeneralUser GS SoundFont, and slow it down or speed it up while you listen.
 
-HOW IT WORKS
-• Photograph printed sheet music with your iPhone or iPad camera
-• Optical music recognition reads the staff: clefs, key and time signatures, notes and rests
-• Play the result back and follow along as notes are highlighted
+WHAT YOU CAN DO
+• Capture sheet music with the camera: tap to focus, torch for dim rooms
+• Import a page from your photo library
+• Play the bundled sample song on a General MIDI synthesizer
+• Play, pause, stop and seek
+• Change tempo from half speed to double speed
 
-ON YOUR DEVICE
-Recognition runs entirely on your iPhone or iPad with machine-learning models that ship inside the app. Your photos are not uploaded, and no account is needed.
+PRIVATE BY DESIGN
+Everything runs on your device. No account, no sign-in, and no internet connection needed. Your photos are never uploaded.
 
-GOOD FOR
-• Hearing a new piece before you practice it
-• Checking pitches and rhythms while sight-reading
-• Students, teachers, and choir and band members
-
-WORKS BEST WITH
-Clean, printed (engraved) sheet music photographed straight on in good light. Handwritten music is not supported.
-
-OPEN SOURCE
-The recognition engine is based on homr, an open-source optical music recognition project, and is licensed under AGPL-3.0.
+BUILT ON OPEN SOURCE
+The app bundles an optical music recognition model based on homr, an open-source project, and runs it entirely on your device. A built-in self-test reads a sample staff of music with it. The recognition engine is licensed under AGPL-3.0.
 ```
 
 ## Support URL
