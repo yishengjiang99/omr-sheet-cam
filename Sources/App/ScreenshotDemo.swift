@@ -28,7 +28,7 @@ enum ScreenshotDemo {
     @MainActor
     static func seedLibrary() {
         let store = PlaylistStore.shared
-        if store.scans.isEmpty {
+        if !store.scans.contains(where: { $0.title.hasPrefix("Demo scan") }) {
             let now = Date()
             if let dir = try? Gate1Runner.bundledFixturesDir(),
                let symbols = try? Gate1Oracle.loadExpectedSymbols(from: dir.appendingPathComponent("expected.tokens.json")) {

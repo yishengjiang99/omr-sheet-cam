@@ -31,18 +31,19 @@ struct ArtworkView: View {
     var glyphSize: CGFloat = 28
 
     var body: some View {
-        ZStack {
-            Theme.coralGradient
-            if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                Image(systemName: "music.note")
-                    .font(.system(size: glyphSize, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.9))
+        // The gradient takes the proposed size; the photo fills it and is clipped to it.
+        Theme.coralGradient
+            .overlay {
+                if let image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    Image(systemName: "music.note")
+                        .font(.system(size: glyphSize, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.9))
+                }
             }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
