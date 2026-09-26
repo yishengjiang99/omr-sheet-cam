@@ -167,6 +167,7 @@ public final class SF2RealtimeCore: @unchecked Sendable {
     /// Published to the control thread: song position (Double bits) and flags (bit0 playing, bit1 finished).
     let publishedPos: UnsafeMutablePointer<UInt64>
     let publishedFlags: UnsafeMutablePointer<Int64>
+    let meter = SF2MeterAccumulator()
 
     public init(sampleRate: Double, voiceCapacity: Int = 512) {
         self.sampleRate = sampleRate
@@ -205,6 +206,9 @@ public final class SF2RealtimeCore: @unchecked Sendable {
     public var positionSeconds: Double { Double(bitPattern: sf2_atomic_load_u64(publishedPos)) / sampleRate }
     public var isPlaying: Bool { sf2_atomic_load_i64(publishedFlags) & 1 != 0 }
     public var isFinished: Bool { sf2_atomic_load_i64(publishedFlags) & 2 != 0 }
+
+    /// Peak / RMS of everything `render` produced since the previous call (resets it). Lock-free.
+    public func takeMeterReading() -> SF2MeterReading { meter.take() }
 
     /// Releases sequences the audio thread swapped out. Call periodically on the control thread.
     public func drainRetired() {
@@ -280,6 +284,7 @@ public final class SF2RealtimeCore: @unchecked Sendable {
         let r = rt
         guard let seq = r.pointee.seq else {
             outL.update(repeating: 0, count: count); outR.update(repeating: 0, count: count)
+            meter.add(outL, outR, count)
             return
         }
         if !r.pointee.playing {
@@ -307,6 +312,7 @@ public final class SF2RealtimeCore: @unchecked Sendable {
                 r.pointee.finished = true
             }
         }
+        meter.add(outL, outR, count)
         sf2_atomic_store_u64(publishedPos, r.pointee.songPos.bitPattern)
         sf2_atomic_store_i64(publishedFlags, (r.pointee.playing ? 1 : 0) | (r.pointee.finished ? 2 : 0))
     }

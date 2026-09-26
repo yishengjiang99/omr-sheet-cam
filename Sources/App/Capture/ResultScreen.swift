@@ -1,8 +1,10 @@
 import SwiftUI
 
 /// Captured / picked page: saves it to Documents/captures, runs `AppServices.recognition`
-/// (stub → "Recognition coming soon"), then shows the visual compare + accuracy feedback and a
-/// Play button for the recognized MIDI. Every step is recorded in `DiagnosticsLog`.
+/// (stub → "Recognition coming soon"), then shows the visual compare + accuracy feedback. A
+/// recognized scan's MIDI is saved to the playlist right away, and a pinned, highlighted Play
+/// button (always visible above the home indicator) opens the Player on it. Every step is
+/// recorded in `DiagnosticsLog`.
 struct ResultScreen: View {
     let photo: CapturedPhoto
     var service: any RecognitionService = AppServices.recognition
@@ -14,6 +16,9 @@ struct ResultScreen: View {
     @State private var sampleError: String?
     @State private var feedback = OMRFeedback(captureName: "", staffCount: 0, noteCount: 0)
     @State private var toast: String?
+    /// Playlist entry for this scan once saved (auto on success, retried by the Play button).
+    @State private var playlistEntry: PlaylistEntry?
+    @State private var playlistError: String?
 
     /// Capture file name used to tie log events + feedback together.
     private var captureName: String { savedURL?.lastPathComponent ?? "unsaved-\(photo.id.uuidString.prefix(8))" }
@@ -42,11 +47,12 @@ struct ResultScreen: View {
                     Label("Recognition coming soon", systemImage: "hourglass")
                     Text("Full-page reading is being built. Your photo is saved for later. Try Diagnostics → Compare Gate-1 staff to preview the compare view.")
                         .font(.footnote).foregroundStyle(.secondary)
-                case let .recognized(details):
-                    Button {
-                        openPlayer(PlayerRoute(midi: details.midi, title: "Your music"))
-                    } label: {
-                        Label("Play recognized music", systemImage: "play.fill")
+                case .recognized:
+                    if let playlistEntry {
+                        Label("Saved to playlist: \(playlistEntry.title)", systemImage: "music.note.list")
+                            .font(.footnote)
+                    } else if let playlistError {
+                        Text(playlistError).font(.footnote).foregroundStyle(.red)
                     }
                 case let .failed(msg):
                     Label("Could not read this page", systemImage: "exclamationmark.triangle")
@@ -66,6 +72,11 @@ struct ResultScreen: View {
                 }
                 Text("\(Int(photo.image.size.width))×\(Int(photo.image.size.height)) from \(photo.source.rawValue)")
                     .font(.caption2.monospaced()).foregroundStyle(.secondary)
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if case let .recognized(details) = outcome {
+                PinnedPlayButton { playScan(details) }
             }
         }
         .navigationTitle("Result")
@@ -114,6 +125,32 @@ struct ResultScreen: View {
             feedback.staffCount = d.staffCount
             feedback.noteCount = d.notes.count
             feedback.layoutSource = d.layoutSource
+            saveToPlaylist(d)
+        }
+    }
+
+    /// Every successful scan goes into the playlist (Application Support/playlist). Idempotent.
+    @discardableResult
+    private func saveToPlaylist(_ d: RecognitionDetails) -> PlaylistEntry? {
+        if let playlistEntry { return playlistEntry }
+        do {
+            let e = try PlaylistStore.shared.addScan(midi: d.midi, captureName: savedURL?.lastPathComponent)
+            playlistEntry = e
+            playlistError = nil
+            return e
+        } catch {
+            playlistError = "Could not save to playlist: \(error)"
+            DiagnosticsLog.shared.record(error: error, category: .playback, context: "playlist save", payload: ["capture": captureName])
+            return nil
+        }
+    }
+
+    /// Pinned Play: make sure the scan is in the playlist, then open the Player on it.
+    private func playScan(_ d: RecognitionDetails) {
+        if let e = saveToPlaylist(d) {
+            openPlayer(PlayerRoute(entry: e))
+        } else {
+            openPlayer(PlayerRoute(midi: d.midi, title: "Your music"))
         }
     }
 
@@ -149,11 +186,43 @@ struct ResultScreen: View {
 
     private func playSample() {
         do {
-            openPlayer(PlayerRoute(midi: try SampleMIDI.sweden(), title: "Sample: Sweden"))
+            guard let e = PlaylistStore.shared.entry(id: "sample:sweden") else { throw SampleMIDI.SampleError.missing("sweden.midi") }
+            openPlayer(PlayerRoute(entry: e))
             sampleError = nil
         } catch {
             sampleError = "Sample unavailable: \(error)"
             DiagnosticsLog.shared.record(error: error, category: .playback, context: "Play sample")
+        }
+    }
+}
+
+/// Accent-filled Play button pinned above the home indicator with a subtle pulse (off with
+/// Reduce Motion).
+struct PinnedPlayButton: View {
+    var action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pulse = false
+
+    var body: some View {
+        Button(action: action) {
+            Label("Play", systemImage: "play.fill")
+                .font(.title3.weight(.bold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .buttonBorderShape(.capsule)
+        .shadow(color: Color.accentColor.opacity(pulse ? 0.55 : 0.15), radius: pulse ? 16 : 6)
+        .scaleEffect(pulse ? 1.03 : 1)
+        .padding(.horizontal)
+        .padding(.vertical, 10)
+        .background(.bar)
+        .accessibilityIdentifier("result.play")
+        .accessibilityHint("Adds this scan to the playlist and opens the player")
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { pulse = true }
         }
     }
 }

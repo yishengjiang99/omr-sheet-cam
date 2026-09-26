@@ -12,7 +12,15 @@ try await player.load(soundFont: sf2URL)   // parsed off the main actor
 try player.load(midi: midiData)
 player.play()                               // pause(), stop(), seek(to:), tempoScale (0.25–4)
 // @Published: position (seconds + tick), isPlaying, duration, activeNoteIDs
+// player.onFinished = { ... }                 // end of song (auto-advance a playlist)
+// player.meter.update(now:) -> SF2MeterLevels // live output level, poll at ~30 Hz
 ```
+
+Level meter: `SF2RealtimeCore.render` adds each callback's peak and Σx² to a lock-free accumulator
+(C atomics: CAS max on float bits, CAS add on double bits, exchange-to-zero on read), so nothing
+between two UI polls is lost and the audio thread never blocks. `SF2MeterBallistics` gives the
+displayed levels: RMS bar with instant attack and 40 dB/s fall, peak marker held 1 s then 24 dB/s
+fall, −60 dBFS floor. The math lives in `SF2LevelMath` / `SF2MeterBallistics` (unit-tested).
 
 Offline render (the gbk export path): `SF2OfflineRenderer.render(midi:soundFont:)`.
 
@@ -25,6 +33,7 @@ Offline render (the gbk export path): `SF2OfflineRenderer.render(midi:soundFont:
 | `SMFReader.swift` | `parseMidiBuffer` |
 | `SF2Sequence.swift` | `midireader.tsx` `onExportWav` (UI defaults) |
 | `SF2RealtimeCore.swift` | `src/midi-timer.worker.ts` + render worklet; lock-free, no allocation on the render thread |
+| `SF2LevelMeter.swift` | (new) lock-free output level meter + ballistics |
 | `SF2MIDIPlayer.swift` | AVAudioEngine + AVAudioSourceNode, session/interruption/route handling |
 
 ## Faithful to gbk, including its gaps

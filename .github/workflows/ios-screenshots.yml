@@ -1,7 +1,8 @@
 name: iOS simulator screenshots
 
-# Builds the app for the simulator and captures real launch-screen screenshots at the App Store
-# sizes (iPhone 6.9" 1320x2868, iPad 13" 2064x2752). Artifacts only; copy into docs/asc/screenshots/.
+# Builds the app for the simulator and captures real screenshots at the App Store sizes (iPhone
+# 6.9" 1320x2868, iPad 13" 2064x2752): launch, then Result (demo scan), Player (sweden sample,
+# playing) and Playlist via Debug-only launch args. Artifacts only; copy into docs/asc/screenshots/.
 
 on:
   workflow_dispatch:
@@ -56,6 +57,15 @@ jobs:
             sleep 8
             xcrun simctl io "$id" screenshot "shots/${label}-01-launch.png"
             sips -g pixelWidth -g pixelHeight "shots/${label}-01-launch.png"
+            # Debug-only deep links (Sources/App/ScreenshotDemo.swift): -OMRScreenshot <route>
+            local n=2
+            for route in result player playlist; do
+              xcrun simctl terminate "$id" com.ragnus.vp || true
+              xcrun simctl launch "$id" com.ragnus.vp -OMRScreenshot "$route"
+              sleep 10
+              xcrun simctl io "$id" screenshot "shots/${label}-0${n}-${route}.png"
+              n=$((n + 1))
+            done
             xcrun simctl shutdown "$id" || true
           }
           shoot iphone-69 'iPhone 1[6-9] Pro Max'

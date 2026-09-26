@@ -44,6 +44,10 @@ public final class SF2MIDIPlayer: ObservableObject {
         }
     }
     public var notePositions: [SF2NotePosition] = []
+    /// Live output level (lock-free, drained by the UI at ~30 Hz via `meter.update(now:)`).
+    public let meter = SF2LevelMeter()
+    /// Called on the main actor when playback reaches the end of the song (not on stop/pause).
+    public var onFinished: (@MainActor () -> Void)?
     public private(set) var soundFont: SF2SoundFont?
     public private(set) var song: SMFSong?
 
@@ -180,6 +184,7 @@ public final class SF2MIDIPlayer: ObservableObject {
         engine.prepare()
         sourceNode = node
         core = c
+        meter.core = c
         return c
     }
 
@@ -202,6 +207,7 @@ public final class SF2MIDIPlayer: ObservableObject {
         }
         sourceNode = nil
         core = nil
+        meter.core = nil
     }
 
     private func startEngine() throws {
@@ -265,6 +271,7 @@ public final class SF2MIDIPlayer: ObservableObject {
         if isPlaying && core.isFinished {
             isPlaying = false
             scheduleIdleStop()
+            onFinished?()
         }
     }
 
