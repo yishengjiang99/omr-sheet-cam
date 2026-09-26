@@ -103,12 +103,32 @@ final class WriterOnlyFixtureTests: XCTestCase {
         XCTAssertEqual(Set(notes.map(\.duration)), [480])
     }
 
-    func testOracleCScaleStaffStillAwaitingExport() throws {
+    /// Gate-1 oracle (homr 7d97c3c export, 995a272): complete, 12 symbols, and the oracle
+    /// tokens round-trip through the writer to its expected.notes.csv (C4…C5 quarters).
+    func testOracleCScaleStaffCompleteAndRoundTripsThroughWriter() throws {
         let root = try Self.fixturesRoot()
-        let url = root.appendingPathComponent("oracle.c_scale_staff/expected.tokens.json")
-        let fixture = try Self.loadTokenFixture(from: url)
-        XCTAssertEqual(fixture.status, "awaiting_oracle_export")
-        XCTAssertTrue(fixture.symbols.isEmpty, "do not invent 22/22 oracle tokens")
+        let dir = root.appendingPathComponent("oracle.c_scale_staff")
+        let fixture = try Self.loadTokenFixture(from: dir.appendingPathComponent("expected.tokens.json"))
+        XCTAssertEqual(fixture.status, "complete")
+        XCTAssertEqual(fixture.symbols.count, 12)
+
+        let vocab = try TokenizerLoader.loadVocabulary()
+        for (i, sym) in fixture.symbols.enumerated() {
+            XCTAssertNotNil(vocab.rhythm[sym.rhythm], "oracle rhythm[\(i)] \(sym.rhythm) not in vocab")
+            XCTAssertNotNil(vocab.pitch[sym.pitch], "oracle pitch[\(i)] \(sym.pitch) not in vocab")
+            XCTAssertNotNil(vocab.position[sym.position], "oracle position[\(i)] \(sym.position) not in vocab")
+        }
+
+        let encoded = fixture.symbols.map { EncodedSymbol(oracleFields: $0) }
+        let smf = SMFWriter().write(symbols: encoded)
+        let contents = try SMFNoteReader.read(from: smf)
+        let actual = contents.notes.map {
+            CanonicalNote(tick: $0.tick, pitch: $0.pitch, duration: $0.duration, staff: contents.staff(of: $0) ?? -1)
+        }.sorted()
+        let expected = try Self.loadNotesCSV(from: dir.appendingPathComponent("expected.notes.csv")).sorted()
+        XCTAssertEqual(actual, expected, "oracle tokens → SMF → notes != expected.notes.csv")
+        XCTAssertEqual(actual.map(\.pitch), [60, 62, 64, 65, 67, 69, 71, 72])
+        XCTAssertEqual(SMFHeaderInspector.readHeader(from: smf)?.trackCount, 2, "conductor + 1 staff")
     }
 
     // MARK: - Helpers
