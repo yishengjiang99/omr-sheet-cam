@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 #
-# Fetch the pinned homr ONNX checkpoints into <repo>/models/.
+# Fetch the pinned homr ONNX checkpoints (and the GeneralUser GS SoundFont used
+# by the SF2 player) into <repo>/models/.
 #
 #   scripts/fetch-models            # download / verify everything in models.lock
 #   MODELS_DIR=/tmp/m scripts/fetch-models
 #
 # models.lock (repo root) has one entry per line:
 #   <sha256>  <filename>  <url>
-# <sha256> is the SHA-256 of <filename> as written to models/ (the .onnx file).
+# <sha256> is the SHA-256 of <filename> as written to models/ (the .onnx / .sf2 file).
 # <url> is the upstream release asset from
 #   https://github.com/liebharc/homr/releases/tag/onnx_checkpoints
+# or, for GeneralUser-GS.sf2, the commit-pinned raw file in yishengjiang99/gbk.
 # If the asset is a .zip, <filename> is extracted from it; otherwise the
 # download itself is <filename>. Blank lines and lines starting with # are skipped.
 #

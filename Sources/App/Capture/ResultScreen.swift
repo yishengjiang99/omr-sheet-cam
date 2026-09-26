@@ -80,7 +80,7 @@ struct ResultScreen: View {
 
     private func playSample() {
         do {
-            openPlayer(PlayerRoute(midi: try SampleMIDI.cMajorScale(), title: "Sample: C major scale"))
+            openPlayer(PlayerRoute(midi: try SampleMIDI.sweden(), title: "Sample: Sweden"))
             sampleError = nil
         } catch {
             sampleError = "Sample unavailable: \(error)"

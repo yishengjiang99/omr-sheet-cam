@@ -104,6 +104,8 @@ def locked_models() -> dict[str, dict[str, str]]:
         if not line.strip() or line.lstrip().startswith("#"):
             continue
         digest, name, url = line.split()
+        if not name.endswith(".onnx"):  # e.g. GeneralUser-GS.sf2 (SF2 player), not an OMR model
+            continue
         kind = "segnet" if name.startswith("segnet_") else name.split("_", 1)[0]
         path = MODELS_DIR / name
         if not path.is_file():

@@ -9,43 +9,22 @@ struct PlayerRoute: Hashable {
 }
 
 enum PlayerDestination {
-    /// Single swap point: replace the placeholder with the SF2 `PlayerView(midi:)` when it lands.
     @MainActor @ViewBuilder
     static func view(for route: PlayerRoute) -> some View {
-        PlayerPlaceholderView(route: route)
+        PlayerView(midi: route.midi, title: route.title)
     }
 }
 
-/// Stand-in until `Packages/SF2Player`'s `PlayerView` lands: plays via the smoke `SimpleMIDIPlayer`.
-struct PlayerPlaceholderView: View {
-    let route: PlayerRoute
-    @State private var player = SimpleMIDIPlayer()
-    @State private var error: String?
-
-    var body: some View {
-        List {
-            Section {
-                Text("SF2 player coming soon (placeholder playback).")
-                    .foregroundStyle(.secondary)
-                Text("\(route.midi.count) bytes SMF")
-                    .font(.footnote.monospaced())
-            }
-            Section {
-                Button("Play") {
-                    do { try player.play(midiData: route.midi); error = nil } catch { self.error = "\(error)" }
-                }
-                Button("Stop") { player.stop() }
-                Text(player.statusText).font(.footnote.monospaced()).foregroundStyle(.secondary)
-                if let error { Text(error).font(.footnote).foregroundStyle(.red) }
-            }
-        }
-        .navigationTitle(route.title)
-        .onDisappear { player.stop() }
-    }
-}
-
-/// Bundled sample: the Gate-1 C-major scale (`gate1/expected.tokens.json`) written by the package's `SMFWriter`.
+/// Bundled samples: gbk `sweden.midi`, and the Gate-1 C-major scale (`gate1/expected.tokens.json`) written by `SMFWriter`.
 enum SampleMIDI {
+    enum SampleError: Error { case missing(String) }
+
+    /// gbk's `sweden.midi` (fixtures/sf2/sweden.midi), bundled at the app root for "Play sample".
+    static func sweden(bundle: Bundle = .main) throws -> Data {
+        guard let url = bundle.url(forResource: "sweden", withExtension: "midi") else { throw SampleError.missing("sweden.midi") }
+        return try Data(contentsOf: url)
+    }
+
     static func cMajorScale(bundle: Bundle = .main) throws -> Data {
         let json = try Gate1Runner.bundledFixturesDir(bundle).appendingPathComponent("expected.tokens.json")
         return SMFWriter().write(symbols: try Gate1Oracle.loadExpectedSymbols(from: json))

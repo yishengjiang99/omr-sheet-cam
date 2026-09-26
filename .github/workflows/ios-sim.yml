@@ -69,10 +69,18 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             | tee "$RUNNER_TEMP/xcodebuild.log"
 
+      - name: SF2Player package tests (macOS, gbk parity)
+        if: always()
+        env:
+          SF2PLAYER_SF2: ${{ github.workspace }}/models/GeneralUser-GS.sf2
+        run: |
+          set -o pipefail
+          swift test --package-path Packages/SF2Player 2>&1 | tee "$RUNNER_TEMP/sf2player.log"
+
       - name: Gate-1 + warmup summary
         if: always()
         run: |
-          grep -E "Gate1StaffTokenMatchTests|Gate-1|ModelWarmupTests|Warmup:|\[warmup\]|Bundled ONNX|models not bundled" "$RUNNER_TEMP/xcodebuild.log" || echo "no Gate-1 / warmup lines"
+          grep -E "Gate1StaffTokenMatchTests|Gate-1|ModelWarmupTests|Warmup:|\[warmup\]|\[sf2\]|SF2PlayerAppTests|Bundled ONNX|models not bundled" "$RUNNER_TEMP/xcodebuild.log" || echo "no Gate-1 / warmup lines"
           if grep -F "should not be called on the main thread" "$RUNNER_TEMP/xcodebuild.log"; then
             echo "::warning::CoreML main-thread warning present"
           else
