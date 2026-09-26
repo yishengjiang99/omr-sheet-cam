@@ -68,3 +68,43 @@ let package = Package(
         ),
     ]
 )
+
+// MARK: - Linux ONNX Runtime C API (branch ios/ort-c-linux) — self-contained, cherry-pick as one hunk.
+//
+// Adds the `CONNXRuntime` system library (Sources/CONNXRuntime: module.modulemap + shim.h) and
+// links `OMRHomrIOS` against the official libonnxruntime fetched by `scripts/fetch-ort` into
+// <repo>/third_party/onnxruntime. Linux only; Apple platforms keep onnxruntime-objc + CoreML and
+// never see these settings. Enabled automatically when the fetched header exists, so
+// `swift build` / `swift test` stay green (ORTCSession compiled out) before fetch-ort runs.
+//   OMR_ORT_C=0            force off     OMR_ORT_C=1  force on (error if headers missing)
+//   OMR_ORT_ROOT=<dir>     use another ORT install (<dir>/include, <dir>/lib)
+// Manual flags (e.g. with OMR_ORT_ROOT unset but headers elsewhere): `scripts/fetch-ort --print-flags`.
+import Foundation
+
+#if os(Linux)
+let ortCRoot: String = ProcessInfo.processInfo.environment["OMR_ORT_ROOT"]
+    ?? URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        .appendingPathComponent("../../third_party/onnxruntime").standardizedFileURL.path
+let ortCEnabled: Bool = {
+    switch ProcessInfo.processInfo.environment["OMR_ORT_C"] {
+    case "0": return false
+    case "1": return true
+    default: return FileManager.default.fileExists(atPath: ortCRoot + "/include/onnxruntime_c_api.h")
+    }
+}()
+if ortCEnabled {
+    package.targets.append(.systemLibrary(name: "CONNXRuntime", path: "Sources/CONNXRuntime"))
+    for target in package.targets where target.name == "OMRHomrIOS" {
+        target.dependencies.append(.target(name: "CONNXRuntime", condition: .when(platforms: [.linux])))
+        target.swiftSettings = (target.swiftSettings ?? []) + [
+            .unsafeFlags(["-Xcc", "-I\(ortCRoot)/include"], .when(platforms: [.linux])),
+        ]
+        target.linkerSettings = (target.linkerSettings ?? []) + [
+            .unsafeFlags(
+                ["-L\(ortCRoot)/lib", "-Xlinker", "-rpath", "-Xlinker", "\(ortCRoot)/lib"],
+                .when(platforms: [.linux])
+            ),
+        ]
+    }
+}
+#endif

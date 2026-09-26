@@ -16,3 +16,7 @@ __pycache__/
 venv/
 # ONNX checkpoints fetched by scripts/fetch-models
 models/
+
+# ONNX Runtime Linux release fetched by scripts/fetch-ort (pinned in ort.lock); never commit
+/third_party/onnxruntime/
+/third_party/.cache/

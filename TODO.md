@@ -7,12 +7,13 @@ Owners: **Core** = OMR Core (the AGPL package `omr-homr-ios`, fixtures, `omr-tes
 Priority is **implementation first**. Keep test tooling to what's needed to prove real output.
 
 ## Now: Gate 1, where Swift decoder tokens exactly match the homr oracle
-- [ ] **iOS**: Linux ONNX Runtime C wrapper `ORTCSession` on `ios/ort-c-linux`. It conforms to `ORTSessionBackend`, runs on CPU only, returns fp16 bytes uncast, and gets the ORT library through a pinned fetch.
+- [x] **iOS** (merged by **Core** into `main`): Linux ONNX Runtime C wrapper `ORTCSession` on `ios/ort-c-linux`. It conforms to `ORTSessionBackend`, runs on CPU only, returns fp16 bytes uncast, and gets the ORT library through a pinned fetch.
 - [ ] **Core**: Merge `ios/ort-c-linux`, then run `omr-test decode-staff fixtures/oracle.c_scale_staff/staff.npy` on Linux and post the raw tokens.
 - [ ] **Core**: Gate 1 passes when `decodeStaff(tensor:)` output equals the 12 tokens in `fixtures/oracle.c_scale_staff/expected.tokens.json`, with a real exit code.
 - [ ] **iOS**: Point `Tests/Gate1StaffTokenMatchTests.swift` at `fixtures/oracle.c_scale_staff/`, loading `staff.npy` and running `decodeStaff`.
 
 ## Next
+- [ ] **Core**: `Package.swift` pins onnxruntime-swift-package-manager `from: "1.24.2"` but `ort.lock` is 1.30.0 (1.24.2 encoder context differed by up to 0.0039); pin Apple SPM to 1.30.0 so iOS and Linux run identical ORT kernels.
 - [ ] **Core**: Port homr's staff preprocessing. `staff.png` to tensor must match `staff.npy`; report the max abs diff.
 - [ ] **Yisheng**: When the Mac is online, add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture.
 - [ ] **Yisheng**: Get the app target compiled once with `xcodebuild test` on a Mac or CI (still never compiled).

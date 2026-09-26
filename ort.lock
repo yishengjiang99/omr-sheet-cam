@@ -1,0 +1,11 @@
+# ort.lock — pinned official ONNX Runtime Linux CPU release, consumed by scripts/fetch-ort.
+# Same format as models.lock:  <sha256>  <filename>  <url>   (blank lines and # comments skipped)
+# <sha256> is the SHA-256 of the release tarball itself (matches GitHub's release asset digest).
+#
+# 1.30.0 = latest stable; the same version is published as the onnxruntime-objc CocoaPod (1.30.0),
+# so iOS (objc + CoreML) and Linux (C API, CPU EP only) can run identical ORT kernels. It is also
+# what `pip install onnxruntime` gives the Python homr oracle today: the fp16 encoder context from
+# ORTCSession on 1.30.0 is bit-identical to Python homr's (1.24.2 differed by up to 0.0039).
+# Bump all lines together.
+a5ed5a3cac51fbb2e90da632ae43d19212faaa20e76484e62bcb7c23ddb3b3fd  onnxruntime-linux-x64-1.30.0.tgz  https://github.com/microsoft/onnxruntime/releases/download/v1.30.0/onnxruntime-linux-x64-1.30.0.tgz
+e16a27a8ed330bbc698df7330b0cf56e722f354e3bcc92118682c74ef3c3e3da  onnxruntime-linux-aarch64-1.30.0.tgz  https://github.com/microsoft/onnxruntime/releases/download/v1.30.0/onnxruntime-linux-aarch64-1.30.0.tgz
