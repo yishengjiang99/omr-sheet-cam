@@ -29,7 +29,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Swap in post-ship ASO copy (`docs/asc/COPY.md` → PENDING table) as recognition / highlighting / library / level meter / instrument ship; rerun `docs/asc/check_copy.py` — OMR iOS
 - [ ] SF2Player gaps inherited from gbk: pitch bend, drum channel 10, the file's own CC7/10/11, SF2 modulators, filter Q; gbk export's master dynamics not ported — OMR iOS
 - [ ] SF2Player seek doesn't retrigger notes held across the seek point — OMR iOS
-- [ ] CoreML compiled-model cache: package `cacheDirectory: URL?`; app uses `<AppSupport>/coreml-cache/<sha256>/`, excluded from backup — OMR iOS + OMR Core — on hold until the real-device warmup number is in
+- [ ] CoreML compiled-model cache: package `cacheDirectory: URL?`; app uses `<AppSupport>/coreml-cache/<sha256>/`, excluded from backup — OMR iOS + OMR Core — implementation follows the approved decision in `docs/coreml-tradeoffs.md`
 - [ ] Bump Apple ORT to `exact: "1.30.0"` to match `ort.lock` once upstream tags it (microsoft/onnxruntime-swift-package-manager#46) — OMR Core — blocked upstream
 
 ## Blocked / waiting on user
@@ -44,6 +44,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] CoreML trade-off decision and measurements: keep the ORT CoreML EP plus a persistent model cache; `docs/coreml-tradeoffs.md` — OMR iOS — approved by Yisheng — 2026-09-26
 - [x] Root license: `LICENSE` = verbatim GNU AGPL-3.0 (gnu.org text), `NOTICE` = app copyright (AGPL-3.0-or-later, source URL) + third-party credits (homr, homr ONNX weights, oemer, Polyphonic-TrOMR, GeneralUser GS, ONNX Runtime, OpenCV/Pillow/NumPy ports), README `## License` — OMR Core — this commit — 2026-09-26
 - [x] Playlist (samples + every recognized scan saved to Application Support/playlist, swipe-delete scans), Player prev/next + elapsed/total + lock-free live level meter, pinned pulsing Play on Result, Debug screenshot deep links — `fea6193`, ios-sim run 36271239029 green (app 39/39, SF2Player 55/55) — 2026-09-26
 - [x] ASC copy: "Open source (AGPL-3.0)." in description (metadata, LISTING.md, COPY.md post-ship), check_copy.py re-run — this commit — 2026-09-26

@@ -17,6 +17,10 @@ Gate-1 shell only: no capture UI yet. Blocked on onnx_checkpoints + C-scale fixt
 
 Camera / Photos → optional Vision crop → SegNet fp16 (CoreML) → staff geometry + dewarp (CPU) → Encoder fp16 (CoreML) → cast context fp16→fp32 → Decoder fp32 (ORT CPU) → SMF MIDI + `noteLayout` → local playback + highlights.
 
+## Docs
+
+- [CoreML trade-offs and decision](docs/coreml-tradeoffs.md) — why the app keeps the ORT CoreML EP and uses a persistent model cache.
+
 ## Packages
 
 | Package | License | Contents |
