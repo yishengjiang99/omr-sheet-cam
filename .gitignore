@@ -20,3 +20,9 @@ models/
 # ONNX Runtime Linux release fetched by scripts/fetch-ort (pinned in ort.lock); never commit
 /third_party/onnxruntime/
 /third_party/.cache/
+
+# SoundFonts are fetched by scripts/fetch-models (pinned in models.lock); never commit them
+*.sf2
+# gbk parity renderer deps (scripts/sf2-parity)
+scripts/sf2-parity/node_modules/
+Packages/SF2Player/.build/

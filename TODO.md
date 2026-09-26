@@ -11,7 +11,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 
 ## Now (in progress)
 - [ ] TestFlight build 4 in internal testing: Run Gate-1 (npy + png) + warmup diagnostics — OMR iOS — `c2950ae`, run 36265488038, VALID 12:21 PM PT
-- [ ] `Packages/SF2Player` (non-AGPL): port gbk SF2 synth (parser, renderer, SMF reader formats 0/1 + tempo map, scheduler, AVAudioEngine AVAudioSourceNode); pin GeneralUser-GS.sf2 in models.lock + fetch via scripts/fetch-models; parity tests vs gbk Node renders (sweden.midi, C scale) — OMR iOS — not on main yet
+- [ ] `Packages/SF2Player` (non-AGPL) gbk port: parser, synth, SMF reader, scheduler, lock-free real-time core, AVAudioEngine player; c_scale + sweden render bit-identical PCM to gbk (SHA-256), 44 Linux tests — OMR iOS — package committed; app wiring + GeneralUser-GS.sf2 lock next
 - [ ] Swap Player placeholder for SF2Player `PlayerView(midi:)` — OMR iOS — after SF2Player lands
 - [ ] Page pipeline port (homr 7d97c3c `detect_staffs_in_image` + `parse_staffs`): page → SegNet → staffs → per-staff decode → SMF + noteLayout — OMR Core — oracle fixtures in `9839f13`
   - [ ] M1: page preprocessing (autocrop, PIL bicubic resize, CLAHE) + SegNet tiling/merge, exact vs oracle

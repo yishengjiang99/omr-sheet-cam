@@ -3,6 +3,8 @@ Copyright (c) 2026 Yisheng Jiang and contributors.
 This repository contains multiple components with different licenses:
 
 - Packages/omr-homr-ios — GNU Affero General Public License v3.0 (see that package)
+- Packages/SF2Player — not AGPL; all rights reserved pending a license choice (see that package)
 - App UI / Player — license TBD; must only consume midi Data + noteLayout
+- GeneralUser GS SoundFont (fetched, not in git) — GeneralUser GS License v2.0 (in-app Acknowledgements)
 
 Upstream OMR weights and algorithms: liebharc/homr (AGPL-3.0), BreezeWhite/oemer, NetEase/Polyphonic-TrOMR.

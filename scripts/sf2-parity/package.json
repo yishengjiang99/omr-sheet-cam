@@ -1,0 +1,12 @@
+{
+  "name": "sf2-parity",
+  "private": true,
+  "type": "module",
+  "description": "Renders gbk reference fixtures for Packages/SF2Player parity tests.",
+  "scripts": {
+    "render": "node render-gbk.mjs"
+  },
+  "devDependencies": {
+    "tsx": "4.21.0"
+  }
+}

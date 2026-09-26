@@ -1,0 +1,13 @@
+Copyright (c) 2026 Yisheng Jiang. All rights reserved.
+
+SF2Player is a Swift port of yishengjiang99/gbk (commit b43f004a7e95321d2decde2e604350b014dcd105:
+sf2-parser.ts, src/sf2-renderer.ts, src/midi-timer.worker.ts, midireader.tsx export path), written by
+the same author. gbk ships without a license file; this package mirrors that status until a license
+is chosen (tracked in TODO.md).
+
+This package is NOT covered by the GNU AGPL: it contains no code from liebharc/homr or from
+Packages/omr-homr-ios, depends on neither, and consumes only Standard MIDI File bytes.
+
+The GeneralUser GS SoundFont (models/GeneralUser-GS.sf2, fetched by scripts/fetch-models, not in git)
+is by S. Christian Collins under the GeneralUser GS License v2.0; see the app's Acknowledgements screen
+(Sources/App/Player/Acknowledgements.swift) or https://github.com/mrbumpy409/GeneralUser-GS.
