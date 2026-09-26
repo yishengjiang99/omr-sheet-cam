@@ -48,7 +48,10 @@ struct PlayerView: View {
 
     var body: some View { PlayerScreen(route: route, controller: controller) }
 
-    private static func clock(_ s: Double) -> String { PlayerView.clock(s) }
+    static func clock(_ s: Double) -> String {
+        let t = max(0, Int(s.rounded(.down)))
+        return String(format: "%d:%02d", t / 60, t % 60)
+    }
 }
 
 struct PlayerScreen: View {
