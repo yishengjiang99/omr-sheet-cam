@@ -15,7 +15,6 @@
 		A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */; };
 		A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */; };
 		A10000000000000000000008 /* OMRHomrIOS in Frameworks */ = {isa = PBXBuildFile; productRef = P10000000000000000000002 /* OMRHomrIOS */; };
-		A10000000000000000000009 /* OMRHomrIOS in Frameworks */ = {isa = PBXBuildFile; productRef = P10000000000000000000003 /* OMRHomrIOS */; };
 		4F06444BBF09D87CE872BDB8 /* MIDINoteExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149722DE288FA9C01620E0D8 /* MIDINoteExtractor.swift */; };
 		21EBA7280EC15355707ED56C /* PlaybackSmokeFixtureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */; };
 /* End PBXBuildFile section */
@@ -58,7 +57,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A10000000000000000000009 /* OMRHomrIOS in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -169,7 +167,6 @@
 			);
 			name = OMRSheetCamTests;
 			packageProductDependencies = (
-				P10000000000000000000003 /* OMRHomrIOS */,
 			);
 			productName = OMRSheetCamTests;
 			productReference = B10000000000000000000011 /* OMRSheetCamTests.xctest */;
@@ -288,6 +285,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				DISABLE_DIAMOND_PROBLEM_DIAGNOSTIC = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				COPY_PHASE_STRIP = NO;
@@ -309,6 +307,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				DISABLE_DIAMOND_PROBLEM_DIAGNOSTIC = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				COPY_PHASE_STRIP = NO;
@@ -475,11 +474,6 @@
 
 /* Begin XCSwiftPackageProductDependency section */
 		P10000000000000000000002 /* OMRHomrIOS */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = P10000000000000000000001 /* XCLocalSwiftPackageReference "Packages/omr-homr-ios" */;
-			productName = OMRHomrIOS;
-		};
-		P10000000000000000000003 /* OMRHomrIOS */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = P10000000000000000000001 /* XCLocalSwiftPackageReference "Packages/omr-homr-ios" */;
 			productName = OMRHomrIOS;
