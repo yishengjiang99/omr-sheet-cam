@@ -109,6 +109,7 @@ Clean, printed sheet music photographed straight on in good light. Handwritten m
 
 BUILT ON OPEN SOURCE
 Music recognition is based on homr, an open-source optical music recognition project, licensed under AGPL-3.0. Sounds use the GeneralUser GS SoundFont.
+Open source (AGPL-3.0).
 ```
 
 ## Screenshot caption plan (build 6 consumer UI, 6.9" 1320×2868)
@@ -133,7 +134,7 @@ upload-ready (metadata/en-US)
   Subtitle              30     30  yes
   Keywords             100    100  yes
   Promotional text     157    170  yes
-  Description         1075   4000  yes
+  Description         1099   4000  yes
 
 post-ship (COPY.md)
   field              chars  limit  ok
@@ -141,7 +142,7 @@ post-ship (COPY.md)
   Subtitle              30     30  yes
   Keywords              99    100  yes
   Promotional text     163    170  yes
-  Description         1426   4000  yes
+  Description         1450   4000  yes
 
 screenshot captions (<= 5 words)
   4 words  1 | Snap your sheet music | Scan (camera) | shipped

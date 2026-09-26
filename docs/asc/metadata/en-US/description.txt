@@ -14,3 +14,4 @@ Everything runs on your device. No account, no sign-in, and no internet connecti
 
 BUILT ON OPEN SOURCE
 The app bundles an optical music recognition model based on homr, an open-source project, and runs it entirely on your device. A built-in self-test reads a sample staff of music with it. The recognition engine is licensed under AGPL-3.0.
+Open source (AGPL-3.0).
