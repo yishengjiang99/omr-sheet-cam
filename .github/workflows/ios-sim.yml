@@ -9,7 +9,8 @@ on:
 
 concurrency:
   group: ios-sim-${{ github.ref }}
-  cancel-in-progress: true
+  # main gets frequent pushes: let an in-progress main run finish (newer pushes queue behind it).
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   test:
