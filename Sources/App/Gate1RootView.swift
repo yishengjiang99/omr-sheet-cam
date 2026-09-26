@@ -44,7 +44,9 @@ struct Gate1RootView: View {
                 }
 
                 Section("Run Gate-1") {
-                    Button("Run Gate-1 (npy)") { runGate1NPY() }
+                    Button("Run Gate-1 (npy)") { runGate1(png: false) }
+                        .disabled(gate1Running)
+                    Button("Run Gate-1 (png)") { runGate1(png: true) }
                         .disabled(gate1Running)
                     if gate1Running {
                         Text("running… (\(warmup.debugLine))")
@@ -54,7 +56,7 @@ struct Gate1RootView: View {
                     if let gate1Verdict {
                         Text(gate1Verdict)
                             .font(.footnote.monospaced())
-                            .foregroundStyle(gate1Verdict.hasPrefix("PASS") ? .green : .red)
+                            .foregroundStyle(gate1Verdict.contains("PASS") ? .green : .red)
                     }
                     if let gate1Detail {
                         Text(gate1Detail)
@@ -91,7 +93,7 @@ struct Gate1RootView: View {
     }
 
     /// Waits for the warmup, then runs Gate 1 off the main thread on the warmed sessions.
-    private func runGate1NPY() {
+    private func runGate1(png: Bool) {
         gate1Running = true
         gate1Verdict = nil
         gate1Detail = nil
@@ -100,13 +102,13 @@ struct Gate1RootView: View {
             do {
                 let models = try await warmup.readyModels()
                 let result = try await Task.detached(priority: .userInitiated) {
-                    try Gate1Runner.runNPY(models: models)
+                    try png ? Gate1Runner.runPNG(models: models) : Gate1Runner.runNPY(models: models)
                 }.value
-                gate1Verdict = result.verdict
+                gate1Verdict = "\(result.input): \(result.verdict)"
                 gate1Detail = result.detail
             } catch {
                 gate1Verdict = "ERROR: \(error)"
-                Gate1Runner.log.error("Gate-1 (npy) error: \(String(describing: error), privacy: .public)")
+                Gate1Runner.log.error("Gate-1 (\(png ? "png" : "npy", privacy: .public)) error: \(String(describing: error), privacy: .public)")
             }
         }
     }

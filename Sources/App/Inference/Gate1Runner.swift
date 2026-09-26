@@ -50,6 +50,8 @@ struct Gate1Result: Sendable {
     var decodeMs: Double
     var encoderProvider: String
     var ortVersion: String
+    /// png run only: max |png tensor - npy tensor|.
+    var tensorMaxAbsDiff: Float? = nil
 
     var passed: Bool { divergence == nil }
 
@@ -60,14 +62,16 @@ struct Gate1Result: Sendable {
     }
 
     var detail: String {
-        String(format: "decode %.0f ms, encoder %@, ORT %@", decodeMs, encoderProvider, ortVersion)
+        var d = String(format: "decode %.0f ms, encoder %@, ORT %@", decodeMs, encoderProvider, ortVersion)
+        if let diff = tensorMaxAbsDiff { d += ", png-npy max|diff| \(diff)" }
+        return d
     }
 }
 
 /// In-app Gate 1 (TestFlight / physical iPhone): bundled `gate1/staff.npy` → the package's
 /// `StaffInferenceSession(encoder:decoder:vocabulary:).decodeStaff(tensor:)` over the warmed
 /// `ORTCSession`s (encoder CoreML EP, decoder CPU) → compare with `gate1/expected.tokens.json`.
-/// Synchronous; call off the main thread.
+/// `runPNG` does the same from `gate1/staff.png`. Synchronous; call off the main thread.
 enum Gate1Runner {
     enum RunnerError: Error, CustomStringConvertible {
         case fixturesMissing(String)
@@ -98,8 +102,25 @@ enum Gate1Runner {
         return try decode(tensor: tensor, input: "npy", expected: expected, models: models)
     }
 
+    /// Bundled `gate1/staff.png` → package `StaffTensor.fromStaffImage(pngURL:)` (its own PNG
+    /// decoder, no ImageIO) → same decode + compare; also reports max |png - npy| tensor diff.
+    static func runPNG(models: WarmedModels, fixturesDir: URL? = nil) throws -> Gate1Result {
+        let dir = try fixturesDir ?? bundledFixturesDir()
+        let png = dir.appendingPathComponent("staff.png")
+        let npy = dir.appendingPathComponent("staff.npy")
+        let json = dir.appendingPathComponent("expected.tokens.json")
+        for f in [png, npy, json] where !FileManager.default.fileExists(atPath: f.path) {
+            throw RunnerError.fixturesMissing(f.path)
+        }
+        let expected = try Gate1Oracle.loadExpectedSymbols(from: json)
+        let tensor = try StaffTensor.fromStaffImage(pngURL: png)
+        let diff = Gate1Oracle.maxAbsDiff(fp32LE: tensor.float32LEData, try StaffTensor.loadNPY(npy).float32LEData)
+        return try decode(tensor: tensor, input: "png", expected: expected, models: models, tensorMaxAbsDiff: diff)
+    }
+
     static func decode(
-        tensor: StaffTensor, input: String, expected: [EncodedSymbol], models: WarmedModels
+        tensor: StaffTensor, input: String, expected: [EncodedSymbol], models: WarmedModels,
+        tensorMaxAbsDiff: Float? = nil
     ) throws -> Gate1Result {
         let session = try StaffInferenceSession(
             encoder: models.encoderBackend, decoder: models.decoderBackend, vocabulary: models.vocabulary
@@ -120,7 +141,8 @@ enum Gate1Runner {
             divergence: divergence,
             decodeMs: ms,
             encoderProvider: "\(models.encoderBackend.provider)",
-            ortVersion: ORTCSession.runtimeVersion
+            ortVersion: ORTCSession.runtimeVersion,
+            tensorMaxAbsDiff: tensorMaxAbsDiff
         )
         log.notice("Gate-1 (\(input, privacy: .public)): \(result.verdict, privacy: .public); \(result.detail, privacy: .public); got \(got.count) symbols")
         return result

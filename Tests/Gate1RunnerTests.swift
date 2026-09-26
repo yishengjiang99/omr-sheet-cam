@@ -30,4 +30,20 @@ final class Gate1RunnerTests: XCTestCase {
         XCTAssertEqual(result.encoderProvider, "coreML")
         XCTAssertGreaterThan(result.decodeMs, 0)
     }
+
+    @MainActor
+    func testBundledPNGRunMatchesOracle() async throws {
+        let env = ProcessInfo.processInfo.environment["OMR_MODELS_DIR"] ?? ""
+        let dir = env.isEmpty ? nil : URL(fileURLWithPath: env, isDirectory: true)
+        let models = try await ModelWarmup.shared.readyModels(modelsDir: dir)
+        let result = try await Task.detached(priority: .userInitiated) {
+            try Gate1Runner.runPNG(models: models)
+        }.value
+        print("Gate1Runner: png \(result.verdict) | \(result.detail)")
+        XCTAssertEqual(result.verdict, "PASS 12/12")
+        XCTAssertEqual(result.gotCount, 12)
+        // Core: package PNG path is bit-exact vs staff.npy on Linux; allow one gray level here.
+        let diff = try XCTUnwrap(result.tensorMaxAbsDiff)
+        XCTAssertLessThanOrEqual(diff, 0.0225639, "png tensor vs staff.npy")
+    }
 }
