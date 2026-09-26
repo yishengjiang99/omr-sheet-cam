@@ -4,22 +4,7 @@ internal import CONNXRuntime
 internal import CONNXRuntimeApple
 #endif
 
-#if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
-import Foundation
-
-// ONNX Runtime C-API backend for `ORTSessionBackend` (see ORTBackend.swift), on BOTH platforms:
-// - Linux: `CONNXRuntime` system library over the official libonnxruntime fetched by
-//   scripts/fetch-ort (ort.lock, 1.30.0). CPU execution provider ONLY; `.coreML` throws.
-// - iOS / macOS: `CONNXRuntimeApple` (C headers of the onnxruntime.xcframework shipped by
-//   microsoft/onnxruntime-swift-package-manager, pinned in Package.swift). `.cpu` = default CPU EP;
-//   `.coreML` = `OrtSessionOptionsAppendExecutionProvider_CoreML` (MLProgram, CPU+GPU) with the CPU
-//   EP still registered as fallback. UNVERIFIED on Apple: never compiled here (Linux box); pending
-//   macOS CI. `.coreML` is for encoder / SegNet sessions only: `DecoderSession` rejects any
-//   backend whose provider is not `.cpu`.
-// - Moves RAW little-endian, row-major bytes tagged with their element type (float32, float16 via
-//   ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16, int64, int32). It never converts dtypes; the single
-//   fp16 -> fp32 cast lives in `EncoderContext.castToFP32ForDecoder()`.
-
+// Platform-independent (also used by `CoreMLModelCache.validate`), so declared outside the ORT gate.
 /// Errors raised by `ORTCSession`.
 public enum ORTCError: Error, CustomStringConvertible, Sendable {
     /// Provider not available on this platform (`.coreML` on Linux, which is CPU EP only).
@@ -34,6 +19,8 @@ public enum ORTCError: Error, CustomStringConvertible, Sendable {
     case unsupportedElementType(name: String, onnxType: Int)
     /// Requested input/output name is not part of the model.
     case unknownName(String)
+    /// Bad CoreML compiled-model cache arguments (`cacheDirectory` with `.cpu`, invalid `cacheKey`, …).
+    case invalidCacheConfiguration(String)
 
     public var description: String {
         switch self {
@@ -43,9 +30,27 @@ public enum ORTCError: Error, CustomStringConvertible, Sendable {
         case let .invalidTensor(m): return "ORTCSession: invalid tensor: \(m)"
         case let .unsupportedElementType(n, t): return "ORTCSession: '\(n)' has unsupported ONNX element type \(t)"
         case let .unknownName(n): return "ORTCSession: unknown input/output name '\(n)'"
+        case let .invalidCacheConfiguration(m): return "ORTCSession: invalid CoreML cache configuration: \(m)"
         }
     }
 }
+
+#if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
+import Foundation
+
+// ONNX Runtime C-API backend for `ORTSessionBackend` (see ORTBackend.swift), on BOTH platforms:
+// - Linux: `CONNXRuntime` system library over the official libonnxruntime fetched by
+//   scripts/fetch-ort (ort.lock, 1.30.0). CPU execution provider ONLY; `.coreML` throws.
+// - iOS / macOS: `CONNXRuntimeApple` (C headers of the onnxruntime.xcframework shipped by
+//   microsoft/onnxruntime-swift-package-manager, pinned in Package.swift). `.cpu` = default CPU EP;
+//   `.coreML` = `OrtSessionOptionsAppendExecutionProvider_CoreML` (MLProgram, CPU+GPU) with the CPU
+//   EP still registered as fallback; with a `cacheDirectory`, the provider-options API with the same
+//   format / compute units + `ModelCacheDirectory`, model loaded from bytes with `COREML_CACHE_KEY`
+//   (see `CoreMLModelCache`). Built and tested on macOS CI (ios-sim workflow). `.coreML` is for
+//   encoder / SegNet sessions only: `DecoderSession` rejects any backend whose provider is not `.cpu`.
+// - Moves RAW little-endian, row-major bytes tagged with their element type (float32, float16 via
+//   ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16, int64, int32). It never converts dtypes; the single
+//   fp16 -> fp32 cast lives in `EncoderContext.castToFP32ForDecoder()`.
 
 /// Process-wide ORT API table + `OrtEnv` (ORT recommends one env per process).
 private final class ORTCRuntime: @unchecked Sendable {
@@ -84,10 +89,12 @@ private final class ORTCRuntime: @unchecked Sendable {
 ///
 /// ```swift
 /// let dec = try ORTCSession(modelURL: decoderURL, provider: .cpu)
+/// // Encoder / SegNet on Apple, with the app-owned CoreML cache folder for this model:
+/// let enc = try ORTCSession(modelURL: encoderURL, provider: .coreML, cacheDirectory: cacheDir)
 /// let out = try dec.run(inputs: ["rhythms": ORTTensor(type: .int64, shape: [1, 1], data: ...), ...],
 ///                       outputNames: ["out_rhythms"])
 /// ```
-public final class ORTCSession: ORTSessionBackend, ORTProviderReporting, @unchecked Sendable {
+public final class ORTCSession: ORTSessionBackend, ORTCoreMLCacheableBackend, ORTProviderReporting, @unchecked Sendable {
     /// Declared model input/output (ONNX metadata). Dynamic dims are `-1` in `shape`,
     /// with their symbolic name (if any) in `symbolicShape`.
     public struct IOInfo: Sendable, CustomStringConvertible {
@@ -109,6 +116,11 @@ public final class ORTCSession: ORTSessionBackend, ORTProviderReporting, @unchec
     public let modelURL: URL
     /// Provider this session was created with (`.coreML` only on Apple; Linux is always `.cpu`).
     public let provider: ORTProvider
+    /// CoreML compiled-model cache folder (`ModelCacheDirectory`); nil = no cache (temp dir, deleted).
+    public let coreMLCacheDirectory: URL?
+    /// `COREML_CACHE_KEY` embedded in the model for the CoreML cache (nil when opened by path).
+    /// ORT's cache entry is `<coreMLCacheDirectory>/<coreMLCacheKey>/`.
+    public let coreMLCacheKey: String?
     public let inputNames: [String]
     public let outputNames: [String]
     public let inputInfo: [IOInfo]
@@ -124,7 +136,7 @@ public final class ORTCSession: ORTSessionBackend, ORTProviderReporting, @unchec
         return f().map { String(cString: $0) } ?? "?"
     }
 
-    /// Intra-op threads used by `init(modelURL:provider:)`: `OMR_ORT_INTRA_OP_THREADS` if set, else 1.
+    /// Intra-op threads used by `init(modelURL:provider:)` / `init(modelURL:provider:cacheDirectory:cacheKey:)`: `OMR_ORT_INTRA_OP_THREADS` if set, else 1.
     ///
     /// Default is 1 for determinism: with ORT's default multi-threaded intra-op pool the homr decoder
     /// gave run-to-run different logits for identical inputs (seen in Swift and in Python ORT 1.30),
@@ -138,51 +150,151 @@ public final class ORTCSession: ORTSessionBackend, ORTProviderReporting, @unchec
         try self.init(modelURL: modelURL, provider: provider, intraOpThreads: Self.defaultIntraOpThreads)
     }
 
+    /// Session with an optional CoreML compiled-model cache.
+    ///
+    /// - Parameters:
+    ///   - provider: `.cpu` (decoder; also encoder / SegNet on Linux) or `.coreML` (encoder / SegNet on
+    ///     Apple; CPU EP stays registered as fallback). The decoder is fp32 on ORT CPU only and must never
+    ///     get a cache (`DecoderSession` rejects non-CPU backends).
+    ///   - cacheDirectory: `nil` (default) = exactly the old behaviour: legacy
+    ///     `OrtSessionOptionsAppendExecutionProvider_CoreML(MLProgram | CPUAndGPU)`, model opened by path,
+    ///     CoreML model compiled into a temp dir and deleted with the session. Non-nil (`.coreML` only;
+    ///     `.cpu` throws `ORTCError.invalidCacheConfiguration`) = CoreML EP via the provider-options API
+    ///     (`ModelFormat=MLProgram`, `MLComputeUnits=CPUAndGPU`, `ModelCacheDirectory=<path>`); ORT writes the
+    ///     converted + compiled model to `<cacheDirectory>/<cacheKey>/…` and reuses it on the next launch.
+    ///   - cacheKey: `COREML_CACHE_KEY` for this model; default = SHA-256 hex of the model file, computed
+    ///     here (≈26–29 MB read). Pass the `models.lock` SHA-256 to skip the hash. Must be 1…64 ASCII
+    ///     letters / digits (ORT's rule); only valid together with `cacheDirectory`.
+    ///
+    /// Cache facts (ORT v1.24.2 `onnxruntime/core/providers/coreml/`), which the CALLER must handle:
+    /// - ORT does NOT invalidate the cache when the model changes: whatever sits under
+    ///   `<cacheDirectory>/<cacheKey>/` is reused blindly. Hence one folder per model content, e.g. the
+    ///   app's `<AppSupport>/coreml-cache/<sha256>/`, and a content key (the default).
+    /// - The key never depends on the model's path: without `COREML_CACHE_KEY` ORT keys on a hash of the
+    ///   file path, which changes with every iOS app update (container UUID) and would recompile (~30 s).
+    ///   So with a cache the model is read into memory, `COREML_CACHE_KEY` is appended to its
+    ///   `metadata_props` (a protobuf append; no other byte changes) and the session is created with
+    ///   `CreateSessionFromArray`. Transient cost: one extra copy of the model file (~26–29 MB) during
+    ///   session creation. Models must be single-file (no external data; true for the pinned models).
+    /// - The directory need not exist: ORT `mkdir -p`s `<dir>/<key>/<id>_dynamic_mlprogram` itself. If that
+    ///   fails (no write permission, read-only volume, EEXIST race) ORT logs an error and silently runs
+    ///   WITHOUT a cache (session still works, compiles every time). Use a writable, non-bundle location.
+    /// - The package never creates, deletes or cleans the folder. The owner (the app) handles backup
+    ///   exclusion (`isExcludedFromBackup`), stale-key cleanup, and disk space (~model size per key).
+    /// - A cache entry is "present" as soon as its folder exists. If the process dies mid-write (e.g. jetsam
+    ///   during the first ~30 s compile) the half-written entry is reused next time and session creation
+    ///   fails (CoreML compile error), every launch, until the folder is deleted. The owner should mark a
+    ///   folder complete only after this initializer returns and delete incomplete folders before retrying.
+    /// - Not safe to create two sessions for the SAME model + folder concurrently (both write the same
+    ///   package; the loser's final move of `compiled_model.mlmodelc` fails and its init throws). Different
+    ///   models / keys in one folder are fine (separate `<key>` subfolders). Serialize creation per model.
+    public convenience init(
+        modelURL: URL, provider: ORTProvider, cacheDirectory: URL? = nil, cacheKey: String? = nil
+    ) throws {
+        try self.init(
+            modelURL: modelURL, provider: provider, intraOpThreads: Self.defaultIntraOpThreads,
+            cacheDirectory: cacheDirectory, cacheKey: cacheKey
+        )
+    }
+
     /// - Parameter intraOpThreads: 0 = ORT default pool (one per physical core; NOT run-to-run
     ///   deterministic for the homr decoder), 1 = deterministic single-threaded.
-    public init(modelURL: URL, provider: ORTProvider, intraOpThreads: Int) throws {
+    /// - Parameters cacheDirectory / cacheKey: see `init(modelURL:provider:cacheDirectory:cacheKey:)`.
+    public convenience init(
+        modelURL: URL, provider: ORTProvider, intraOpThreads: Int,
+        cacheDirectory: URL? = nil, cacheKey: String? = nil
+    ) throws {
+        try CoreMLModelCache.validate(provider: provider, cacheDirectory: cacheDirectory, cacheKey: cacheKey)
         #if !canImport(CONNXRuntimeApple)
         guard case .cpu = provider else {
             throw ORTCError.unsupportedProvider("\(provider)")
         }
         #endif
+        var plan = SessionPlan(provider: provider, intraOpThreads: intraOpThreads)
+        if case .coreML = provider, let cacheDirectory {
+            plan.coreMLProviderOptions = CoreMLModelCache.providerOptions(cacheDirectory: cacheDirectory)
+            plan.cacheDirectory = cacheDirectory
+            plan.embedCacheKey = .some(cacheKey)
+        }
+        try self.init(modelURL: modelURL, plan: plan)
+    }
+
+    /// How a session is built. Internal so tests can exercise the bytes + `COREML_CACHE_KEY` loading path
+    /// on the CPU EP (Linux has no CoreML).
+    struct SessionPlan {
+        var provider: ORTProvider
+        var intraOpThreads: Int
+        /// Non-nil = CoreML EP via `SessionOptionsAppendExecutionProvider("CoreML", …)`; nil with `.coreML`
+        /// = legacy flags.
+        var coreMLProviderOptions: [(key: String, value: String)]?
+        var cacheDirectory: URL?
+        /// `.none` = open by path. `.some(key)` = load bytes, append `COREML_CACHE_KEY` = key (nil = file SHA-256).
+        var embedCacheKey: String??
+
+        init(provider: ORTProvider, intraOpThreads: Int) {
+            self.provider = provider
+            self.intraOpThreads = intraOpThreads
+        }
+    }
+
+    init(modelURL: URL, plan: SessionPlan) throws {
         let runtime = try ORTCRuntime.shared.get()
         let api = runtime.api
         self.runtime = runtime
         self.modelURL = modelURL
-        self.provider = provider
+        self.provider = plan.provider
+        self.coreMLCacheDirectory = plan.cacheDirectory
 
         var options: OpaquePointer?
         try ORTCRuntime.check(api, api.CreateSessionOptions!(&options), "CreateSessionOptions")
         defer { if let options { api.ReleaseSessionOptions!(options) } }
-        try ORTCRuntime.check(api, api.SetIntraOpNumThreads!(options, Int32(intraOpThreads)), "SetIntraOpNumThreads")
+        try ORTCRuntime.check(
+            api, api.SetIntraOpNumThreads!(options, Int32(plan.intraOpThreads)), "SetIntraOpNumThreads"
+        )
         try ORTCRuntime.check(
             api, api.SetSessionGraphOptimizationLevel!(options, ORT_ENABLE_ALL), "SetSessionGraphOptimizationLevel"
         )
-        switch provider {
+        switch plan.provider {
         case .cpu:
             break // default CPU EP only: NO SessionOptionsAppendExecutionProvider* call of any kind.
         case .coreML:
             #if canImport(CONNXRuntimeApple)
             // CoreML EP first; ORT keeps the CPU EP registered as fallback for nodes CoreML can't take.
-            // Flags match the old objc path (ModelFormat=MLProgram, MLComputeUnits=CPUAndGPU):
-            // COREML_FLAG_CREATE_MLPROGRAM (0x010) | COREML_FLAG_USE_CPU_AND_GPU (0x020).
-            let coreMLFlags: UInt32 = 0x010 | 0x020
-            try ORTCRuntime.check(
-                api, OrtSessionOptionsAppendExecutionProvider_CoreML(options, coreMLFlags),
-                "OrtSessionOptionsAppendExecutionProvider_CoreML"
-            )
+            if let providerOptions = plan.coreMLProviderOptions {
+                // Cache: provider-options API (the legacy flags cannot carry ModelCacheDirectory). Same
+                // ModelFormat=MLProgram / MLComputeUnits=CPUAndGPU as the flags below.
+                try Self.appendExecutionProvider(api: api, options: options, name: "CoreML", providerOptions)
+            } else {
+                // No cache: unchanged. COREML_FLAG_CREATE_MLPROGRAM (0x010) | COREML_FLAG_USE_CPU_AND_GPU (0x020).
+                try ORTCRuntime.check(
+                    api, OrtSessionOptionsAppendExecutionProvider_CoreML(options, CoreMLModelCache.legacyCoreMLFlags),
+                    "OrtSessionOptionsAppendExecutionProvider_CoreML"
+                )
+            }
             #else
-            throw ORTCError.unsupportedProvider("\(provider)")
+            throw ORTCError.unsupportedProvider("\(plan.provider)")
             #endif
         }
 
         var sessionOut: OpaquePointer?
-        try ORTCRuntime.check(
-            api,
-            modelURL.path.withCString { api.CreateSession!(runtime.env, $0, options, &sessionOut) },
-            "CreateSession(\(modelURL.lastPathComponent))"
-        )
+        if let requestedKey = plan.embedCacheKey {
+            // Load from bytes with COREML_CACHE_KEY so the CoreML cache key never depends on the path.
+            let fileBytes = try Data(contentsOf: modelURL, options: .mappedIfSafe)
+            let key = requestedKey ?? CoreMLModelCache.sha256Hex(of: fileBytes)
+            let model = CoreMLModelCache.appendingCacheKey(key, toModel: fileBytes)
+            self.coreMLCacheKey = key
+            let status: OpaquePointer? = model.withUnsafeBytes { raw in
+                api.CreateSessionFromArray!(runtime.env, raw.baseAddress, raw.count, options, &sessionOut)
+            }
+            try ORTCRuntime.check(api, status, "CreateSessionFromArray(\(modelURL.lastPathComponent))")
+        } else {
+            self.coreMLCacheKey = nil
+            try ORTCRuntime.check(
+                api,
+                modelURL.path.withCString { api.CreateSession!(runtime.env, $0, options, &sessionOut) },
+                "CreateSession(\(modelURL.lastPathComponent))"
+            )
+        }
         guard let sessionOut else { throw ORTCError.ort(code: -1, message: "null OrtSession", call: "CreateSession") }
 
         var mem: OpaquePointer?
@@ -207,6 +319,48 @@ public final class ORTCSession: ORTSessionBackend, ORTProviderReporting, @unchec
         }
         self.session = sessionOut
         self.memoryInfo = mem!
+    }
+
+    /// `SessionOptionsAppendExecutionProvider(options, name, keys, values, n)` (provider-options C API).
+    private static func appendExecutionProvider(
+        api: OrtApi, options: OpaquePointer?, name: String, _ pairs: [(key: String, value: String)]
+    ) throws {
+        let keys: [UnsafeMutablePointer<CChar>?] = pairs.map { strdup($0.key) }
+        let values: [UnsafeMutablePointer<CChar>?] = pairs.map { strdup($0.value) }
+        defer {
+            for p in keys { free(p) }
+            for p in values { free(p) }
+        }
+        let status: OpaquePointer? = keys.withUnsafeBufferPointer { k in
+            values.withUnsafeBufferPointer { v in
+                k.baseAddress!.withMemoryRebound(to: UnsafePointer<CChar>?.self, capacity: k.count) { kp in
+                    v.baseAddress!.withMemoryRebound(to: UnsafePointer<CChar>?.self, capacity: v.count) { vp in
+                        name.withCString { n in
+                            api.SessionOptionsAppendExecutionProvider!(options, n, kp, vp, pairs.count)
+                        }
+                    }
+                }
+            }
+        }
+        try ORTCRuntime.check(api, status, "SessionOptionsAppendExecutionProvider(\(name))")
+    }
+
+    /// Custom model metadata value (`metadata_props`), e.g. `COREML_CACHE_KEY` for diagnostics.
+    public func modelMetadataValue(forKey key: String) throws -> String? {
+        let api = runtime.api
+        var metadata: OpaquePointer?
+        try ORTCRuntime.check(api, api.SessionGetModelMetadata!(session, &metadata), "SessionGetModelMetadata")
+        defer { if let metadata { api.ReleaseModelMetadata!(metadata) } }
+        var allocator: UnsafeMutablePointer<OrtAllocator>?
+        try ORTCRuntime.check(api, api.GetAllocatorWithDefaultOptions!(&allocator), "GetAllocatorWithDefaultOptions")
+        var value: UnsafeMutablePointer<CChar>?
+        let status = key.withCString { k in
+            api.ModelMetadataLookupCustomMetadataMap!(metadata, allocator, k, &value)
+        }
+        try ORTCRuntime.check(api, status, "ModelMetadataLookupCustomMetadataMap")
+        guard let value else { return nil }
+        defer { _ = api.AllocatorFree!(allocator, value) }
+        return String(cString: value)
     }
 
     deinit {

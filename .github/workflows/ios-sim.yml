@@ -69,6 +69,17 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             | tee "$RUNNER_TEMP/xcodebuild.log"
 
+      - name: OMRHomrIOS CoreML cache tests (macOS, real CoreML EP, ORT 1.24.2)
+        if: always()
+        # New step (first macOS `swift test` of this package): informational until proven stable.
+        continue-on-error: true
+        env:
+          OMR_MODELS_DIR: ${{ github.workspace }}/models
+        run: |
+          set -o pipefail
+          swift test --package-path Packages/omr-homr-ios --filter CoreMLModelCacheTests 2>&1 | tee "$RUNNER_TEMP/omr-coreml-cache.log"
+          grep -F "[coreml-cache]" "$RUNNER_TEMP/omr-coreml-cache.log" || true
+
       - name: SF2Player package tests (macOS, gbk parity)
         if: always()
         env:

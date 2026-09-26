@@ -40,3 +40,11 @@ public protocol ORTSessionBackend: AnyObject {
     var outputNames: [String] { get }
     func run(inputs: [String: ORTTensor], outputNames: [String]) throws -> [String: ORTTensor]
 }
+
+/// Backends that can open a CoreML EP session with a compiled-model cache (`ORTCSession`). Used by
+/// `EncoderSession.open(_:fp16ModelURL:fp32ModelURL:cacheDirectory:)`; see
+/// `ORTCSession.init(modelURL:provider:cacheDirectory:cacheKey:)` for the cache rules.
+public protocol ORTCoreMLCacheableBackend: ORTSessionBackend {
+    /// `cacheDirectory` non-nil only with `.coreML`; `cacheKey` nil = backend default (model SHA-256).
+    init(modelURL: URL, provider: ORTProvider, cacheDirectory: URL?, cacheKey: String?) throws
+}

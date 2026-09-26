@@ -48,6 +48,14 @@ switch to `exact: "1.30.0"`. Don't pin to the PR branch or a revision; it isn't 
 - `.cpu` means the default CPU EP. `.coreML` calls `OrtSessionOptionsAppendExecutionProvider_CoreML(options, 0x010 | 0x020)`
   (MLProgram, CPU+GPU), and the CPU EP stays registered as fallback. Use it for encoder and SegNet only;
   `DecoderSession` rejects any backend that reports a non-CPU provider.
+- CoreML compiled-model cache: `ORTCSession(modelURL:provider: .coreML, cacheDirectory:cacheKey:)`. With a
+  `cacheDirectory` the EP is appended through `SessionOptionsAppendExecutionProvider("CoreML", …)` with
+  `ModelFormat=MLProgram`, `MLComputeUnits=CPUAndGPU` (same as the flags above) and `ModelCacheDirectory`, and the
+  model is loaded from bytes with `COREML_CACHE_KEY` (default: the file's SHA-256) appended to `metadata_props`,
+  because ORT 1.24.2 otherwise keys the cache on a hash of the model *path*, which changes with every iOS app update.
+  `cacheDirectory == nil` keeps the legacy call above unchanged. `.cpu` + `cacheDirectory` throws. Details and caller
+  obligations (no invalidation on model change, crash-safety, one creator per model at a time) are in the doc comment
+  of that initializer and in `CoreMLModelCache.swift`.
 - Verified on 2026-09-26 against `pod-archive-onnxruntime-c-1.24.2.zip` (SHA-256 `f7100a99…600b54`, which matches
   the SPM 1.24.2 checksum): `Headers/` has `onnxruntime_c_api.h` (ORT_API_VERSION 24) and
   `coreml_provider_factory.h`. The slices are static archives (`prelinked_objects.o`). `llvm-nm -g --defined-only`

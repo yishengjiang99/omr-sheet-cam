@@ -106,13 +106,23 @@ public final class PageInferenceSession: @unchecked Sendable {
 extension PageInferenceSession {
     /// Pinned models (models.lock names) from `modelsDirectory`, else `$OMR_MODELS_DIR`, else `models/` in
     /// `bundle` (default `Bundle.main`). SegNet + encoder use the CoreML EP on Apple (CPU fallback), CPU on Linux;
-    /// the decoder always runs on CPU.
-    public static func load(modelsDirectory: URL? = nil, bundle: Bundle? = nil) throws -> PageInferenceSession {
+    /// the decoder always runs on CPU (never CoreML, never a cache).
+    ///
+    /// - Parameters segnetCacheDirectory / encoderCacheDirectory: CoreML compiled-model cache folder per model
+    ///   (the app's `<AppSupport>/coreml-cache/<sha256>/`), nil (default) = no cache. Cache key = SHA-256 of
+    ///   the model file. Used only for the CoreML attempt, not the CPU fallback; ignored on Linux. See
+    ///   `ORTCSession.init(modelURL:provider:cacheDirectory:cacheKey:)` for what the folder owner must handle.
+    public static func load(
+        modelsDirectory: URL? = nil,
+        bundle: Bundle? = nil,
+        segnetCacheDirectory: URL? = nil,
+        encoderCacheDirectory: URL? = nil
+    ) throws -> PageInferenceSession {
         let dir = try PageModels.resolveDirectory(modelsDirectory, bundle: bundle)
         let files = try PageModels.files(in: dir)
         let vocab = try TokenizerLoader.loadVocabulary(bundle: nil)
-        let seg = try PageModels.accelerated(files.segnet)
-        let enc = try PageModels.accelerated(files.encoder)
+        let seg = try PageModels.accelerated(files.segnet, cacheDirectory: segnetCacheDirectory)
+        let enc = try PageModels.accelerated(files.encoder, cacheDirectory: encoderCacheDirectory)
         let dec = try ORTCSession(modelURL: files.decoder, provider: .cpu)
         return try PageInferenceSession(segnet: seg, encoder: enc, decoder: dec, vocabulary: vocab)
     }
@@ -154,9 +164,10 @@ public enum PageModels {
     }
 
     #if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
-    static func accelerated(_ url: URL) throws -> ORTCSession {
+    /// `.coreML` (+ optional compiled-model cache) on Apple, else / on failure `.cpu` (never with a cache).
+    static func accelerated(_ url: URL, cacheDirectory: URL? = nil) throws -> ORTCSession {
         #if canImport(CONNXRuntimeApple)
-        if let s = try? ORTCSession(modelURL: url, provider: .coreML) { return s }
+        if let s = try? ORTCSession(modelURL: url, provider: .coreML, cacheDirectory: cacheDirectory) { return s }
         #endif
         return try ORTCSession(modelURL: url, provider: .cpu)
     }

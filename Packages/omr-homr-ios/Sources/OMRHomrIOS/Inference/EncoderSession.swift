@@ -88,16 +88,29 @@ public final class EncoderSession: @unchecked Sendable {
     /// - Other platforms: `.cpu` session on `fp32ModelURL ?? fp16ModelURL`.
     ///
     /// The input dtype follows the model file: fp16 checkpoint → `.float16`, fp32 → `.float32`.
+    ///
+    /// - Parameter cacheDirectory: CoreML compiled-model cache folder for the fp16 encoder (the app's
+    ///   `<AppSupport>/coreml-cache/<sha256>/`); nil (default) = no cache. Used only for the `.coreML`
+    ///   attempt (never for the CPU fallback) and ignored where CoreML is unavailable (Linux). Requires a
+    ///   backend conforming to `ORTCoreMLCacheableBackend` (`ORTCSession`), else throws. Cache key =
+    ///   `cacheKey` ?? SHA-256 of the model file. See `ORTCSession.init(modelURL:provider:cacheDirectory:cacheKey:)`.
     public static func open<B: ORTSessionBackend>(
         _ backendType: B.Type,
         fp16ModelURL: URL?,
-        fp32ModelURL: URL? = nil
+        fp32ModelURL: URL? = nil,
+        cacheDirectory: URL? = nil,
+        cacheKey: String? = nil
     ) throws -> EncoderSession {
+        if cacheDirectory != nil, !(B.self is any ORTCoreMLCacheableBackend.Type) {
+            throw OMRError.sessionNotConfigured(
+                "EncoderSession.open: cacheDirectory needs an ORTCoreMLCacheableBackend (ORTCSession); got \(B.self)"
+            )
+        }
         var coreMLError: Error?
         #if canImport(CoreML)
         if let fp16 = fp16ModelURL {
             do {
-                let b = try B(modelURL: fp16, provider: .coreML)
+                let b = try makeCoreMLBackend(B.self, modelURL: fp16, cacheDirectory: cacheDirectory, cacheKey: cacheKey)
                 return try EncoderSession(
                     backend: b, provider: .coreMLFP16, inputElementType: .float16, modelURL: fp16
                 )
@@ -119,6 +132,23 @@ public final class EncoderSession: @unchecked Sendable {
             inputElementType: fp32ModelURL != nil ? .float32 : .float16,
             modelURL: cpuURL
         )
+    }
+
+    /// `.coreML` backend, with the compiled-model cache when `cacheDirectory` is set.
+    static func makeCoreMLBackend<B: ORTSessionBackend>(
+        _ backendType: B.Type, modelURL: URL, cacheDirectory: URL?, cacheKey: String?
+    ) throws -> B {
+        guard let cacheDirectory else { return try B(modelURL: modelURL, provider: .coreML) }
+        guard let cacheable = B.self as? any ORTCoreMLCacheableBackend.Type else {
+            throw OMRError.sessionNotConfigured("\(B.self) does not support a CoreML cache directory")
+        }
+        let made = try cacheable.init(
+            modelURL: modelURL, provider: .coreML, cacheDirectory: cacheDirectory, cacheKey: cacheKey
+        )
+        guard let b = made as? B else {
+            throw OMRError.sessionNotConfigured("\(type(of: made)) is not \(B.self)")
+        }
+        return b
     }
 
     /// Kept for app warm-up: succeeds when a backend is bound, else throws the scaffold error.
