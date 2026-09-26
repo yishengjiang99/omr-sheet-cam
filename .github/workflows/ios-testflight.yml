@@ -20,7 +20,7 @@ jobs:
   build-upload:
     name: Archive and upload
     runs-on: macos-15
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
       APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -199,6 +199,26 @@ jobs:
           du -sh "$APP"
           plutil -p "$APP/Info.plist"
 
+      - name: Drop embedded static frameworks (ITMS-90208)
+        run: |
+          set -euo pipefail
+          # onnxruntime.xcframework (SPM binary target, pod-archive-onnxruntime-c) is a STATIC framework:
+          # its code is already linked into the app binary, but Xcode still copies it into
+          # Frameworks/, and ASC rejects the delivery with ITMS-90208. Remove static frameworks only.
+          APP="$ARCHIVE_PATH/Products/Applications/OMRSheetCam.app"
+          shopt -s nullglob
+          for fw in "$APP"/Frameworks/*.framework; do
+            bin="$fw/$(basename "$fw" .framework)"
+            desc=$(file -b "$bin" || true)
+            echo "$(basename "$fw"): $desc"
+            if echo "$desc" | grep -qi 'ar archive'; then
+              echo "::notice::removing static framework $(basename "$fw") from the archive"
+              rm -rf "$fw"
+            fi
+          done
+          if [ -d "$APP/Frameworks" ] && [ -z "$(ls -A "$APP/Frameworks")" ]; then rmdir "$APP/Frameworks"; fi
+          ls -la "$APP" "$APP/Frameworks" 2>/dev/null || true
+
       - name: Upload archive log
         if: always()
         uses: actions/upload-artifact@v4
@@ -218,6 +238,21 @@ jobs:
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
           ls -la "$EXPORT_PATH"
           test -n "$(find "$EXPORT_PATH" -name '*.ipa' | head -1)"
+
+      - name: Validate with App Store Connect
+        run: |
+          set -euo pipefail
+          IPA=$(find "$EXPORT_PATH" -name '*.ipa' | head -1)
+          set +e
+          xcrun altool --validate-app --type ios --file "$IPA" \
+            --apiKey "$APP_STORE_CONNECT_KEY_ID" --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID" > "$RUNNER_TEMP/altool-validate.log" 2>&1
+          rc=$?
+          set -e
+          cat "$RUNNER_TEMP/altool-validate.log"
+          if [ "$rc" -ne 0 ] || grep -Eiq 'Validation failed|ERROR ITMS-|ERROR:\s*\[altool|error: ' "$RUNNER_TEMP/altool-validate.log"; then
+            echo "::error::altool validation failed (rc=$rc)"
+            exit 1
+          fi
 
       - name: Upload to TestFlight
         run: |
@@ -246,6 +281,43 @@ jobs:
             echo "::error::altool did not report success"
             exit 1
           fi
+
+      - name: Wait for ASC processing (fail unless VALID)
+        env:
+          P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          pip3 install -q --break-system-packages PyJWT cryptography 2>/dev/null || pip3 install -q PyJWT cryptography
+          python3 - <<'PY'
+          import json, os, time, urllib.request
+          import jwt
+          p8 = os.environ["P8"].replace("\\n", "\n").strip()
+          def tok():
+              now = int(time.time())
+              return jwt.encode({"iss": os.environ["APP_STORE_CONNECT_ISSUER_ID"].strip(), "iat": now, "exp": now + 1100,
+                                 "aud": "appstoreconnect-v1"}, p8, algorithm="ES256",
+                                headers={"kid": os.environ["APP_STORE_CONNECT_KEY_ID"].strip()})
+          def get(path):
+              req = urllib.request.Request("https://api.appstoreconnect.apple.com" + path, headers={"Authorization": "Bearer " + tok()})
+              with urllib.request.urlopen(req, timeout=60) as r:
+                  return json.loads(r.read().decode() or "{}")
+          app = get(f"/v1/apps?filter[bundleId]={os.environ['BUNDLE_ID']}")["data"][0]["id"]
+          want = os.environ["BUILD_NUMBER"]
+          deadline = time.time() + 40 * 60
+          state = None
+          while time.time() < deadline:
+              d = get(f"/v1/builds?filter[app]={app}&filter[version]={want}&filter[preReleaseVersion.version]=1.0&limit=5")
+              if d.get("data"):
+                  state = d["data"][0]["attributes"]["processingState"]
+                  print(time.strftime("%H:%M:%S"), "build", want, state, flush=True)
+                  if state in ("VALID", "INVALID", "FAILED"):
+                      break
+              else:
+                  print(time.strftime("%H:%M:%S"), "build", want, "not visible yet", flush=True)
+              time.sleep(30)
+          if state != "VALID":
+              raise SystemExit(f"::error::build {want} processing state {state!r} (check the ASC 'issues' email for ITMS codes)")
+          PY
 
       - name: Summary
         if: success()
