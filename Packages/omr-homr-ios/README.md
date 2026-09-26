@@ -105,6 +105,12 @@ let result = try OMRHomrIOS.parseSheetMusicWithLayout(
 // Oracle / token compare hook (once ORT step runner is bound):
 // let seq = try session.decodeStaffOracleSequence(normalizedStaffImage:tile, stepRunner: ort)
 // seq.mismatches(vs: expectedFromFixture)
+
+// Staff tensor from a PNG, decoded by the package's own pure-Swift PNG reader (no ImageIO, no color
+// management), so iOS and Linux produce byte-identical tensors. Unsupported PNGs throw
+// StaffTensor.PNGLoadError (8-bit non-interlaced gray / gray+alpha / RGB / RGBA / palette only).
+let staff = try StaffTensor.fromStaffImage(pngURL: staffPNG)      // or fromStaffImage(pngData:)
+let page = try StaffTensor.fromPage(pngURL: pagePNG, geometry: g)   // homr prepare_staff_image first
 ```
 
 ## Tokens → MIDI + noteLayout (Layer C helper)

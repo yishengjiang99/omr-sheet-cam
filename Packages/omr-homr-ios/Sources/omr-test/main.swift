@@ -22,7 +22,6 @@
 //             2 usage / input error · 3 ONNX path not runnable on this platform yet.
 import Foundation
 import OMRHomrIOS
-import OMRPNG
 
 #if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
 // ORT C API on both platforms. Linux (`scripts/fetch-ort`): CPU EP only. Apple: CoreML EP for the
@@ -217,13 +216,10 @@ func loadStaffTensor(_ path: String) -> StaffTensor {
     }
 }
 
-/// PNG → grayscale (cv2 imread + BGR2GRAY semantics) → `StaffTensor.fromStaffImage`.
+/// PNG → `StaffTensor.fromStaffImage(pngURL:)` (package PNG decoder, cv2 imread + BGR2GRAY semantics).
 func preprocessPNG(_ path: String) -> StaffTensor {
-    let url = URL(fileURLWithPath: path, relativeTo: cwd)
-    let img: PNGImage
-    do { img = try PNGDecoder.decode(contentsOf: url) } catch { exitUsage("\(path): \(error)") }
     do {
-        return try StaffTensor.fromStaffImage(grayscale: img.grayscale(), width: img.width, height: img.height)
+        return try StaffTensor.fromStaffImage(pngURL: URL(fileURLWithPath: path, relativeTo: cwd))
     } catch { exitUsage("\(path): \(error)") }
 }
 
@@ -409,17 +405,17 @@ if positional.first == "prepare-staff" {
     guard positional.count == 2 else { exitUsage("prepare-staff needs exactly one page .png") }
     guard let geo = geometryJSON else { exitUsage("prepare-staff needs --geometry <json>") }
     let url = URL(fileURLWithPath: positional[1], relativeTo: cwd)
-    let page: PNGImage
-    do { page = try PNGDecoder.decode(contentsOf: url) } catch { exitUsage("\(positional[1]): \(error)") }
     let geometry: StaffGeometry
     do { geometry = try StaffPrepare.loadGeometry(URL(fileURLWithPath: geo, relativeTo: cwd)) } catch { exitUsage("\(geo): \(error)") }
     let t0 = Date()
     let r: StaffPrepare.Result
     do {
-        r = try StaffPrepare.prepareStaffImage(page: page.grayscale(), width: page.width, height: page.height, geometry: geometry)
+        r = try StaffPrepare.prepareStaffImage(pngURL: url, geometry: geometry)
+    } catch let e as StaffTensor.PNGLoadError {
+        exitUsage("\(positional[1]): \(e)")
     } catch { err("omr-test: prepare-staff failed: \(error)"); exit(1) }
     let ms = Date().timeIntervalSince(t0) * 1000
-    out("prepare-staff: \(url.standardizedFileURL.path) (\(page.width)x\(page.height))")
+    out("prepare-staff: \(url.standardizedFileURL.path)")
     out("prepared: \(r.width)x\(r.height) uint8, canvas size \(r.canvasWidth)x\(r.canvasHeight) (\(String(format: "%.1f", ms)) ms)")
     if let o = outNPY {
         var header = "{'descr': '|u1', 'fortran_order': False, 'shape': (\(r.height), \(r.width)), }"
@@ -456,11 +452,9 @@ if positional.first == "decode-staff" {
     let tensor: StaffTensor
     if let geo = geometryJSON {
         guard positional[1].lowercased().hasSuffix(".png") else { exitUsage("decode-staff --geometry needs a page .png") }
-        let page: PNGImage
-        do { page = try PNGDecoder.decode(contentsOf: URL(fileURLWithPath: positional[1], relativeTo: cwd)) } catch { exitUsage("\(positional[1]): \(error)") }
         do {
             let g = try StaffPrepare.loadGeometry(URL(fileURLWithPath: geo, relativeTo: cwd))
-            tensor = try StaffTensor.fromPage(grayscale: page.grayscale(), width: page.width, height: page.height, geometry: g)
+            tensor = try StaffTensor.fromPage(pngURL: URL(fileURLWithPath: positional[1], relativeTo: cwd), geometry: g)
         } catch { exitUsage("\(positional[1]) --geometry \(geo): \(error)") }
     } else {
         tensor = loadStaffTensor(positional[1])

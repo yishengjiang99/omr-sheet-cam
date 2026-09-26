@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Minimal pure-Swift PNG reader for omr-test and the unit tests (Linux-safe; no UIKit/CoreGraphics/zlib).
-// Internal tooling target, not part of the OMRHomrIOS product / iOS API.
-// Supports non-interlaced 8-bit gray (0), RGB (2), palette (3), gray+alpha (4), RGBA (6).
+// Minimal pure-Swift PNG reader (no UIKit/ImageIO/CoreGraphics/zlib, no color management or gamma), so
+// iOS and Linux decode byte-identically. Internal target: not a product; OMRHomrIOS exposes it only via
+// `StaffTensor.fromStaffImage(pngURL:)` / `(pngData:)` and friends.
+// Supports non-interlaced 8-bit gray (0), RGB (2), palette (3), gray+alpha (4), RGBA (6). Everything else
+// (16-bit, sub-byte depths, Adam7) and malformed input throws `PNGError`; it never traps.
 import Foundation
 
 public struct PNGImage: Sendable {
@@ -43,6 +45,10 @@ public enum PNGError: Error, CustomStringConvertible, Equatable {
 }
 
 public enum PNGDecoder {
+    /// Largest accepted image (pixels) and side; bigger headers throw instead of allocating.
+    public static let maxPixels = 1 << 27
+    public static let maxSide = 1 << 16
+
     public static func decode(contentsOf url: URL) throws -> PNGImage {
         try decode([UInt8](Data(contentsOf: url)))
     }
@@ -77,7 +83,10 @@ public enum PNGDecoder {
             if type == "IEND" { break }
         }
         guard width > 0, height > 0 else { throw PNGError.corrupt("missing IHDR") }
-        guard depth == 8 else { throw PNGError.unsupported("bit depth \(depth) (need 8)") }
+        guard width <= maxSide, height <= maxSide, width * height <= maxPixels else {
+            throw PNGError.unsupported("size \(width)x\(height) (max \(maxSide) per side, \(maxPixels) pixels)")
+        }
+        guard depth == 8 else { throw PNGError.unsupported("bit depth \(depth) (only 8-bit PNGs are supported)") }
         guard interlace == 0 else { throw PNGError.unsupported("interlaced PNG") }
         let spp: Int
         switch colorType {
@@ -88,8 +97,9 @@ public enum PNGDecoder {
         case 6: spp = 4
         default: throw PNGError.unsupported("color type \(colorType)")
         }
-        let raw = try Inflate.zlib(idat)
+        if colorType == 3 && palette.isEmpty { throw PNGError.corrupt("palette image without PLTE") }
         let stride = width * spp
+        let raw = try Inflate.zlib(idat, maxOutput: height * (stride + 1))
         guard raw.count >= height * (stride + 1) else {
             throw PNGError.corrupt("inflated \(raw.count) bytes, need \(height * (stride + 1))")
         }
@@ -171,7 +181,11 @@ enum Inflate {
             for len in 1..<16 {
                 code |= try need(1)
                 let count = h.counts[len]
-                if code - count < first { return h.symbols[index + (code - first)] }
+                if code - count < first {
+                    let k = index + (code - first)
+                    guard k >= 0, k < h.symbols.count else { throw PNGError.corrupt("bad Huffman code") }
+                    return h.symbols[k]
+                }
                 index += count; first += count; first <<= 1; code <<= 1
             }
             throw PNGError.corrupt("bad Huffman code")
@@ -184,13 +198,14 @@ enum Inflate {
     static let distExtra = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13]
     static let clOrder = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]
 
-    static func zlib(_ d: [UInt8]) throws -> [UInt8] {
+    /// `maxOutput`: expected inflated size; a stream producing more throws (decompression-bomb guard).
+    static func zlib(_ d: [UInt8], maxOutput: Int = Int.max) throws -> [UInt8] {
         guard d.count >= 6, d[0] & 0x0F == 8, (Int(d[0]) << 8 | Int(d[1])) % 31 == 0, d[1] & 0x20 == 0 else {
             throw PNGError.corrupt("zlib header")
         }
         var bits = Bits(d, start: 2)
         var out: [UInt8] = []
-        out.reserveCapacity(d.count * 4)
+        out.reserveCapacity(min(maxOutput, d.count * 4))
         let fixedLit = try Huffman(lengths: (0..<288).map { $0 < 144 ? 8 : $0 < 256 ? 9 : $0 < 280 ? 7 : 8 })
         let fixedDist = try Huffman(lengths: [Int](repeating: 5, count: 30))
         var last = 0
@@ -207,8 +222,9 @@ enum Inflate {
                 guard len == (~nlen & 0xFFFF), p + 4 + len <= d.count else { throw PNGError.corrupt("stored block") }
                 out.append(contentsOf: d[(p + 4)..<(p + 4 + len)])
                 bits.pos = p + 4 + len
+                guard out.count <= maxOutput else { throw PNGError.corrupt("image data larger than \(maxOutput) bytes") }
             case 1:
-                try block(&bits, &out, fixedLit, fixedDist)
+                try block(&bits, &out, fixedLit, fixedDist, maxOutput)
             case 2:
                 let hlit = try bits.need(5) + 257, hdist = try bits.need(5) + 1, hclen = try bits.need(4) + 4
                 var cl = [Int](repeating: 0, count: 19)
@@ -227,7 +243,7 @@ enum Inflate {
                     }
                 }
                 guard lengths.count == hlit + hdist else { throw PNGError.corrupt("code lengths overrun") }
-                try block(&bits, &out, Huffman(lengths: Array(lengths[0..<hlit])), Huffman(lengths: Array(lengths[hlit...])))
+                try block(&bits, &out, Huffman(lengths: Array(lengths[0..<hlit])), Huffman(lengths: Array(lengths[hlit...])), maxOutput)
             default:
                 throw PNGError.corrupt("block type 3")
             }
@@ -246,8 +262,9 @@ enum Inflate {
         return out
     }
 
-    static func block(_ bits: inout Bits, _ out: inout [UInt8], _ lit: Huffman, _ dist: Huffman) throws {
+    static func block(_ bits: inout Bits, _ out: inout [UInt8], _ lit: Huffman, _ dist: Huffman, _ maxOutput: Int) throws {
         while true {
+            guard out.count <= maxOutput else { throw PNGError.corrupt("image data larger than \(maxOutput) bytes") }
             let sym = try bits.decode(lit)
             if sym < 256 { out.append(UInt8(sym)); continue }
             if sym == 256 { return }
@@ -256,6 +273,7 @@ enum Inflate {
             let len = lenBase[li] + (try bits.need(lenExtra[li]))
             let ds = try bits.decode(dist)
             guard ds < 30 else { throw PNGError.corrupt("distance symbol \(ds)") }
+            guard len <= maxOutput else { throw PNGError.corrupt("length \(len)") }
             let dd = distBase[ds] + (try bits.need(distExtra[ds]))
             guard dd <= out.count else { throw PNGError.corrupt("distance \(dd) > output \(out.count)") }
             let s = out.count - dd

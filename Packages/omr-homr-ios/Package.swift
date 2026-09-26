@@ -75,7 +75,7 @@ let package = Package(
     targets: [
         .target(
             name: "OMRHomrIOS",
-            dependencies: ortTargetDeps,
+            dependencies: ["OMRPNG"] + ortTargetDeps,
             path: "Sources/OMRHomrIOS",
             exclude: [
                 "Resources/README.md", // docs only; not a bundled resource
@@ -85,15 +85,16 @@ let package = Package(
                 .copy("Resources/Vocab"),
             ]
         ),
-        // Pure-Swift PNG reader (inflate + unfilter) for omr-test and tests only; not a product,
-        // not part of the iOS API (the app decodes images with ImageIO).
+        // Pure-Swift PNG reader (inflate + unfilter), all platforms; not a product. OMRHomrIOS uses it
+        // for `StaffTensor.fromStaffImage(pngURL:)` / `(pngData:)` / `fromPage(pngURL:geometry:)` so iOS
+        // and Linux decode PNGs identically (no ImageIO, no color management).
         .target(
             name: "OMRPNG",
             path: "Sources/OMRPNG"
         ),
         .executableTarget(
             name: "omr-test",
-            dependencies: ["OMRHomrIOS", "OMRPNG"],
+            dependencies: ["OMRHomrIOS"],
             path: "Sources/omr-test"
         ),
         .testTarget(
