@@ -18,11 +18,15 @@ public final class SegNetSession: @unchecked Sendable {
     public static let classCount = 6
 
     public let backend: ORTSessionBackend
+    /// Tiles per `run` (homr: 8). Results do not depend on it (tiles are independent).
+    public let tilesPerRun: Int
 
     /// `backend`: the pinned SegNet fp16 model (`segnet_308-…_fp16.onnx`), `.coreML` (CPU fallback) on
     /// iOS, `.cpu` elsewhere.
-    public init(backend: ORTSessionBackend) {
+    public init(backend: ORTSessionBackend, tilesPerRun: Int = SegNetSession.batchSize) {
+        precondition(tilesPerRun >= 1)
         self.backend = backend
+        self.tilesPerRun = tilesPerRun
     }
 
     /// Tile origins in homr's order (`for y_loop in range(0, max(h, win), step)`, same for x).
@@ -58,7 +62,7 @@ public final class SegNetSession: @unchecked Sendable {
         let plane = win * win
         var start = 0
         while start < origins.count {
-            let n = min(Self.batchSize, origins.count - start)
+            let n = min(tilesPerRun, origins.count - start)
             var input = Data(count: n * 3 * plane * 2)
             input.withUnsafeMutableBytes { raw in
                 let dst = raw.bindMemory(to: UInt16.self)

@@ -230,6 +230,12 @@ public final class ORTCSession: ORTSessionBackend, ORTCoreMLCacheableBackend, OR
         var cacheDirectory: URL?
         /// `.none` = open by path. `.some(key)` = load bytes, append `COREML_CACHE_KEY` = key (nil = file SHA-256).
         var embedCacheKey: String??
+        /// `.coreML` without provider options: legacy flags (nil = `CoreMLModelCache.legacyCoreMLFlags`).
+        var coreMLLegacyFlags: UInt32?
+        /// `AddFreeDimensionOverrideByName` entries (e.g. `("batch_size", 1)` makes SegNet's input static).
+        var freeDimensionOverrides: [(name: String, value: Int64)] = []
+        /// `SetSessionLogSeverityLevel` (0 = verbose, 1 = info, 2 = warning …); nil = env default (warning).
+        var logSeverity: Int32?
 
         init(provider: ORTProvider, intraOpThreads: Int) {
             self.provider = provider
@@ -254,6 +260,15 @@ public final class ORTCSession: ORTSessionBackend, ORTCoreMLCacheableBackend, OR
         try ORTCRuntime.check(
             api, api.SetSessionGraphOptimizationLevel!(options, ORT_ENABLE_ALL), "SetSessionGraphOptimizationLevel"
         )
+        if let severity = plan.logSeverity {
+            try ORTCRuntime.check(api, api.SetSessionLogSeverityLevel!(options, severity), "SetSessionLogSeverityLevel")
+        }
+        for o in plan.freeDimensionOverrides {
+            try ORTCRuntime.check(
+                api, o.name.withCString { api.AddFreeDimensionOverrideByName!(options, $0, o.value) },
+                "AddFreeDimensionOverrideByName(\(o.name))"
+            )
+        }
         switch plan.provider {
         case .cpu:
             break // default CPU EP only: NO SessionOptionsAppendExecutionProvider* call of any kind.
@@ -267,7 +282,9 @@ public final class ORTCSession: ORTSessionBackend, ORTCoreMLCacheableBackend, OR
             } else {
                 // No cache: unchanged. COREML_FLAG_CREATE_MLPROGRAM (0x010) | COREML_FLAG_USE_CPU_AND_GPU (0x020).
                 try ORTCRuntime.check(
-                    api, OrtSessionOptionsAppendExecutionProvider_CoreML(options, CoreMLModelCache.legacyCoreMLFlags),
+                    api, OrtSessionOptionsAppendExecutionProvider_CoreML(
+                        options, plan.coreMLLegacyFlags ?? CoreMLModelCache.legacyCoreMLFlags
+                    ),
                     "OrtSessionOptionsAppendExecutionProvider_CoreML"
                 )
             }
