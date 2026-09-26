@@ -16,6 +16,8 @@
 		A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */; };
 		A10000000000000000000008 /* OMRHomrIOS in Frameworks */ = {isa = PBXBuildFile; productRef = P10000000000000000000002 /* OMRHomrIOS */; };
 		A10000000000000000000009 /* OMRHomrIOS in Frameworks */ = {isa = PBXBuildFile; productRef = P10000000000000000000003 /* OMRHomrIOS */; };
+		4F06444BBF09D87CE872BDB8 /* MIDINoteExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149722DE288FA9C01620E0D8 /* MIDINoteExtractor.swift */; };
+		21EBA7280EC15355707ED56C /* PlaybackSmokeFixtureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -39,6 +41,8 @@
 		B10000000000000000000008 /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fixtures; sourceTree = "<group>"; };
 		B10000000000000000000010 /* OMRSheetCam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OMRSheetCam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000000000000000000011 /* OMRSheetCamTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OMRSheetCamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		149722DE288FA9C01620E0D8 /* MIDINoteExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDINoteExtractor.swift; sourceTree = "<group>"; };
+		C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackSmokeFixtureTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -94,6 +98,7 @@
 			isa = PBXGroup;
 			children = (
 				B10000000000000000000003 /* SimpleMIDIPlayer.swift */,
+				149722DE288FA9C01620E0D8 /* MIDINoteExtractor.swift */,
 			);
 			path = MIDI;
 			sourceTree = "<group>";
@@ -111,6 +116,7 @@
 			children = (
 				B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */,
 				B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */,
+				C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */,
 				B10000000000000000000008 /* Fixtures */,
 			);
 			path = Tests;
@@ -229,6 +235,7 @@
 				A10000000000000000000002 /* Gate1RootView.swift in Sources */,
 				A10000000000000000000003 /* SimpleMIDIPlayer.swift in Sources */,
 				A10000000000000000000004 /* SessionWarmup.swift in Sources */,
+				4F06444BBF09D87CE872BDB8 /* MIDINoteExtractor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -238,6 +245,7 @@
 			files = (
 				A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */,
 				A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */,
+				21EBA7280EC15355707ED56C /* PlaybackSmokeFixtureTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
