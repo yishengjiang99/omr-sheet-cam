@@ -61,6 +61,14 @@ final class ModelWarmup: ObservableObject {
         return t
     }
 
+    /// Warm sessions, starting the warmup if needed; suspends (never blocks) until ready.
+    func readyModels(modelsDir: URL? = nil) async throws -> WarmedModels {
+        if let models, state == .ready { return models }
+        _ = await start(modelsDir: modelsDir).value
+        if let models, state == .ready { return models }
+        throw WarmupError.notReady(debugLine)
+    }
+
     private var isFailed: Bool {
         if case .failed = state { return true }
         return false
@@ -83,8 +91,10 @@ final class ModelWarmup: ObservableObject {
     enum WarmupError: Error, CustomStringConvertible {
         case modelsMissing(String)
         case badModel(String)
+        case notReady(String)
         var description: String {
             switch self {
+            case let .notReady(m): return "warmup not ready (\(m))"
             case let .modelsMissing(m): return "models missing: \(m)"
             case let .badModel(m): return "bad model: \(m)"
             }
@@ -130,10 +140,11 @@ final class ModelWarmup: ObservableObject {
 
         // Encoder fp16, CoreML EP. Zero staff tile (fp32 in, EncoderSession casts to fp16).
         let encURL = try modelFile("encoder_", in: dir)
-        let (encoder, encCreate) = try timed { () -> EncoderSession in
+        let (encPair, encCreate) = try timed { () -> (ORTCSession, EncoderSession) in
             let b = try ORTCSession(modelURL: encURL, provider: .coreML)
-            return try EncoderSession(backend: b, provider: .coreMLFP16, inputElementType: .float16, modelURL: encURL)
+            return (b, try EncoderSession(backend: b, provider: .coreMLFP16, inputElementType: .float16, modelURL: encURL))
         }
+        let (encBackend, encoder) = encPair
         let staffBytes = StaffInputSpec.nchwShape.reduce(1, *) * 4
         let (context, encRun) = try timed {
             try encoder.generateContext(staffImageNormalized: Data(count: staffBytes)).castToFP32ForDecoder()
@@ -143,10 +154,11 @@ final class ModelWarmup: ObservableObject {
         // Decoder fp32, CPU EP only. One BOS step over the encoder context.
         let decURL = try modelFile("decoder_", in: dir)
         let vocab = try TokenizerLoader.loadVocabulary()
-        let (decoder, decCreate) = try timed { () -> DecoderSession in
+        let (decPair, decCreate) = try timed { () -> (ORTCSession, DecoderSession) in
             let b = try ORTCSession(modelURL: decURL, provider: .cpu)
-            return try DecoderSession(vocabulary: vocab, backend: b, provider: .cpu, modelURL: decURL)
+            return (b, try DecoderSession(vocabulary: vocab, backend: b, provider: .cpu, modelURL: decURL))
         }
+        let (decBackend, decoder) = decPair
         let (_, decRun) = try timed {
             try decoder.makeStepRunner(context: context).runStep(
                 DecoderStepInput(
@@ -166,7 +178,10 @@ final class ModelWarmup: ObservableObject {
             sessions: timings, totalMs: totalMs, startMB: startMB, endMB: endMB, peakMB: peak,
             ranOnMainThread: onMain, modelsDir: dir
         )
-        return WarmedModels(segnet: seg, encoder: encoder, decoder: decoder, vocabulary: vocab, report: report)
+        return WarmedModels(
+            segnet: seg, encoderBackend: encBackend, decoderBackend: decBackend,
+            encoder: encoder, decoder: decoder, vocabulary: vocab, report: report
+        )
     }
 
     nonisolated static func resolveModelsDir(_ explicit: URL?) throws -> URL {
@@ -237,13 +252,21 @@ struct WarmupReport: Sendable {
 /// Sessions created by the warmup (ORT sessions are not thread-confined; used serially).
 final class WarmedModels: @unchecked Sendable {
     let segnet: ORTCSession
+    /// Encoder fp16 on the CoreML EP (`.coreML`), decoder fp32 on the CPU EP (`.cpu`).
+    let encoderBackend: ORTCSession
+    let decoderBackend: ORTCSession
     let encoder: EncoderSession
     let decoder: DecoderSession
     let vocabulary: HomrVocabulary
     let report: WarmupReport
 
-    init(segnet: ORTCSession, encoder: EncoderSession, decoder: DecoderSession, vocabulary: HomrVocabulary, report: WarmupReport) {
+    init(
+        segnet: ORTCSession, encoderBackend: ORTCSession, decoderBackend: ORTCSession,
+        encoder: EncoderSession, decoder: DecoderSession, vocabulary: HomrVocabulary, report: WarmupReport
+    ) {
         self.segnet = segnet
+        self.encoderBackend = encoderBackend
+        self.decoderBackend = decoderBackend
         self.encoder = encoder
         self.decoder = decoder
         self.vocabulary = vocabulary

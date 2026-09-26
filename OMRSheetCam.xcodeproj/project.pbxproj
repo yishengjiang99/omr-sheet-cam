@@ -15,6 +15,8 @@
 		A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */; };
 		A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */; };
 		A1000000000000000000000A /* ModelWarmupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000A /* ModelWarmupTests.swift */; };
+		A1000000000000000000000B /* Gate1Runner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000B /* Gate1Runner.swift */; };
+		A1000000000000000000000C /* Gate1RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000C /* Gate1RunnerTests.swift */; };
 		A10000000000000000000008 /* OMRHomrIOS in Frameworks */ = {isa = PBXBuildFile; productRef = P10000000000000000000002 /* OMRHomrIOS */; };
 		4F06444BBF09D87CE872BDB8 /* MIDINoteExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149722DE288FA9C01620E0D8 /* MIDINoteExtractor.swift */; };
 		21EBA7280EC15355707ED56C /* PlaybackSmokeFixtureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */; };
@@ -39,6 +41,8 @@
 		B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gate1StaffTokenMatchTests.swift; sourceTree = "<group>"; };
 		B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDIPlayerSmokeTests.swift; sourceTree = "<group>"; };
 		B1000000000000000000000A /* ModelWarmupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelWarmupTests.swift; sourceTree = "<group>"; };
+		B1000000000000000000000B /* Gate1Runner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gate1Runner.swift; sourceTree = "<group>"; };
+		B1000000000000000000000C /* Gate1RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gate1RunnerTests.swift; sourceTree = "<group>"; };
 		B10000000000000000000008 /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fixtures; sourceTree = "<group>"; };
 		B10000000000000000000010 /* OMRSheetCam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OMRSheetCam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000000000000000000011 /* OMRSheetCamTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OMRSheetCamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -107,6 +111,7 @@
 			isa = PBXGroup;
 			children = (
 				B10000000000000000000004 /* ModelWarmup.swift */,
+				B1000000000000000000000B /* Gate1Runner.swift */,
 			);
 			path = Inference;
 			sourceTree = "<group>";
@@ -117,6 +122,7 @@
 				B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */,
 				B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */,
 				B1000000000000000000000A /* ModelWarmupTests.swift */,
+				B1000000000000000000000C /* Gate1RunnerTests.swift */,
 				C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */,
 				B10000000000000000000008 /* Fixtures */,
 			);
@@ -143,6 +149,7 @@
 				F10000000000000000000001 /* Frameworks */,
 				R10000000000000000000001 /* Resources */,
 				R10000000000000000000002 /* Bundle ONNX models */,
+				R10000000000000000000003 /* Bundle Gate-1 fixtures */,
 			);
 			buildRules = (
 			);
@@ -228,6 +235,31 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		R10000000000000000000003 /* Bundle Gate-1 fixtures */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/fixtures/oracle.c_scale_staff/staff.npy",
+				"$(SRCROOT)/fixtures/oracle.c_scale_staff/staff.png",
+				"$(SRCROOT)/fixtures/oracle.c_scale_staff/expected.tokens.json",
+			);
+			name = "Bundle Gate-1 fixtures";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/gate1/staff.npy",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/gate1/staff.png",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/gate1/expected.tokens.json",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Copies the Gate-1 oracle fixtures (fixtures/oracle.c_scale_staff: staff.npy, staff.png,\n# expected.tokens.json; tracked in git, never edited here) into <App>.app/gate1/ for the in-app\n# \"Run Gate-1\" section. Fails if any is missing.\nset -eu\nSRC=\"${SRCROOT}/fixtures/oracle.c_scale_staff\"\nDST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/gate1\"\nmkdir -p \"$DST\"\nfor n in staff.npy staff.png expected.tokens.json; do\n  [ -f \"$SRC/$n\" ] || { echo \"error: Gate-1 fixture missing: $SRC/$n\" >&2; exit 1; }\n  cp -p \"$SRC/$n\" \"$DST/$n\"\ndone\necho \"Bundled Gate-1 fixtures: $(echo $(ls \"$DST\"))\"\n";
+			showEnvVarsInLog = 0;
+		};
 		R10000000000000000000002 /* Bundle ONNX models */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -260,6 +292,7 @@
 				A10000000000000000000002 /* Gate1RootView.swift in Sources */,
 				A10000000000000000000003 /* SimpleMIDIPlayer.swift in Sources */,
 				A10000000000000000000004 /* ModelWarmup.swift in Sources */,
+				A1000000000000000000000B /* Gate1Runner.swift in Sources */,
 				4F06444BBF09D87CE872BDB8 /* MIDINoteExtractor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -271,6 +304,7 @@
 				A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */,
 				A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */,
 				A1000000000000000000000A /* ModelWarmupTests.swift in Sources */,
+				A1000000000000000000000C /* Gate1RunnerTests.swift in Sources */,
 				21EBA7280EC15355707ED56C /* PlaybackSmokeFixtureTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 import OMRHomrIOS
+@testable import OMRSheetCam
 
 /// Gate 1 on iOS / macOS: `fixtures/oracle.c_scale_staff/staff.npy` → `decodeStaff(tensor:)` over
 /// `ORTCSession` (ORT C API; encoder `.coreML` = CoreML EP + CPU fallback, or `.cpu`; decoder fp32
@@ -57,7 +58,7 @@ final class Gate1StaffTokenMatchTests: XCTestCase {
         }
         let models = try modelURLs(repoRoot: repoRoot, env: env)
 
-        let expected = try loadExpectedSymbols(from: json)
+        let expected = try Gate1Oracle.loadExpectedSymbols(from: json)
         XCTAssertFalse(expected.isEmpty, "expected.tokens.json has no symbols")
         let tensor = try StaffTensor.loadNPY(npy)
         let session = try StaffInferenceSession(
@@ -68,7 +69,7 @@ final class Gate1StaffTokenMatchTests: XCTestCase {
         let got = try session.decodeStaff(tensor: tensor)
 
         var note = ""
-        if let idx = firstMismatch(got, expected) {
+        if let idx = Gate1Oracle.firstMismatch(got, expected) {
             if encoderProvider == .coreML {
                 note = cpuEncoderDiagnostics(
                     session: session, encoderModel: models.encoder,
@@ -107,11 +108,11 @@ final class Gate1StaffTokenMatchTests: XCTestCase {
             )
             let coreMLCtx = try session.encoder.generateContext(staffImageNormalized: input).castToFP32ForDecoder()
             let cpuCtx = try cpuEncoder.generateContext(staffImageNormalized: input).castToFP32ForDecoder()
-            let diff = maxAbsDiff(fp32LE: coreMLCtx.bytes, cpuCtx.bytes)
+            let diff = Gate1Oracle.maxAbsDiff(fp32LE: coreMLCtx.bytes, cpuCtx.bytes)
             let cpuGot = try session.decoderLoop.generate(
                 context: cpuCtx, stepRunner: session.decoder.makeStepRunner(context: cpuCtx)
             )
-            let cpuVerdict = firstMismatch(cpuGot, expected).map { "no (diverges @\($0))" } ?? "yes"
+            let cpuVerdict = Gate1Oracle.firstMismatch(cpuGot, expected).map { "no (diverges @\($0))" } ?? "yes"
             return "\(head); encoder context max|coreML-cpu| (fp32) = \(diff) "
                 + "(shapes \(coreMLCtx.shape) vs \(cpuCtx.shape)); CPU-encoder decode matches oracle: \(cpuVerdict)"
         } catch {
@@ -153,34 +154,7 @@ final class Gate1StaffTokenMatchTests: XCTestCase {
         return (encoder, decoder)
     }
 
-    private struct ExpectedTokensFile: Decodable {
-        var symbols: [OracleSymbolFields]
-    }
-
-    static func loadExpectedSymbols(from url: URL) throws -> [EncodedSymbol] {
-        try JSONDecoder().decode(ExpectedTokensFile.self, from: Data(contentsOf: url))
-            .symbols.map { EncodedSymbol(oracleFields: $0) }
-    }
-
-    // MARK: - Compare
-
-    static func firstMismatch(_ got: [EncodedSymbol], _ expected: [EncodedSymbol]) -> Int? {
-        let n = min(got.count, expected.count)
-        if let i = (0..<n).first(where: { got[$0].oracleFields != expected[$0].oracleFields }) { return i }
-        return got.count == expected.count ? nil : n
-    }
-
-    static func maxAbsDiff(fp32LE a: Data, _ b: Data) -> Float {
-        guard a.count == b.count, a.count % 4 == 0 else { return .infinity }
-        func floats(_ d: Data) -> [Float] {
-            d.withUnsafeBytes { raw in
-                (0..<(d.count / 4)).map {
-                    Float(bitPattern: UInt32(littleEndian: raw.loadUnaligned(fromByteOffset: $0 * 4, as: UInt32.self)))
-                }
-            }
-        }
-        return zip(floats(a), floats(b)).reduce(0) { max($0, abs($1.0 - $1.1)) }
-    }
+    // MARK: - Compare (shared with the in-app runner: Gate1Oracle)
 
     static func assertSymbolsEqual(
         _ got: [EncodedSymbol],

@@ -1,5 +1,6 @@
 import SwiftUI
 import OMRHomrIOS
+import os
 
 /// Gate-1 debug surface only — status, warmup, MIDI smoke.
 /// No capture camera UI, no geometry overlays, no App Store polish.
@@ -13,6 +14,9 @@ struct Gate1RootView: View {
     @State private var lastError: String?
     @State private var midiPlayer = SimpleMIDIPlayer()
     @ObservedObject private var warmup = ModelWarmup.shared
+    @State private var gate1Running = false
+    @State private var gate1Verdict: String?
+    @State private var gate1Detail: String?
 
     var body: some View {
         NavigationStack {
@@ -36,6 +40,26 @@ struct Gate1RootView: View {
                     }
                     if case .failed = warmup.state {
                         Button("Retry warmup") { warmup.start() }
+                    }
+                }
+
+                Section("Run Gate-1") {
+                    Button("Run Gate-1 (npy)") { runGate1NPY() }
+                        .disabled(gate1Running)
+                    if gate1Running {
+                        Text("running… (\(warmup.debugLine))")
+                            .font(.footnote.monospaced())
+                            .foregroundStyle(.secondary)
+                    }
+                    if let gate1Verdict {
+                        Text(gate1Verdict)
+                            .font(.footnote.monospaced())
+                            .foregroundStyle(gate1Verdict.hasPrefix("PASS") ? .green : .red)
+                    }
+                    if let gate1Detail {
+                        Text(gate1Detail)
+                            .font(.caption2.monospaced())
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -63,6 +87,27 @@ struct Gate1RootView: View {
                 }
             }
             .navigationTitle("AI Camera - Music Reader")
+        }
+    }
+
+    /// Waits for the warmup, then runs Gate 1 off the main thread on the warmed sessions.
+    private func runGate1NPY() {
+        gate1Running = true
+        gate1Verdict = nil
+        gate1Detail = nil
+        Task {
+            defer { gate1Running = false }
+            do {
+                let models = try await warmup.readyModels()
+                let result = try await Task.detached(priority: .userInitiated) {
+                    try Gate1Runner.runNPY(models: models)
+                }.value
+                gate1Verdict = result.verdict
+                gate1Detail = result.detail
+            } catch {
+                gate1Verdict = "ERROR: \(error)"
+                Gate1Runner.log.error("Gate-1 (npy) error: \(String(describing: error), privacy: .public)")
+            }
         }
     }
 
