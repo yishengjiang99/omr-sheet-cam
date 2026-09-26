@@ -1,5 +1,7 @@
 import XCTest
+#if canImport(CoreGraphics)
 import CoreGraphics
+#endif
 @testable import OMRHomrIOS
 
 /// Layer C (soft layout): `OMRHomrIOS.renderTokens` builds MIDI + `noteLayout` from ONE shared
@@ -78,16 +80,22 @@ final class RenderTokensLayoutTests: XCTestCase {
                 )
             }
 
-            // 5. The SMF emits note-ons in exactly noteLayout order.
-            let ons = Self.noteOns(in: result.midi)
+            // 5. One track per staff; note-ons merged by (tick, track) == noteLayout order,
+            //    and each note sits in track staffIndex + 1.
+            let ons = Self.mergedNoteOns(in: result.midi)
             XCTAssertEqual(ons.map(\.tick), layout.map(\.onsetTicks), "\(id): SMF note-on ticks")
             XCTAssertEqual(ons.map(\.pitch), layout.compactMap(\.midiNote), "\(id): SMF note-on pitches")
-            XCTAssertEqual(SMFHeaderInspector.readHeader(from: result.midi)?.division, 480, id)
+            XCTAssertEqual(ons.map { $0.track - 1 }, layout.map(\.staffIndex), "\(id): track != staff + 1")
+            let header = SMFHeaderInspector.readHeader(from: result.midi)
+            XCTAssertEqual(header?.format, 1, id)
+            XCTAssertEqual(header?.division, 480, id)
+            XCTAssertEqual(Int(header?.trackCount ?? 0), result.staffCount + 1, "\(id): conductor + staves")
+            XCTAssertEqual(SMFHeaderInspector.trackChunkCount(in: result.midi), result.staffCount + 1, id)
 
             // 6. No attention boxes yet → midi-fallback.
             XCTAssertEqual(result.layoutSource, .midiFallback, id)
             XCTAssertEqual(result.layoutSource.rawValue, "midi-fallback", id)
-            XCTAssertEqual(result.staffCount, Set(expected.map(\.staff)).count, "\(id) staffCount")
+            XCTAssertEqual(result.staffCount, (expected.map(\.staff).max() ?? 0) + 1, "\(id) staffCount")
 
             checked.append(id)
         }
@@ -154,51 +162,59 @@ final class RenderTokensLayoutTests: XCTestCase {
         XCTAssertEqual(partial.noteLayout.map(\.hasBox), [true, false])
     }
 
-    // MARK: - Minimal SMF note-on reader (note tracks only; writer never uses running status)
+    // MARK: - Test-only SMF note-on reader (not public API; writer never uses running status)
 
     struct NoteOn: Equatable {
+        var track: Int
         var tick: Int
         var pitch: Int
     }
 
-    static func noteOns(in smf: Data) -> [NoteOn] {
+    /// Note-ons from every track, merged by `(tick, track, order within track)`.
+    static func mergedNoteOns(in smf: Data) -> [NoteOn] {
         let b = [UInt8](smf)
-        var out: [NoteOn] = []
+        var out: [(seq: Int, on: NoteOn)] = []
         var i = 14
         var track = 0
         while i + 8 <= b.count {
             let len = Int(b[i + 4]) << 24 | Int(b[i + 5]) << 16 | Int(b[i + 6]) << 8 | Int(b[i + 7])
             let start = i + 8
             let end = min(b.count, start + len)
-            if track >= 1 {
-                var j = start
-                var tick = 0
+            var j = start
+            var tick = 0
+            while j < end {
+                var delta = 0
                 while j < end {
-                    var delta = 0
-                    while j < end {
-                        let byte = b[j]
-                        j += 1
-                        delta = (delta << 7) | Int(byte & 0x7F)
-                        if byte & 0x80 == 0 { break }
+                    let byte = b[j]
+                    j += 1
+                    delta = (delta << 7) | Int(byte & 0x7F)
+                    if byte & 0x80 == 0 { break }
+                }
+                tick += delta
+                guard j < end else { break }
+                let status = b[j]
+                let hi = status & 0xF0
+                if status == 0xFF {
+                    guard j + 2 < end else { break }
+                    j += 3 + Int(b[j + 2])
+                } else if hi == 0xC0 || hi == 0xD0 {
+                    j += 2
+                } else {
+                    guard j + 2 < end else { break }
+                    if hi == 0x90, b[j + 2] > 0 {
+                        out.append((seq: out.count, on: NoteOn(track: track, tick: tick, pitch: Int(b[j + 1]))))
                     }
-                    tick += delta
-                    guard j < end else { break }
-                    let status = b[j]
-                    if status == 0xFF {
-                        guard j + 2 < end else { break }
-                        j += 3 + Int(b[j + 2])
-                    } else {
-                        guard j + 2 < end else { break }
-                        if status & 0xF0 == 0x90, b[j + 2] > 0 {
-                            out.append(NoteOn(tick: tick, pitch: Int(b[j + 1])))
-                        }
-                        j += 3
-                    }
+                    j += 3
                 }
             }
             track += 1
             i = start + len
         }
-        return out
+        out.sort { l, r in
+            if l.on.tick != r.on.tick { return l.on.tick < r.on.tick }
+            if l.on.track != r.on.track { return l.on.track < r.on.track }
+            return l.seq < r.seq
+        }
+        return out.map(\.on)
     }
 }

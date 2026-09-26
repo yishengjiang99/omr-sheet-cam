@@ -69,11 +69,16 @@ final class WriterOnlyFixtureTests: XCTestCase {
                 "writer mismatch for \(id)\nactual=\(actual)\nexpected=\(expected)"
             )
 
-            // SMF structure still format 1 @ 480 TPQ.
+            // SMF structure: format 1 @ 480 TPQ, conductor + one track per staff.
             let smf = SMFWriter().write(symbols: encoded)
             let header = SMFHeaderInspector.readHeader(from: smf)
             XCTAssertEqual(header?.format, 1, id)
             XCTAssertEqual(header?.division, 480, id)
+            let staffTracks = (expected.map(\.staff).max() ?? 0) + 1
+            XCTAssertEqual(Int(header?.trackCount ?? 0), 1 + staffTracks, "\(id) track count")
+            XCTAssertEqual(SMFHeaderInspector.trackChunkCount(in: smf), 1 + staffTracks, id)
+            if id == "piano.grand" { XCTAssertEqual(header?.trackCount, 3, id) }
+            if id.hasPrefix("mono.") { XCTAssertEqual(header?.trackCount, 2, id) }
         }
     }
 

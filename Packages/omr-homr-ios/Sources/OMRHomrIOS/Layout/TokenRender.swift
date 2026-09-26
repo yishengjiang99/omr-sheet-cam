@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
 import CoreGraphics
+#endif
 
 /// Seam for real per-note boxes (attention-derived) — **not wired yet**.
 ///
@@ -23,8 +25,11 @@ public extension OMRHomrIOS {
     /// - Order is total and stable: ascending `(onsetTicks, staffIndex, midiNote)`, tie-broken
     ///   by `(durationTicks, symbolIndex)`. Staff 0 is the top staff (`upper`), 1 below it
     ///   (`lower`), plus `staffIndexOffset`.
-    /// - The SMF note track emits note-ons in that same order, so `noteLayout[k]` is the k-th
-    ///   note-on (`noteLayout[k].noteIndex == k`).
+    /// - `symbolIndex` is the real index of the source `note_*` symbol in `symbols`.
+    /// - SMF has one track per staff (track 0 = conductor, track `1 + staffIndex` = staff).
+    ///   Merging all staff tracks' note-ons by `(tick, track)` yields exactly `noteLayout`
+    ///   order, so `noteLayout[k]` is the k-th merged note-on (`noteLayout[k].noteIndex == k`)
+    ///   and each entry's note lives in track `noteLayout[k].staffIndex + 1`.
     /// - Without a `boxProvider` every `pageRect` is `.null` and `layoutSource == .midiFallback`.
     ///
     /// - Parameters:
@@ -33,7 +38,8 @@ public extension OMRHomrIOS {
     ///     decoded staff on its page row).
     ///   - boxProvider: optional real-box seam (attention); nil today.
     ///   - writer: SMF writer config (format 1 @ 480 TPQ).
-    /// - Returns: `ParseSheetMusicResult` (`staffCount` = distinct staves with ≥1 sounding note).
+    /// - Returns: `ParseSheetMusicResult`; `staffCount` = number of staff tracks in `midi`
+    ///   (highest staff index + 1, minimum 1).
     static func renderTokens(
         _ symbols: [EncodedSymbol],
         staffIndexOffset: Int = 0,
@@ -77,7 +83,7 @@ public extension OMRHomrIOS {
             midi: midi,
             noteLayout: layout,
             layoutSource: source,
-            staffCount: Set(ordered.map { $0.event.staff }).count,
+            staffCount: max(1, (ordered.map { $0.event.staff }.max() ?? 0) + 1),
             warnings: warnings
         )
     }

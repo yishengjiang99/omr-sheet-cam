@@ -26,7 +26,54 @@ final class SMFWriterTests: XCTestCase {
         let header = SMFHeaderInspector.readHeader(from: data)!
         XCTAssertEqual(header.format, 1)
         XCTAssertEqual(header.division, 480)
+        XCTAssertEqual(header.trackCount, 2, "conductor + one staff track")
+        XCTAssertEqual(SMFHeaderInspector.trackChunkCount(in: data), 2)
         XCTAssertGreaterThan(data.count, 30)
+    }
+
+    func testOneTrackPerStaffTopToBottom() {
+        let notes = [
+            SMFWriter.NoteEvent(midiNote: 60, onsetTicks: 0, durationTicks: 480, staff: 0),
+            SMFWriter.NoteEvent(midiNote: 48, onsetTicks: 0, durationTicks: 480, staff: 1),
+        ]
+        let data = SMFWriter().write(notes: notes)
+        XCTAssertEqual(SMFHeaderInspector.readHeader(from: data)?.trackCount, 3)
+        XCTAssertEqual(SMFHeaderInspector.trackChunkCount(in: data), 3)
+        let ons = RenderTokensLayoutTests.mergedNoteOns(in: data)
+        XCTAssertEqual(ons.map(\.track), [1, 2], "track index - 1 == staff index")
+        XCTAssertEqual(ons.map(\.pitch), [60, 48])
+    }
+
+    func testLowerStaffOnlyStillMapsTrackToStaff() {
+        // Staff 1 alone → empty staff-0 track kept so track - 1 == staff holds.
+        let data = SMFWriter().write(notes: [
+            SMFWriter.NoteEvent(midiNote: 48, onsetTicks: 0, durationTicks: 480, staff: 1),
+        ])
+        XCTAssertEqual(SMFHeaderInspector.trackChunkCount(in: data), 3)
+        XCTAssertEqual(RenderTokensLayoutTests.mergedNoteOns(in: data).map(\.track), [2])
+    }
+
+    func testStaffTracksContainOnlyProgramZeroAndNoteOnOff() {
+        let data = SMFWriter().write(notes: [
+            SMFWriter.NoteEvent(midiNote: 60, onsetTicks: 0, durationTicks: 480, staff: 0),
+            SMFWriter.NoteEvent(midiNote: 48, onsetTicks: 480, durationTicks: 480, staff: 1),
+        ])
+        let bytes = [UInt8](data)
+        var i = 14
+        var track = 0
+        while i + 8 <= bytes.count {
+            let len = Int(bytes[i + 4]) << 24 | Int(bytes[i + 5]) << 16 | Int(bytes[i + 6]) << 8 | Int(bytes[i + 7])
+            let body = Array(bytes[(i + 8)..<(i + 8 + len)])
+            if track >= 1 {
+                // Starts with delta 0 + program change 0; ends with end-of-track meta.
+                XCTAssertEqual(Array(body.prefix(3)), [0x00, 0xC0, 0x00], "track \(track) program 0")
+                XCTAssertEqual(Array(body.suffix(3)), [0xFF, 0x2F, 0x00], "track \(track) EOT")
+                XCTAssertFalse(body.dropLast(3).contains(0xFF), "track \(track): no meta besides EOT")
+            }
+            track += 1
+            i += 8 + len
+        }
+        XCTAssertEqual(track, 3)
     }
 
     func testVLQEncoding() {

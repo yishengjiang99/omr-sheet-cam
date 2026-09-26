@@ -19,6 +19,9 @@ let package = Package(
         .target(
             name: "OMRHomrIOS",
             path: "Sources/OMRHomrIOS",
+            exclude: [
+                "Resources/README.md", // docs only; not a bundled resource
+            ],
             resources: [
                 .copy("Resources/Tokenizers"),
                 .copy("Resources/Vocab"),

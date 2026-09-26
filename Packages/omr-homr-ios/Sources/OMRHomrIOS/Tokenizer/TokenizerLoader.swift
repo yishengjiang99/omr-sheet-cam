@@ -16,8 +16,10 @@ public enum TokenizerLoader {
 
     /// Load authoritative decode vocab from package resources.
     public static func loadVocabulary(
-        bundle: Bundle = .module
+        bundle: Bundle? = nil
     ) throws -> HomrVocabulary {
+        // `Bundle.module` is internal, so it cannot be a public default argument value.
+        let bundle = bundle ?? Bundle.module
         guard let url = bundle.url(
             forResource: vocabularyResourceName,
             withExtension: "json",
@@ -61,8 +63,10 @@ public enum TokenizerLoader {
 
     /// Ensure upstream HF tokenizer JSONs are present (mirrors staff2score existence check).
     public static func requireHFTokenizerAssets(
-        bundle: Bundle = .module
+        bundle: Bundle? = nil
     ) throws -> [HFWordLevelTokenizer] {
+        // `Bundle.module` is internal, so it cannot be a public default argument value.
+        let bundle = bundle ?? Bundle.module
         var loaded: [HFWordLevelTokenizer] = []
         for name in tokenizerNames {
             guard let url = bundle.url(

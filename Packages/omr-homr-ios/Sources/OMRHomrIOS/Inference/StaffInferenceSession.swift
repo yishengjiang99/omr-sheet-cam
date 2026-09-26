@@ -30,7 +30,7 @@ public final class StaffInferenceSession: @unchecked Sendable {
     }
 
     /// Default scaffold: load vocab + HF tokenizer presence check; models optional/missing.
-    public static func makeDefault(bundle: Bundle = .module) throws -> StaffInferenceSession {
+    public static func makeDefault(bundle: Bundle? = nil) throws -> StaffInferenceSession {
         let vocab = try TokenizerLoader.loadVocabulary(bundle: bundle)
         _ = try TokenizerLoader.requireHFTokenizerAssets(bundle: bundle)
         let encoder = EncoderSession(modelURL: nil)

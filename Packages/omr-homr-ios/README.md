@@ -64,7 +64,7 @@ swift test
 # or open the package in Xcode 15+ / iOS 17 SDK
 ```
 
-Linux CI cannot compile Swift here; run tests on macOS.
+Builds and tests on Linux too (Swift 6.x toolchain; `CGRect` comes from swift-corelibs-foundation there).
 
 No App UI code lives in this package. App target under repo `Sources/App` (when
 present) must only consume `midi` + `noteLayout`, plus optional oracle hooks.
@@ -100,8 +100,9 @@ let k = r.noteLayout[i].noteIndex                    // == i == i-th note-on in 
 ```
 
 - **Ordering (stable, total):** ascending `(onsetTicks, staffIndex, midiNote)`, tie-break
-  `(durationTicks, symbolIndex)`. The SMF note track emits note-ons in the same order, so
-  `noteLayout[k]` ↔ k-th note-on.
+  `(durationTicks, symbolIndex)`. The SMF has a conductor track 0 plus one track per staff
+  (track `staffIndex + 1`, top to bottom); merging note-ons across staff tracks by
+  `(tick, track)` gives the same order, so `noteLayout[k]` ↔ k-th merged note-on.
 - Each entry carries `noteIndex`, `symbolIndex` (into the input symbols), `staffIndex`,
   `onsetTicks`, `durationTicks`, `midiNote`, and `pageRect` (`.null` = no box; never fabricated).
 - Pieces: `SymbolMIDIMapping.orderedNoteEvents(from:tpq:staffIndexOffset:)` and

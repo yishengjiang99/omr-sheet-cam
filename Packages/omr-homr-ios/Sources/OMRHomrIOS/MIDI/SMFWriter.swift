@@ -2,8 +2,9 @@ import Foundation
 
 /// Minimal Standard MIDI File writer — **Format 1**, **480 TPQ**, metrical division.
 ///
-/// Web-player-compatible subset: tempo (+ optional time-signature) track + one note track.
-/// Gate-1: structure tests + `SymbolMIDIMapping.noteEvents` for tokenizer-faithful C-scale writeout.
+/// Web-player-compatible subset: conductor track (name, tempo, optional time signature) +
+/// one note track per staff, top-to-bottom (track index − 1 == staff index), program 0,
+/// noteOn/noteOff only. See `write(notes:staffCount:)`.
 public struct SMFWriter: Sendable {
     public static let ticksPerQuarter: UInt16 = 480
     public static let format: UInt16 = 1
@@ -76,11 +77,33 @@ public struct SMFWriter: Sendable {
         }
     }
 
-    /// Write SMF format 1 with a tempo/conductor track and a note track.
-    public func write(notes: [NoteEvent]) -> Data {
-        var tracks: [Data] = []
-        tracks.append(makeTempoTrack())
-        tracks.append(makeNoteTrack(notes: notes))
+    /// Conductor track name (FF 03) written on track 0.
+    public static let conductorTrackName = "OMRHomrIOS"
+
+    /// Write SMF format 1 @ 480 TPQ with **one track per staff**.
+    ///
+    /// Track layout (contract):
+    /// - Track 0: conductor — track name, tempo, optional time signature (default 4/4). No notes.
+    /// - Track 1 + s: staff `s` (0 = top staff), top-to-bottom. Each staff track holds a
+    ///   program change to program 0 at tick 0, then noteOn/noteOff only.
+    ///   `staff index == track index - 1`, so a note's staff is recoverable from its track.
+    ///
+    /// Staff track count = `max(1, staffCount ?? 0, highest note staff + 1)`; staves with no
+    /// notes between the top and the highest used staff still get an (empty) track so the
+    /// index mapping holds. Within a track, note-ons at the same tick keep input order, so
+    /// merging all note-ons by `(tick, track)` reproduces input order when input is sorted by
+    /// `(tick, staff, …)` (as `SymbolMIDIMapping.orderedNoteEvents` is).
+    public func write(notes: [NoteEvent], staffCount: Int? = nil) -> Data {
+        let maxStaff = notes.map { max(0, $0.staff) }.max() ?? -1
+        let staffTracks = max(1, staffCount ?? 0, maxStaff + 1)
+        var perStaff: [[(order: Int, note: NoteEvent)]] = Array(repeating: [], count: staffTracks)
+        for (i, n) in notes.enumerated() {
+            perStaff[max(0, n.staff)].append((order: i, note: n))
+        }
+        var tracks: [Data] = [makeConductorTrack()]
+        for staffNotes in perStaff {
+            tracks.append(makeStaffTrack(notes: staffNotes))
+        }
         return assembleFile(tracks: tracks)
     }
 
@@ -90,7 +113,7 @@ public struct SMFWriter: Sendable {
         write(notes: SymbolMIDIMapping.noteEvents(from: symbols, tpq: Int(Self.ticksPerQuarter)))
     }
 
-    /// Empty score (tempo + empty note track) — useful for structure tests.
+    /// Empty score (conductor + one empty staff track) — useful for structure tests.
     public func writeEmpty() -> Data {
         write(notes: [])
     }
@@ -112,14 +135,20 @@ public struct SMFWriter: Sendable {
         return data
     }
 
-    private func makeTempoTrack() -> Data {
+    private func makeConductorTrack() -> Data {
         var events = Data()
+        // delta 0, meta FF 03 len name
+        let name = Array(Self.conductorTrackName.utf8)
+        events.append(contentsOf: Self.encodeVLQ(0))
+        events.append(contentsOf: [0xFF, 0x03])
+        events.append(contentsOf: Self.encodeVLQ(name.count))
+        events.append(contentsOf: name)
         // delta 0, meta FF 51 03 tttttt
-        events.append(contentsOf: encodeVLQ(0))
+        events.append(contentsOf: Self.encodeVLQ(0))
         events.append(contentsOf: [0xFF, 0x51, 0x03])
         events.append(u24be(tempoMicroseconds))
         if let ts = timeSignature {
-            events.append(contentsOf: encodeVLQ(0))
+            events.append(contentsOf: Self.encodeVLQ(0))
             events.append(contentsOf: [
                 0xFF, 0x58, 0x04,
                 ts.numerator,
@@ -129,15 +158,15 @@ public struct SMFWriter: Sendable {
             ])
         }
         // end of track
-        events.append(contentsOf: encodeVLQ(0))
+        events.append(contentsOf: Self.encodeVLQ(0))
         events.append(contentsOf: [0xFF, 0x2F, 0x00])
         return events
     }
 
-    private func makeNoteTrack(notes: [NoteEvent]) -> Data {
+    private func makeStaffTrack(notes: [(order: Int, note: NoteEvent)]) -> Data {
         struct MIDIInstant: Comparable {
             var tick: Int
-            var order: Int // note-off before note-on at same tick
+            var order: Int // note-off (0) before note-on (1 + input index) at same tick
             var bytes: [UInt8]
             static func < (lhs: MIDIInstant, rhs: MIDIInstant) -> Bool {
                 if lhs.tick != rhs.tick { return lhs.tick < rhs.tick }
@@ -146,27 +175,38 @@ public struct SMFWriter: Sendable {
         }
 
         var instants: [MIDIInstant] = []
-        for (i, n) in notes.enumerated() {
+        for (i, n) in notes {
             let vel = n.velocity ?? defaultVelocity
             let ch = n.channel & 0x0F
-            let on: [UInt8] = [0x90 | ch, n.midiNote, vel]
-            let off: [UInt8] = [0x80 | ch, n.midiNote, 0x40]
-            instants.append(MIDIInstant(tick: n.onsetTicks, order: 1 + i, bytes: on))
+            let pitch = n.midiNote & 0x7F
+            let on: [UInt8] = [0x90 | ch, pitch, vel & 0x7F]
+            let off: [UInt8] = [0x80 | ch, pitch, 0x40]
+            instants.append(MIDIInstant(tick: max(0, n.onsetTicks), order: 1 + i, bytes: on))
             instants.append(
-                MIDIInstant(tick: n.onsetTicks + max(0, n.durationTicks), order: 0, bytes: off)
+                MIDIInstant(
+                    tick: max(0, n.onsetTicks) + max(0, n.durationTicks),
+                    order: 0,
+                    bytes: off
+                )
             )
         }
         instants.sort()
 
         var events = Data()
+        // Program 0 (Acoustic Grand) on every channel this staff uses (channel 0 when empty).
+        let channels = Set(notes.map { $0.note.channel & 0x0F })
+        for ch in (channels.isEmpty ? [UInt8(0)] : channels.sorted()) {
+            events.append(contentsOf: Self.encodeVLQ(0))
+            events.append(contentsOf: [0xC0 | ch, 0x00])
+        }
         var lastTick = 0
         for inst in instants {
             let delta = max(0, inst.tick - lastTick)
-            events.append(contentsOf: encodeVLQ(delta))
+            events.append(contentsOf: Self.encodeVLQ(delta))
             events.append(contentsOf: inst.bytes)
             lastTick = inst.tick
         }
-        events.append(contentsOf: encodeVLQ(0))
+        events.append(contentsOf: Self.encodeVLQ(0))
         events.append(contentsOf: [0xFF, 0x2F, 0x00])
         return events
     }
@@ -248,7 +288,7 @@ public enum SMFHeaderInspector {
     /// True when conductor track contains FF 58 time-signature meta (metrical cue).
     public static func containsTimeSignatureMeta(in data: Data) -> Bool {
         guard data.count >= 14 else { return false }
-        var i = 14
+        let i = 14
         let bytes = [UInt8](data)
         // Inspect first MTrk only (conductor)
         guard i + 8 <= bytes.count else { return false }

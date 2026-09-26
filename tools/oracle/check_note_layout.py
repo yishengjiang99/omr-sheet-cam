@@ -3,14 +3,15 @@
 
 Swift is not available on Linux CI, so this re-implements, line for line, the package's
 `SymbolMIDIMapping.sourcedNoteEvents` + `orderedNoteEvents` + `NoteLayout.midiFallback`
-and the `SMFWriter` note-track ordering, then for every fixture with a complete
+and the `SMFWriter` per-staff track layout, then for every fixture with a complete
 `expected.tokens.json` and an `expected.notes.csv` asserts:
 
   1. len(noteLayout) == sounding notes in expected.notes.csv
   2. noteLayout entries (tick, pitch, duration, staff) == the shared MIDI note list, 1:1,
      and that list == expected.notes.csv (as a multiset)
   3. order is (tick, staff, pitch[, duration, symbolIndex]) ascending, noteIndex == k
-  4. k-th note-on in the written SMF note track == noteLayout[k]
+  4. SMF = conductor + one track per staff; note-ons merged by (tick, track) == noteLayout
+     order, and each note's track index - 1 == its staffIndex
   5. layoutSource == "midi-fallback" and no box (no attention boxes yet)
 
 Fixtures whose tokens status is not "complete" (stubs / awaiting oracle export) are
@@ -176,29 +177,42 @@ def vlq(v: int) -> bytes:
 
 
 def write_smf(notes: list[dict], vel: int = 80) -> bytes:
-    inst = []
+    """Mirror of SMFWriter.write(notes:): conductor + one track per staff (track = staff + 1)."""
+    n_staff = max([1] + [max(0, n["staff"]) + 1 for n in notes])
+    per_staff: list[list[tuple[int, dict]]] = [[] for _ in range(n_staff)]
     for i, n in enumerate(notes):
-        inst.append((n["tick"], 1 + i, bytes([0x90, n["pitch"], vel])))
-        inst.append((n["tick"] + max(0, n["duration"]), 0, bytes([0x80, n["pitch"], 0x40])))
-    inst.sort(key=lambda x: (x[0], x[1]))
-    trk, last = bytearray(), 0
-    for t, _, b in inst:
-        trk += vlq(t - last) + b
-        last = t
-    trk += vlq(0) + b"\xff\x2f\x00"
-    tempo = vlq(0) + b"\xff\x51\x03\x07\xa1\x20" + vlq(0) + b"\xff\x2f\x00"
-    out = b"MThd" + struct.pack(">IHHH", 6, 1, 2, TPQ)
-    for t in (tempo, bytes(trk)):
+        per_staff[max(0, n["staff"])].append((i, n))
+    name = b"OMRHomrIOS"
+    conductor = (vlq(0) + b"\xff\x03" + vlq(len(name)) + name
+                 + vlq(0) + b"\xff\x51\x03\x07\xa1\x20"
+                 + vlq(0) + b"\xff\x58\x04\x04\x02\x18\x08"
+                 + vlq(0) + b"\xff\x2f\x00")
+    tracks = [conductor]
+    for staff_notes in per_staff:
+        inst = []
+        for i, n in staff_notes:
+            inst.append((n["tick"], 1 + i, bytes([0x90, n["pitch"], vel])))
+            inst.append((n["tick"] + max(0, n["duration"]), 0, bytes([0x80, n["pitch"], 0x40])))
+        inst.sort(key=lambda x: (x[0], x[1]))
+        trk, last = bytearray(vlq(0) + b"\xc0\x00"), 0  # program 0
+        for t, _, b in inst:
+            trk += vlq(t - last) + b
+            last = t
+        trk += vlq(0) + b"\xff\x2f\x00"
+        tracks.append(bytes(trk))
+    out = b"MThd" + struct.pack(">IHHH", 6, 1, len(tracks), TPQ)
+    for t in tracks:
         out += b"MTrk" + struct.pack(">I", len(t)) + t
     return out
 
 
-def note_ons(smf: bytes) -> list[tuple[int, int]]:
+def merged_note_ons(smf: bytes) -> list[tuple[int, int, int]]:
+    """(tick, track, pitch) note-ons from all tracks, merged by (tick, track, in-track order)."""
     i, track, out = 14, 0, []
     while i + 8 <= len(smf):
         ln = struct.unpack(">I", smf[i + 4:i + 8])[0]
         j, end, tick = i + 8, i + 8 + ln, 0
-        while track >= 1 and j < end:
+        while j < end:
             delta = 0
             while True:
                 b = smf[j]; j += 1
@@ -209,13 +223,16 @@ def note_ons(smf: bytes) -> list[tuple[int, int]]:
             st = smf[j]
             if st == 0xFF:
                 j += 3 + smf[j + 2]
+            elif st & 0xF0 in (0xC0, 0xD0):
+                j += 2
             else:
                 if st & 0xF0 == 0x90 and smf[j + 2] > 0:
-                    out.append((tick, smf[j + 1]))
+                    out.append((tick, track, len(out), smf[j + 1]))
                 j += 3
         track += 1
         i = end
-    return out
+    out.sort()
+    return [(t, trk, p) for t, trk, _, p in out], track
 
 
 # --- fixture check ------------------------------------------------------------------
@@ -251,15 +268,21 @@ def check_fixture(d: Path) -> tuple[str, str]:
         errs.append("not ordered by (tick, staff, pitch)")
     if [l["noteIndex"] for l in layout] != list(range(len(layout))):
         errs.append("noteIndex != position")
-    ons = note_ons(res["midi"])
-    if ons != [(l["onsetTicks"], l["midiNote"]) for l in layout]:
-        errs.append(f"SMF note-on order != noteLayout order\n  ons={ons}")
+    ons, n_tracks = merged_note_ons(res["midi"])
+    if [(t, p) for t, _, p in ons] != [(l["onsetTicks"], l["midiNote"]) for l in layout]:
+        errs.append(f"SMF merged note-on order != noteLayout order\n  ons={ons}")
+    if [trk - 1 for _, trk, _ in ons] != [l["staffIndex"] for l in layout]:
+        errs.append("note track index - 1 != staffIndex")
+    want_tracks = 1 + max([0] + [r[3] for r in expected]) + 1
+    if n_tracks != want_tracks:
+        errs.append(f"SMF tracks={n_tracks} != conductor + staves={want_tracks}")
     if res["layoutSource"] != "midi-fallback" or any(l["pageRect"] is not None for l in layout):
         errs.append("expected midi-fallback with no boxes")
     if errs:
         return "FAIL", "; ".join(errs)
     staves = sorted({l["staffIndex"] for l in layout})
-    return "PASS", f"noteLayout={len(layout)} == csv={len(expected)} staves={staves} layoutSource=midi-fallback"
+    return "PASS", (f"noteLayout={len(layout)} == csv={len(expected)} staves={staves} "
+                    f"smf_tracks={n_tracks} layoutSource=midi-fallback")
 
 
 def main() -> int:

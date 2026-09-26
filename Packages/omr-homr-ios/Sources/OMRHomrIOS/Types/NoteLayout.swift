@@ -1,11 +1,16 @@
 import Foundation
+#if canImport(CoreGraphics)
 import CoreGraphics
+#endif
+// On Linux, swift-corelibs-foundation provides `CGRect` / `CGFloat` (incl. `.null`, `isNull`,
+// `isEmpty`), so `pageRect` keeps the same public type and name on every platform.
 
 /// Stable layout hit for highlight overlays.
 ///
 /// One entry per **sounding** MIDI note (rests produce none; each chord member gets its own
 /// entry with the shared onset). When built by `OMRHomrIOS.renderTokens`, `noteLayout[k]`
-/// describes the k-th note-on in the SMF note track (same shared, sorted note-event list).
+/// describes the k-th note-on when all staff tracks' note-ons are merged by `(tick, track)`
+/// (same shared, sorted note-event list); its note lives in SMF track `staffIndex + 1`.
 ///
 /// `pageRect` is `CGRect.null` when no real box is known (`layoutSource == .midiFallback`);
 /// coordinates are never fabricated.
@@ -23,9 +28,33 @@ public struct NoteLayout: Equatable, Sendable {
     /// Staff index within the page (0-based, 0 = top staff). Staff-only gate-1 uses 0.
     public var staffIndex: Int
     /// Zero-based index of this entry in the sorted sounding-note list (== its array index
-    /// in `noteLayout`, == ordinal of its note-on in the SMF note track).
+    /// in `noteLayout`, == ordinal of its note-on in the `(tick, track)`-merged SMF note-ons).
     public var noteIndex: Int
 
+    /// Source-compatible initializer — argument labels identical to the pre-layout API
+    /// (`symbolIndex:midiNote:onsetTicks:durationTicks:pageRect:staffIndex:`). `noteIndex`
+    /// defaults to 0; use `init(symbolIndex:…:noteIndex:)` to set it.
+    public init(
+        symbolIndex: Int,
+        midiNote: Int? = nil,
+        onsetTicks: Int = 0,
+        durationTicks: Int = 0,
+        pageRect: CGRect = .null,
+        staffIndex: Int = 0
+    ) {
+        self.init(
+            symbolIndex: symbolIndex,
+            midiNote: midiNote,
+            onsetTicks: onsetTicks,
+            durationTicks: durationTicks,
+            pageRect: pageRect,
+            staffIndex: staffIndex,
+            noteIndex: 0
+        )
+    }
+
+    /// Full initializer including `noteIndex` (required here so calls without it resolve to
+    /// the source-compatible initializer above, unambiguously).
     public init(
         symbolIndex: Int,
         midiNote: Int? = nil,
@@ -33,7 +62,7 @@ public struct NoteLayout: Equatable, Sendable {
         durationTicks: Int = 0,
         pageRect: CGRect = .null,
         staffIndex: Int = 0,
-        noteIndex: Int = 0
+        noteIndex: Int
     ) {
         self.symbolIndex = symbolIndex
         self.midiNote = midiNote
