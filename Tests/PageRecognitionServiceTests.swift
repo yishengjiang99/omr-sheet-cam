@@ -215,7 +215,7 @@ final class PageRecognitionServiceTests: XCTestCase {
     }
 
     func testAppUsesPageRecognition() {
-        XCTAssertTrue(AppServices.recognition is PageRecognitionService)
+        XCTAssertTrue((AppServices.recognition as? GatedRecognitionService)?.real is PageRecognitionService)
     }
 
     // MARK: - Real models (simulator CI): app path vs homr oracle pages

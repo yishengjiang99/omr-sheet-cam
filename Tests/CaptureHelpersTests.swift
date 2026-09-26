@@ -64,7 +64,7 @@ final class CaptureHelpersTests: XCTestCase {
     func testStubRecognitionReturnsComingSoon() async {
         let outcome = await StubRecognitionService().recognize(imageData: Data([0xFF, 0xD8]))
         XCTAssertEqual(outcome, .comingSoon)
-        XCTAssertTrue(AppServices.recognition is PageRecognitionService)
+        XCTAssertTrue((AppServices.recognition as? GatedRecognitionService)?.real is PageRecognitionService)
     }
 
     func testSampleMIDIIsValidSMF() throws {

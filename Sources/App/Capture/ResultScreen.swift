@@ -26,6 +26,10 @@ struct ResultScreen: View {
     @State private var savedToLibrary = false
     @Environment(\.dismiss) private var dismiss
 
+    /// "Recognition coming soon" row: plain text, no glyph (nil = no icon; any value must be a valid SF Symbol).
+    static let comingSoonTitle = "Recognition coming soon"
+    static let comingSoonSymbol: String? = nil
+
     /// Pinned bottom actions for an outcome; the view renders exactly these.
     enum PinnedAction: String { case play, saveToLibrary }
 
@@ -123,7 +127,11 @@ struct ResultScreen: View {
                             Text(msg).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
                         }
                     default:
-                        Label("Recognition coming soon", systemImage: "sparkles")
+                        if let symbol = Self.comingSoonSymbol {
+                            Label(Self.comingSoonTitle, systemImage: symbol)
+                        } else {
+                            Text(Self.comingSoonTitle).font(.headline)
+                        }
                         Text("Your photo is saved on this iPhone. Meanwhile, try a sample song.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }

@@ -112,6 +112,11 @@ enum PromptBuilder {
             out.append("- none")
         }
 
+        // SegNet self-test (Settings → Developer)
+        out.append("")
+        out.append("## SegNet self-test (latest)")
+        out.append(contentsOf: segnetSelfTestLines(ev, clip))
+
         // Feedback
         var fb: OMRFeedback? = nil
         if let f = input.feedback, !f.isEmpty {
@@ -141,6 +146,18 @@ enum PromptBuilder {
         if problems.count > lim.errors { out.append("- … and \(problems.count - lim.errors) more") }
 
         return out.joined(separator: "\n") + "\n"
+    }
+
+    /// Latest `segnet_selftest` event → one line per variant (classes, min/max/NaN, ms, staffs or "unavailable: …").
+    static func segnetSelfTestLines(_ ev: [DiagnosticsEvent], _ clip: (String) -> String) -> [String] {
+        guard let e = ev.last(where: { $0.category == .recognition && $0.payload?["kind"] == "segnet_selftest" }),
+              let q = e.payload else { return ["- not run"] }
+        var out = ["- \(clip(e.message)) · \(q["page"] ?? "?")"]
+        for v in SegNetSelfTest.Variant.allCases {
+            if let line = q[v.rawValue] { out.append(clip("- \(v.rawValue): \(line)")) }
+        }
+        if let err = q["error"] { out.append(clip("- error: \(err)")) }
+        return out
     }
 
     /// `page_parse` payload → prompt lines (outcome, timing, image, staffs, warnings, memory, stages, error).

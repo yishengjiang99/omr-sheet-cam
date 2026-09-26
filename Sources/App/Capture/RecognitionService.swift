@@ -27,7 +27,35 @@ struct StubRecognitionService: RecognitionService {
     func recognize(imageData: Data) async -> RecognitionOutcome { .comingSoon }
 }
 
+/// Page recognition gate. OFF: a capture shows "Recognition coming soon" (the page path is never
+/// called). ON: the real `PageRecognitionService`. Developers override it in Settings → Developer →
+/// "Experimental page recognition" (UserDefaults `key`); everyone else gets `defaultEnabled`.
+enum RecognitionGate {
+    /// THE switch: set to `true` to turn page recognition on for everyone (once SegNet on the CoreML
+    /// EP is fixed in OMRHomrIOS and green on ios-sim).
+    static let defaultEnabled = false
+
+    static let key = "developer.experimentalPageRecognition"
+
+    /// Developer override if set, else `defaultEnabled`.
+    static func isEnabled(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: key) as? Bool ?? defaultEnabled
+    }
+}
+
+/// Returns `.comingSoon` while the gate is closed, else forwards to `real`.
+struct GatedRecognitionService: RecognitionService {
+    let real: any RecognitionService
+    var isEnabled: @Sendable () -> Bool = { RecognitionGate.isEnabled() }
+
+    func recognize(imageData: Data) async -> RecognitionOutcome {
+        guard isEnabled() else { return .comingSoon }
+        return await real.recognize(imageData: imageData)
+    }
+}
+
 enum AppServices {
-    /// Full-page homr recognition on the warmed ORT sessions (`Inference/PageRecognitionService.swift`).
-    static let recognition: any RecognitionService = PageRecognitionService.shared
+    /// Full-page homr recognition on the warmed ORT sessions (`Inference/PageRecognitionService.swift`),
+    /// behind `RecognitionGate`.
+    static let recognition: any RecognitionService = GatedRecognitionService(real: PageRecognitionService.shared)
 }

@@ -138,17 +138,20 @@ final class ModelWarmup: ObservableObject {
                     payload: ["kind": "start", "models": dir.lastPathComponent, "main_thread": "\(onMain)"])
         var providers: [String] = []
 
-        func record(_ name: String, _ provider: ORTProvider, _ createMs: Double, _ runMs: Double) {
+        func record(_ name: String, _ provider: ORTProvider, _ createMs: Double, _ runMs: Double, cache: EncoderCacheInfo? = nil) {
             let mb = physFootprintMB()
             peak = max(peak, mb)
-            timings.append(.init(name: name, provider: "\(provider)", createMs: createMs, firstRunMs: runMs, footprintMB: mb))
+            timings.append(.init(name: name, provider: "\(provider)", createMs: createMs, firstRunMs: runMs, footprintMB: mb,
+                                 coreMLCache: cache?.summary))
             providers.append("\(name)=\(provider)")
-            diag.record(
-                .info, .warmup,
-                String(format: "%@ %@: create %.0f ms, first run %.0f ms, footprint %.0f MB", name, "\(provider)", createMs, runMs, mb),
-                payload: ["kind": "session", "session": name, "provider": "\(provider)", "create_ms": String(format: "%.1f", createMs),
-                          "first_run_ms": String(format: "%.1f", runMs), "footprint_mb": String(format: "%.1f", mb)]
-            )
+            var payload = ["kind": "session", "session": name, "provider": "\(provider)", "create_ms": String(format: "%.1f", createMs),
+                           "first_run_ms": String(format: "%.1f", runMs), "footprint_mb": String(format: "%.1f", mb)]
+            var msg = String(format: "%@ %@: create %.0f ms, first run %.0f ms, footprint %.0f MB", name, "\(provider)", createMs, runMs, mb)
+            if let cache {
+                payload.merge(cache.payload) { _, new in new }
+                msg += " · coreml cache \(cache.summary)"
+            }
+            diag.record(.info, .warmup, msg, payload: payload)
             log.notice("\(name, privacy: .public) provider=\(String(describing: provider), privacy: .public) create=\(createMs, format: .fixed(precision: 1)) ms firstRun=\(runMs, format: .fixed(precision: 1)) ms footprint=\(mb, format: .fixed(precision: 1)) MB")
         }
 
@@ -168,10 +171,12 @@ final class ModelWarmup: ObservableObject {
         }
         record("segnet", seg.provider, segCreate, segRun)
 
-        // Encoder fp16, CoreML EP. Zero staff tile (fp32 in, EncoderSession casts to fp16).
+        // Encoder fp16, CoreML EP with the app's compiled-model cache (<AppSupport>/coreml-cache/,
+        // key = model SHA-256). Zero staff tile (fp32 in, EncoderSession casts to fp16).
         let encURL = try modelFile("encoder_", in: dir)
+        var encCache = EncoderCacheInfo()
         let (encPair, encCreate) = try timed { () -> (ORTCSession, EncoderSession) in
-            let b = try ORTCSession(modelURL: encURL, provider: .coreML)
+            let b = try openCachedEncoder(encURL, info: &encCache)
             return (b, try EncoderSession(backend: b, provider: .coreMLFP16, inputElementType: .float16, modelURL: encURL))
         }
         let (encBackend, encoder) = encPair
@@ -179,7 +184,7 @@ final class ModelWarmup: ObservableObject {
         let (context, encRun) = try timed {
             try encoder.generateContext(staffImageNormalized: Data(count: staffBytes)).castToFP32ForDecoder()
         }
-        record("encoder", .coreML, encCreate, encRun)
+        record("encoder", .coreML, encCreate, encRun, cache: encCache)
 
         // Decoder fp32, CPU EP only. One BOS step over the encoder context.
         let decURL = try modelFile("decoder_", in: dir)
@@ -219,6 +224,71 @@ final class ModelWarmup: ObservableObject {
             segnet: seg, encoderBackend: encBackend, decoderBackend: decBackend,
             encoder: encoder, decoder: decoder, vocabulary: vocab, report: report
         )
+    }
+
+    /// How the encoder session used the CoreML cache (warmup diagnostics).
+    struct EncoderCacheInfo: Sendable {
+        /// hit / miss / incomplete (half entry deleted, cold compile) / off / failed.
+        var state = "off"
+        var key: String?
+        var keyMs: Double = 0
+        var directory: String?
+        var error: String?
+        var removedStale: [String] = []
+
+        var summary: String {
+            var s = state
+            if let key { s += " key \(key.prefix(12))" }
+            if let error { s += " (\(error))" }
+            return s
+        }
+
+        var payload: [String: String] {
+            var p = ["coreml_cache": state, "coreml_cache_used": state == "hit" ? "1" : "0",
+                     "coreml_cache_key_ms": String(format: "%.1f", keyMs)]
+            if let key { p["coreml_cache_key"] = key }
+            if let directory { p["coreml_cache_dir"] = directory }
+            if let error { p["coreml_cache_error"] = error }
+            if !removedStale.isEmpty { p["coreml_cache_removed"] = removedStale.joined(separator: " ") }
+            return p
+        }
+    }
+
+    /// `OMR_COREML_CACHE=0` disables the cache (plain CoreML EP, compiled into a temp dir every launch).
+    nonisolated static var coreMLCacheEnabled: Bool {
+        ProcessInfo.processInfo.environment["OMR_COREML_CACHE"] != "0"
+    }
+
+    /// Encoder `.coreML` session through `CoreMLCacheStore`. A failed create on a cached entry deletes it and
+    /// retries uncached, so a bad entry can never break the warmup. Never used for the decoder.
+    nonisolated static func openCachedEncoder(_ url: URL, info: inout EncoderCacheInfo, root: URL? = nil) throws -> ORTCSession {
+        guard coreMLCacheEnabled else { return try ORTCSession(modelURL: url, provider: .coreML) }
+        let store: CoreMLCacheStore
+        let key: String
+        do {
+            store = try CoreMLCacheStore.prepare(root: root)
+            let (k, ms) = try timed { try CoreMLModelCache.sha256Hex(ofFileAt: url) }
+            key = k
+            info.key = k
+            info.keyMs = ms
+            info.directory = store.root.path
+            info.removedStale = store.removeStale(keeping: [k])
+        } catch {
+            info.state = "failed"
+            info.error = "cache dir: \(error)"
+            return try ORTCSession(modelURL: url, provider: .coreML)
+        }
+        info.state = store.prepareEntry(key).rawValue
+        do {
+            let s = try ORTCSession(modelURL: url, provider: .coreML, cacheDirectory: store.root, cacheKey: key)
+            store.markComplete(key)
+            return s
+        } catch {
+            store.remove(key)
+            info.state = "failed"
+            info.error = "\(error)"
+            return try ORTCSession(modelURL: url, provider: .coreML)
+        }
     }
 
     nonisolated static func resolveModelsDir(_ explicit: URL?) throws -> URL {
@@ -268,6 +338,8 @@ struct WarmupReport: Sendable {
         var createMs: Double
         var firstRunMs: Double
         var footprintMB: Double
+        /// CoreML compiled-model cache use (encoder only), e.g. "hit key 1a2b3c4d5e6f"; nil = no cache.
+        var coreMLCache: String? = nil
     }
 
     var sessions: [Session]
@@ -282,6 +354,7 @@ struct WarmupReport: Sendable {
         sessions.map {
             String(format: "%@ %@: create %.0f ms, first run %.0f ms, %.0f MB",
                    $0.name, $0.provider, $0.createMs, $0.firstRunMs, $0.footprintMB)
+                + ($0.coreMLCache.map { ", coreml cache \($0)" } ?? "")
         } + [String(format: "total %.0f ms, footprint %.0f → %.0f MB, peak %.0f MB", totalMs, startMB, endMB, peakMB)]
     }
 }

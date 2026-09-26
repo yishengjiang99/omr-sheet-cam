@@ -7,7 +7,9 @@ import SwiftUI
 struct SettingsView: View {
     enum Section: String, CaseIterable { case playback, about, developer }
     enum AboutRow: String, CaseIterable { case version, rate, privacy, sourceCode }
-    enum DeveloperRow: String, CaseIterable { case eventLog, copyPrompt, selfTest, compareStaff, turnOff }
+    enum DeveloperRow: String, CaseIterable {
+        case eventLog, copyPrompt, selfTest, segnetSelfTest, experimentalRecognition, compareStaff, turnOff
+    }
 
     static let repoURL = URL(string: "https://github.com/yishengjiang99/omr-sheet-cam")!
 
@@ -33,6 +35,8 @@ struct SettingsView: View {
         case .eventLog: return "Event log"
         case .copyPrompt: return "Copy diagnostics as prompt"
         case .selfTest: return "Run model self-test"
+        case .segnetSelfTest: return "SegNet self-test"
+        case .experimentalRecognition: return "Experimental page recognition"
         case .compareStaff: return "Compare test staff"
         case .turnOff: return "Turn off developer mode"
         }
@@ -50,6 +54,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.requestReview) private var requestReview
     @State private var toast: String?
+    /// Developer override of `RecognitionGate.defaultEnabled` (nothing stored until toggled).
+    @AppStorage(RecognitionGate.key) private var experimentalRecognition = RecognitionGate.defaultEnabled
 
     var body: some View {
         NavigationStack {
@@ -144,6 +150,17 @@ struct SettingsView: View {
                     CopyPromptButton(toast: $toast, title: Self.title(row))
                 case .selfTest:
                     NavigationLink { Gate1RootView(embedded: true) } label: { SettingsLabel(Self.title(row), icon: "checkmark", color: .purple) }
+                case .segnetSelfTest:
+                    NavigationLink { SegNetSelfTestScreen() } label: { SettingsLabel(Self.title(row), icon: "square.grid.3x3", color: .purple) }
+                        .accessibilityIdentifier("settings.segnetSelfTest")
+                case .experimentalRecognition:
+                    Toggle(isOn: $experimentalRecognition) { SettingsLabel(Self.title(row), icon: "wand.and.stars", color: .purple) }
+                        .accessibilityIdentifier("settings.experimentalRecognition")
+                        .onChange(of: experimentalRecognition) { _, on in
+                            DiagnosticsLog.shared.record(.info, .app, "experimental page recognition \(on ? "on" : "off")",
+                                                         payload: ["kind": "recognition_gate", "enabled": on ? "1" : "0",
+                                                                   "default": RecognitionGate.defaultEnabled ? "1" : "0"])
+                        }
                 case .compareStaff:
                     NavigationLink { Gate1CompareScreen() } label: { SettingsLabel(Self.title(row), icon: "rectangle.on.rectangle", color: .purple) }
                 case .turnOff:
