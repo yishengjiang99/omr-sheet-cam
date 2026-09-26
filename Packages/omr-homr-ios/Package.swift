@@ -50,14 +50,7 @@ let ortExtraTargets: [Target] = [
         ]
     ),
 ]
-/// Dynamic on Apple: the ORT xcframework is a static archive (product `onnxruntime` is `.static`).
-/// With an automatic (static) OMRHomrIOS, Xcode links ORT into both the app and its test bundle and
-/// fails with "Swift package product 'onnxruntime' is linked as a static library by 'OMRSheetCamTests'
-/// and 'OMRSheetCam' ... duplication of library code". A dynamic OMRHomrIOS.framework holds the
-/// single copy of ORT and both link it.
-let omrLibraryType: Product.Library.LibraryType? = .dynamic
 #else
-let omrLibraryType: Product.Library.LibraryType? = nil
 let ortPackages: [Package.Dependency] = []
 let ortTargetDeps: [Target.Dependency] = []
 let ortExtraTargets: [Target] = []
@@ -72,7 +65,6 @@ let package = Package(
     products: [
         .library(
             name: "OMRHomrIOS",
-            type: omrLibraryType,
             targets: ["OMRHomrIOS"]
         ),
         // Non-interactive fixture runner (repo root: scripts/omr-test).
