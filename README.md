@@ -8,7 +8,7 @@ Standalone native iOS/iPadOS app: photo of engraved Western sheet music → on-d
 
 Open **`OMRSheetCam.xcodeproj`** (iOS 17+, links local package `Packages/omr-homr-ios` → product `OMRHomrIOS`).
 
-App identity (locked): see `docs/asc/APP_IDENTITY.md` — display name **AI Camera - Music Reader**, bundle id `com.ragnus.vp`.
+App identity (locked): see `docs/asc/APP_IDENTITY.md` — App Store name **AI Camera - Music Reader**, home-screen display name **SheetCam**, bundle id `com.ragnus.vp`.
 
 Gate-1 shell only: no capture UI yet. Blocked on onnx_checkpoints + C-scale fixtures + ORT bindings.
 
