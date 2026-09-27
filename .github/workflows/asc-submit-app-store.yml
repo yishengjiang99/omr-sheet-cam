@@ -507,12 +507,15 @@ jobs:
               ok_add, st_add, add_resp = True, 200, {'already': True}
             if not ok_add:
               print('failed to attach version to submission', submission_id, st_add, json.dumps(add_resp)[:1200])
-              # Last resort: another fresh create (in case prior create raced)
-              st_c2, created2 = create_review_submission()
-              if st_c2 < 400:
-                submission_id = created2['data']['id']
-                print('created second reviewSubmission', submission_id)
-                ok_add, st_add, add_resp = add_version_to_submission(submission_id)
+              # A second empty shell does not fix missing metadata (409 ENTITY_STATE_INVALID).
+              # Only retry when the version is locked to another submission.
+              blob = json.dumps(add_resp)
+              if 'ITEM_PART_OF_ANOTHER_SUBMISSION' in blob:
+                st_c2, created2 = create_review_submission()
+                if st_c2 < 400:
+                  submission_id = created2['data']['id']
+                  print('created second reviewSubmission', submission_id)
+                  ok_add, st_add, add_resp = add_version_to_submission(submission_id)
               if not ok_add:
                 return True, 409, {
                   'submission_id': submission_id,
@@ -561,6 +564,165 @@ jobs:
             )
             return st, resp
 
+
+          def ensure_submission_prerequisites(app_id):
+            """Set the three app-level fields Apple rejected the last submit for.
+            Does not overwrite a content-rights value, price, or privacy answer
+            that is already present. Privacy defaults to Data Not Collected only
+            when no usage rows exist (on-device camera reader; nothing leaves
+            the device).
+            """
+            # --- Content rights ---
+            _, app = api('GET', f'/v1/apps/{app_id}')
+            rights = (app.get('data') or {}).get('attributes', {}).get('contentRightsDeclaration')
+            print('contentRightsDeclaration', rights)
+            if rights in (None, '', 'NOT_YET_FINALIZED'):
+              desired = os.environ.get(
+                'CONTENT_RIGHTS', 'DOES_NOT_USE_THIRD_PARTY_CONTENT',
+              ).strip() or 'DOES_NOT_USE_THIRD_PARTY_CONTENT'
+              st, patched = api('PATCH', f'/v1/apps/{app_id}', {
+                'data': {
+                  'type': 'apps',
+                  'id': app_id,
+                  'attributes': {'contentRightsDeclaration': desired},
+                }
+              }, ok_statuses={409, 422})
+              print('patched contentRightsDeclaration', st, desired, json.dumps(patched)[:400])
+              if st >= 400:
+                raise SystemExit(
+                  f'Could not set contentRightsDeclaration={desired}: {json.dumps(patched)[:800]}'
+                )
+
+            # --- Price: free base (USA) only when no manual price exists ---
+            st_mp, mp = api(
+              'GET',
+              f'/v1/apps/{app_id}/appPriceSchedule/manualPrices?limit=10',
+              ok_statuses={404},
+            )
+            if st_mp == 404:
+              st_mp, mp = api(
+                'GET',
+                f'/v1/appPriceSchedules/{app_id}/manualPrices?limit=10',
+                ok_statuses={404},
+              )
+            manual = (mp.get('data') or []) if st_mp < 400 else []
+            print('manual prices', st_mp, len(manual))
+            if not manual:
+              print('no price schedule; setting free (0.00) base territory USA')
+              free_id = None
+              path = f'/v1/apps/{app_id}/appPricePoints?filter[territory]=USA&limit=200'
+              for _page in range(8):
+                _, points = api('GET', path)
+                for pt in points.get('data') or []:
+                  price = str((pt.get('attributes') or {}).get('customerPrice'))
+                  if price in ('0', '0.0', '0.00'):
+                    free_id = pt['id']
+                    break
+                if free_id:
+                  break
+                nxt = ((points.get('links') or {}).get('next') or '')
+                if not nxt:
+                  break
+                path = nxt.replace('https://api.appstoreconnect.apple.com', '')
+              if not free_id:
+                raise SystemExit('Could not find a USA appPricePoint with customerPrice 0.0')
+              print('free price point', free_id)
+              st_set, set_resp = api('POST', '/v1/appPriceSchedules', {
+                'data': {
+                  'type': 'appPriceSchedules',
+                  'relationships': {
+                    'app': {'data': {'type': 'apps', 'id': app_id}},
+                    'baseTerritory': {'data': {'type': 'territories', 'id': 'USA'}},
+                    'manualPrices': {'data': [{'type': 'appPrices', 'id': '${price0}'}]},
+                  },
+                },
+                'included': [{
+                  'type': 'appPrices',
+                  'id': '${price0}',
+                  'attributes': {'startDate': None},
+                  'relationships': {
+                    'appPricePoint': {
+                      'data': {'type': 'appPricePoints', 'id': free_id},
+                    },
+                  },
+                }],
+              }, ok_statuses={409, 422})
+              print('set price schedule', st_set, json.dumps(set_resp)[:600])
+              if st_set >= 400:
+                blob = json.dumps(set_resp)
+                if 'EXIST' in blob or 'DUPLICATE' in blob or 'already' in blob.lower():
+                  print('price schedule already present; continuing')
+                else:
+                  raise SystemExit(
+                    f'Could not set free price schedule: {blob[:1200]}'
+                  )
+
+            # --- App Privacy: publish, declaring Data Not Collected if empty ---
+            st_u, usages = api(
+              'GET',
+              f'/v1/apps/{app_id}/dataUsages?limit=50&include=dataProtection',
+              ok_statuses={404},
+            )
+            usage_rows = (usages.get('data') or []) if st_u < 400 else []
+            print('app data usages', st_u, len(usage_rows))
+            if not usage_rows:
+              st_add, add_u = api('POST', '/v1/appDataUsages', {
+                'data': {
+                  'type': 'appDataUsages',
+                  'relationships': {
+                    'app': {'data': {'type': 'apps', 'id': app_id}},
+                    'dataProtection': {
+                      'data': {
+                        'type': 'appDataUsageDataProtections',
+                        'id': 'DATA_NOT_COLLECTED',
+                      },
+                    },
+                  },
+                }
+              }, ok_statuses={409, 422})
+              print('declare DATA_NOT_COLLECTED', st_add, json.dumps(add_u)[:500])
+              if st_add >= 400:
+                blob = json.dumps(add_u)
+                if 'DUPLICATE' not in blob and 'already' not in blob.lower() and 'EXIST' not in blob:
+                  raise SystemExit(
+                    'Could not declare App Privacy (Data Not Collected). '
+                    f'Set it in App Store Connect, then re-run. {blob[:800]}'
+                  )
+            st_ps, pub = api(
+              'GET', f'/v1/apps/{app_id}/dataUsagePublishState', ok_statuses={404},
+            )
+            if st_ps >= 400:
+              raise SystemExit(
+                f'Could not read dataUsagePublishState: {st_ps} {json.dumps(pub)[:500]}'
+              )
+            pdata = pub.get('data') or {}
+            if isinstance(pdata, list):
+              pdata = pdata[0] if pdata else {}
+            if pdata.get('id') and 'attributes' not in pdata:
+              _, pub = api('GET', f'/v1/appDataUsagesPublishState/{pdata["id"]}')
+              pdata = pub.get('data') or pdata
+            published = (pdata.get('attributes') or {}).get('published')
+            pub_id = pdata.get('id')
+            print('privacy publish state', pub_id, 'published=', published)
+            if published is not True:
+              if not pub_id:
+                raise SystemExit(f'privacy publish state missing id: {json.dumps(pub)[:500]}')
+              st_pub, pub_resp = api(
+                'PATCH', f'/v1/appDataUsagesPublishState/{pub_id}',
+                {
+                  'data': {
+                    'type': 'appDataUsagesPublishState',
+                    'id': pub_id,
+                    'attributes': {'published': True},
+                  }
+                },
+                ok_statuses={409, 422},
+              )
+              print('published app privacy', st_pub, json.dumps(pub_resp)[:400])
+              if st_pub >= 400:
+                raise SystemExit(f'Could not publish App Privacy: {json.dumps(pub_resp)[:800]}')
+
+          ensure_submission_prerequisites(app_id)
           print('=== submitting for review (reviewSubmissions) ===')
           ok, st, resp = submit_via_review_submissions()
           if not ok:
