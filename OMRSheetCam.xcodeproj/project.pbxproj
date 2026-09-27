@@ -15,7 +15,7 @@
 		5F0000000000000000000001 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000001 /* PlayerView.swift */; };
 		5F0000000000000000000002 /* Acknowledgements.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000002 /* Acknowledgements.swift */; };
 		5F0000000000000000000003 /* sweden.midi in Resources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000003 /* sweden.midi */; };
-		5F000000000000000000000B /* sweden.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 5E000000000000000000000A /* sweden.jpg */; };
+		5F000000000000000000000B /* ode-to-joy.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 5E000000000000000000000A /* ode-to-joy.jpg */; };
 		5F0000000000000000000004 /* SF2PlayerAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000004 /* SF2PlayerAppTests.swift */; };
 		5F0000000000000000000005 /* SF2Player in Frameworks */ = {isa = PBXBuildFile; productRef = 5D0000000000000000000002 /* SF2Player */; };
 		CA0000000000000000000001 /* CaptureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000001 /* CaptureStore.swift */; };
@@ -87,7 +87,7 @@
 		5E0000000000000000000001 /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
 		5E0000000000000000000002 /* Acknowledgements.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Acknowledgements.swift; sourceTree = "<group>"; };
 		5E0000000000000000000003 /* sweden.midi */ = {isa = PBXFileReference; lastKnownFileType = audio.midi; name = sweden.midi; path = fixtures/sf2/sweden.midi; sourceTree = SOURCE_ROOT; };
-		5E000000000000000000000A /* sweden.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = sweden.jpg; path = fixtures/samples/sweden.jpg; sourceTree = SOURCE_ROOT; };
+		5E000000000000000000000A /* ode-to-joy.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = "ode-to-joy.jpg"; path = "fixtures/samples/ode-to-joy.jpg"; sourceTree = SOURCE_ROOT; };
 		5E0000000000000000000004 /* SF2PlayerAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SF2PlayerAppTests.swift; sourceTree = "<group>"; };
 		CB0000000000000000000001 /* CaptureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStore.swift; sourceTree = "<group>"; };
 		CB0000000000000000000002 /* RecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecognitionService.swift; sourceTree = "<group>"; };
@@ -201,7 +201,7 @@
 				5E0000000000000000000006 /* LibraryScreen.swift */,
 				5E0000000000000000000007 /* LevelMeterView.swift */,
 				5E0000000000000000000003 /* sweden.midi */,
-				5E000000000000000000000A /* sweden.jpg */,
+				5E000000000000000000000A /* ode-to-joy.jpg */,
 				6E0000000000000000000001 /* PlaybackController.swift */,
 			);
 			path = Player;
@@ -409,7 +409,7 @@
 			files = (
 				A10000000000000000000005 /* Assets.xcassets in Resources */,
 				5F0000000000000000000003 /* sweden.midi in Resources */,
-				5F000000000000000000000B /* sweden.jpg in Resources */,
+				5F000000000000000000000B /* ode-to-joy.jpg in Resources */,
 				6F0000000000000000000006 /* LICENSE in Resources */,
 				6F0000000000000000000007 /* NOTICE in Resources */,
 				6F0000000000000000000008 /* ONNXRuntime-LICENSE.txt in Resources */,

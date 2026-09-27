@@ -239,17 +239,17 @@ final class PageRecognitionServiceTests: XCTestCase {
         XCTAssertTrue((AppServices.recognition as? GatedRecognitionService)?.real is PageRecognitionService)
     }
 
-    /// "Try sample picture": sweden.jpg is bundled and decodes to an upright page photo that
+    /// "Try sample picture": ode-to-joy.jpg is bundled and decodes to an upright page image that
     /// the Result flow can feed to `AppServices.recognition`.
     func testTrySamplePictureIsBundledAndDecodes() async throws {
         XCTAssertEqual(SamplePicture.buttonTitle, "Try sample picture")
+        XCTAssertEqual(SamplePicture.resourceName, "ode-to-joy")
         let data = try SamplePicture.data()
-        XCTAssertGreaterThan(data.count, 100_000)
+        XCTAssertGreaterThan(data.count, 50_000)
         let photo = try await SamplePicture.photo()
         XCTAssertEqual(photo.source, .sample)
         XCTAssertEqual(photo.image.imageOrientation, .up)
-        XCTAssertGreaterThan(photo.image.size.height, photo.image.size.width, "portrait page photo")
-        XCTAssertGreaterThanOrEqual(min(photo.image.size.width, photo.image.size.height) * photo.image.scale, 768)
+        XCTAssertGreaterThanOrEqual(photo.image.size.width * photo.image.scale, 1200, "LilyPond render ~1530 px wide")
     }
 
     // MARK: - Real models (simulator CI): app path vs homr oracle pages
@@ -344,6 +344,25 @@ final class PageRecognitionServiceTests: XCTestCase {
         print("PageParse mono.c_major_scale tokens: staffs \(r.layout.staffs.count), staff0 \(matched)/\(expected.count) tokens (got \(got.count)) | \(timings)")
         XCTAssertEqual(r.layout.staffs.count, 1)
         XCTAssertNil(Gate1Oracle.firstMismatch(got, expected), "staff 0 tokens \(matched)/\(expected.count) vs homr")
+    }
+
+    /// "Try sample picture" end to end: the bundled Ode to Joy page through the same
+    /// `PageRecognitionService.recognize(imageData:)` the Result screen uses (warmed sessions) must
+    /// recognize at least one staff and some notes. Melody range is C4...G4 (MIDI 60...67).
+    @MainActor
+    func testTrySamplePictureRecognizesNotes() async throws {
+        let data = try SamplePicture.data()
+        let dir = try requireModels()
+        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
+        let outcome = await realService(log).recognize(imageData: data)
+        let e = pageEvents(log).last
+        print("PageParse sample ode-to-joy: \(e?.message ?? "no event") | \(e?.payload ?? [:])")
+        guard case let .recognized(d) = outcome else { return XCTFail("expected recognized, got \(outcome) (models \(dir.path))") }
+        let pitches = d.notes.compactMap(\.midiNote)
+        print("PageParse sample ode-to-joy: staffCount \(d.staffCount) · notes \(pitches.count) · \(pitches)")
+        XCTAssertGreaterThanOrEqual(d.staffCount, 1)
+        XCTAssertGreaterThan(pitches.count, 0)
+        XCTAssertFalse(d.midi.isEmpty)
     }
 
     /// Every other homr oracle page through the app path. Hard: recognized + staffCount == homr.

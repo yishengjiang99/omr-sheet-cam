@@ -65,21 +65,22 @@ struct CapturedPhoto: Hashable, Identifiable {
     func hash(into h: inout Hasher) { h.combine(id) }
 }
 
-/// "Try sample picture": the bundled photo of the Sweden piano sheet music
-/// (`fixtures/samples/sweden.jpg`, bundled at the app root as `sweden.jpg`). Loaded exactly like a
+/// "Try sample picture": a bundled engraving of Beethoven's "Ode to Joy" melody (public domain;
+/// rendered with LilyPond from `fixtures/samples/ode-to-joy.ly`, bundled at the app root as
+/// `ode-to-joy.jpg`). Loaded exactly like a
 /// Photos pick (decode + `normalizedUpright`) and handed to the same `onPhoto` → `ResultScreen`
 /// recognition flow, so the result lands in the Library like any other scan.
 enum SamplePicture {
     static let buttonTitle = "Try sample picture"
-    static let resourceName = "sweden"
+    static let resourceName = "ode-to-joy"
     static let resourceExtension = "jpg"
 
     enum LoadError: Error, CustomStringConvertible {
         case missing, unreadable
         var description: String {
             switch self {
-            case .missing: return "sample picture sweden.jpg is not bundled"
-            case .unreadable: return "sample picture sweden.jpg could not be decoded"
+            case .missing: return "sample picture ode-to-joy.jpg is not bundled"
+            case .unreadable: return "sample picture ode-to-joy.jpg could not be decoded"
             }
         }
     }

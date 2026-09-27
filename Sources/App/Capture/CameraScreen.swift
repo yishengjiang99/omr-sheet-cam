@@ -5,7 +5,7 @@ import SwiftUI
 
 /// Scan (home, redesign 01-scan): live camera (when available + authorized), tap-to-focus,
 /// Settings (gear) and torch on top, Photos · shutter · Library at the bottom, with a
-/// "Try sample picture" button (bundled Sweden page) just above them. Hands an upright
+/// "Try sample picture" button (bundled Ode to Joy page) just above them. Hands an upright
 /// `CapturedPhoto` to `onPhoto`. The app-wide mini-player shows above the controls while
 /// something is loaded.
 struct CameraScreen: View {
@@ -150,7 +150,7 @@ struct CameraScreen: View {
         .accessibilityLabel(label)
     }
 
-    /// "Try sample picture": runs the bundled Sweden photo through the same flow as a Photos pick.
+    /// "Try sample picture": runs the bundled Ode to Joy page through the same flow as a Photos pick.
     private var sampleButton: some View {
         Button(action: trySample) {
             Label(SamplePicture.buttonTitle, systemImage: "music.note")
@@ -233,7 +233,7 @@ struct CameraScreen: View {
             defer { loadingSample = false }
             do {
                 let photo = try await SamplePicture.photo()
-                DiagnosticsLog.shared.record(.info, .capture, "Try sample picture: sweden.jpg")
+                DiagnosticsLog.shared.record(.info, .capture, "Try sample picture: ode-to-joy.jpg")
                 onPhoto(photo)
             } catch {
                 self.error = "Could not load the sample picture"

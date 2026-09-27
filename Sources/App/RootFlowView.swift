@@ -45,7 +45,7 @@ struct RootFlowView: View {
         Task { @MainActor in
             do {
                 let photo = try await SamplePicture.photo()
-                DiagnosticsLog.shared.record(.info, .capture, "Try sample picture (library): sweden.jpg")
+                DiagnosticsLog.shared.record(.info, .capture, "Try sample picture (library): ode-to-joy.jpg")
                 path.append(.result(photo))
             } catch {
                 DiagnosticsLog.shared.record(error: error, category: .capture, context: "Try sample picture (library)")
