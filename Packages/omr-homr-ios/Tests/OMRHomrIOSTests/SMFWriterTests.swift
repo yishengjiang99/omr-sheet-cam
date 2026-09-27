@@ -131,4 +131,40 @@ final class SMFWriterTests: XCTestCase {
         XCTAssertEqual(events.map(\.onsetTicks), [0, 0, 0])
         XCTAssertEqual(Set(events.map(\.durationTicks)), [480])
     }
+
+    func testLowerStaffClefRestartsTimeForGrandStaffDump() {
+        // Grand-staff token order: upper staff first, then the lower staff. The lower clef
+        // restarts time so the two staves sound simultaneously.
+        let sym: (String, String, String) -> EncodedSymbol = { rhythm, pitch, position in
+            EncodedSymbol(rhythm: rhythm, pitch: pitch, lift: "_", articulation: "_", slur: "_", position: position)
+        }
+        let symbols: [EncodedSymbol] = [
+            sym("clef_G2", ".", "upper"),
+            sym("note_4", "C4", "upper"),
+            sym("note_4", "D4", "upper"),
+            sym("clef_F4", ".", "lower"),
+            sym("note_4", "C3", "lower"),
+            sym("note_4", "D3", "lower"),
+        ]
+        let events = SymbolMIDIMapping.noteEvents(from: symbols)
+        XCTAssertEqual(events.map(\.midiNote), [60, 62, 48, 50])
+        XCTAssertEqual(events.map(\.onsetTicks), [0, 480, 0, 480])
+        XCTAssertEqual(events.map(\.staff), [0, 0, 1, 1])
+    }
+
+    func testSameStaffClefChangeDoesNotRewindTime() {
+        // A mid-piece clef change on the same staff keeps the cursor running.
+        let sym: (String, String, String) -> EncodedSymbol = { rhythm, pitch, position in
+            EncodedSymbol(rhythm: rhythm, pitch: pitch, lift: "_", articulation: "_", slur: "_", position: position)
+        }
+        let symbols: [EncodedSymbol] = [
+            sym("clef_G2", ".", "upper"),
+            sym("note_4", "C4", "upper"),
+            sym("clef_C3", ".", "upper"),
+            sym("note_4", "D4", "upper"),
+        ]
+        let events = SymbolMIDIMapping.noteEvents(from: symbols)
+        XCTAssertEqual(events.map(\.midiNote), [60, 62])
+        XCTAssertEqual(events.map(\.onsetTicks), [0, 480])
+    }
 }

@@ -154,6 +154,27 @@ final class PageRecognitionServiceTests: XCTestCase {
         XCTAssertEqual(pageEvents(log).compactMap { $0.payload?["session"] }, ["built", "reused", "reused"])
     }
 
+    func testCancelledQueuedRecognizeSkipsParse() async throws {
+        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
+        let fake = FakeParser(result: Self.goodResult(), delay: 0.3)
+        let service = makeService(factory: { fake }, log: log)
+        let png = Self.pngData()
+        let t1 = Task { await service.recognize(imageData: png) }
+        // Wait until t1 is inside the parse (it holds the mutex for `delay`).
+        for _ in 0..<200 where fake.calls == 0 {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertEqual(fake.calls, 1, "t1 must be inside the parse before t2 starts")
+        let t2 = Task { await service.recognize(imageData: png) }
+        try await Task.sleep(nanoseconds: 50_000_000) // t2 queues in acquire() behind t1
+        t2.cancel()
+        let o1 = await t1.value
+        let o2 = await t2.value
+        XCTAssertEqual(o1.name, "recognized")
+        XCTAssertEqual(o2, .failed("cancelled"))
+        XCTAssertEqual(fake.calls, 1, "cancelled queued task must not run a parse")
+    }
+
     func testMemoryWarningDropsSessionAndNextParseRebuilds() async throws {
         let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
         let center = NotificationCenter()

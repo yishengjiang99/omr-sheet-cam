@@ -11,7 +11,7 @@ Same fixtures work for browser worker, native mobile, and desktop. This is sheet
 - Input: dewarped staff `[1, 1, 256, 1280]` grayscale, mean `0.7931`, std `0.1738`
 - Expected: homr token streams (rhythm, pitch, note, lift, + fifth stream from `decoder_inference.py`)
 - Match: exact per stream, or Levenshtein if fixture says so
-- **Hard gate:** C-scale oracle staff **22/22** vs Python homr (fp16 encoder → fp32 decoder known-good)
+- **Hard gate:** C-scale oracle staff **12/12** vs Python homr (fp16 encoder → fp32 decoder known-good)
 
 ### Layer B — MIDI
 - Expected: canonical note list from known notation (not from homr)
@@ -59,7 +59,7 @@ fixtures/<id>/
 | `piano.grand` | two staves, 4 simple bars | exact_midi |
 | `camera.deskew` | same scale ~15° | midi_distance |
 
-Also include (do not invent): C-scale 22/22 oracle from `~/workspace/homr-research` if present; homr `figures/` as `snapshot`; datasets release as `midi_distance`/`snapshot`; tokenizers from `homr/transformer/*.json`.
+Also include (do not invent): C-scale 12/12 oracle from `~/workspace/homr-research` if present; homr `figures/` as `snapshot`; datasets release as `midi_distance`/`snapshot`; tokenizers from `homr/transformer/*.json`.
 
 No bubble-sheet OMR datasets.
 
@@ -124,7 +124,7 @@ WHAT TO ADD BEFORE AN AGENT CAN LOOP
 ----------------------------------------------------------
 
 1. Check in a minimal fixture pack (or a one-shot fetch):
-   - C-scale staff PNG used for the 22/22 oracle
+   - C-scale staff PNG used for the 12/12 oracle
    - expected.tokens.json from that run (commit the tokens; do not
      require live Python homr on every unit run)
    - expected.notes.csv

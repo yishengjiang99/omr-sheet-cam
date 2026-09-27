@@ -149,9 +149,10 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
 
         func recognize(imageData: Data) async -> RecognitionOutcome {
             await acquire()
-            let outcome = await run(imageData)
-            release()
-            return outcome
+            defer { release() }
+            // A task cancelled while queued must not burn a full parse when its turn arrives.
+            guard !Task.isCancelled else { return .failed("cancelled") }
+            return await run(imageData)
         }
 
         private func run(_ imageData: Data) async -> RecognitionOutcome {

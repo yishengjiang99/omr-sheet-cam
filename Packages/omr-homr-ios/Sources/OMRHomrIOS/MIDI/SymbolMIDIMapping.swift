@@ -159,7 +159,9 @@ public enum SymbolMIDIMapping: Sendable {
     }
 
     /// Token-order note events tagged with their source symbol index.
-    /// `resetCursorOnClef`: a clef after the first note restarts time at 0 (staff-only grand-staff dumps).
+    /// `resetCursorOnClef`: a lower-staff clef after the first note restarts time at 0 (staff-only
+    /// grand-staff dumps, whose second staff follows the first in the token stream). A mid-piece clef
+    /// change on the same staff must not rewind time.
     /// The page path passes false: its voice streams run continuously across rows (homr joins them with
     /// `newline` and drops repeated clefs), and a mid-piece clef change must not rewind time.
     static func sourcedNoteEvents(
@@ -183,8 +185,10 @@ public enum SymbolMIDIMapping: Sendable {
                 continue
             }
             if sym.rhythm.hasPrefix("clef_") {
-                // New clef starts a staff stream: reset cursor (grand-staff sequential dumps).
-                if resetCursorOnClef && !events.isEmpty {
+                // A lower-staff clef starts the second staff's stream: reset the cursor so the two
+                // staves of a grand-staff dump sound simultaneously. A same-staff clef change
+                // (upper position) mid-piece must not rewind time.
+                if resetCursorOnClef && !events.isEmpty && SymbolCleanup.isLower(sym.position) {
                     onset = 0
                     chordAnchor = 0
                 }
