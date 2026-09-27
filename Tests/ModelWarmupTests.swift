@@ -30,4 +30,22 @@ final class ModelWarmupTests: XCTestCase {
         print("Warmup: \(warmup.debugLine)")
         r.lines.forEach { print("Warmup: \($0)") }
     }
+
+    /// Warmup progress weights: one per step, summing to 1 (the "Warming up… x%" bar ends at 100%).
+    func testWarmupProgressWeights() {
+        XCTAssertEqual(ModelWarmup.warmupProgressWeights.count, 7, "segnet create/run, encoder create/run, vocab, decoder create/run")
+        XCTAssertEqual(ModelWarmup.warmupProgressWeights.reduce(0, +), 1.0, accuracy: 1e-9)
+        XCTAssertTrue(ModelWarmup.warmupProgressWeights.allSatisfy { $0 > 0 })
+    }
+
+    /// `attachProgressIfNeeded`: never auto-starts a first-ever warmup (launch owns that; a scan
+    /// with a fake factory must not kick off real model loading).
+    @MainActor
+    func testAttachProgressIfNeededDoesNotStartFirstWarmup() {
+        let warmup = ModelWarmup()
+        var reports = 0
+        XCTAssertFalse(warmup.attachProgressIfNeeded { _ in reports += 1 })
+        XCTAssertEqual(warmup.state, .idle, "must not start a first-ever warmup")
+        XCTAssertEqual(reports, 0)
+    }
 }

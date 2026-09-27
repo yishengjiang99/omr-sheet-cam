@@ -17,6 +17,29 @@ import os
 /// - Logs (`Logger`, subsystem = bundle id, category `warmup`): per-session create / first-run ms
 ///   and provider, `phys_footprint` MB after each session, total ms and peak MB.
 ///
+/// Warmup step progress 0...1, called from the warmup worker thread.
+typealias WarmupProgressHandler = @Sendable (Double) -> Void
+
+/// Thread-safe multicast for warmup progress: the launch warmup starts without a watcher, and a
+/// scan that arrives mid-warmup attaches its handler to the in-flight run.
+private final class WarmupProgressBus: @unchecked Sendable {
+    private let lock = NSLock()
+    private var handlers: [WarmupProgressHandler] = []
+    func add(_ h: @escaping WarmupProgressHandler) {
+        lock.lock(); handlers.append(h); lock.unlock()
+    }
+    func broadcast(_ f: Double) {
+        lock.lock(); let hs = handlers; lock.unlock()
+        for h in hs { h(f) }
+    }
+    func clear() {
+        lock.lock(); handlers.removeAll(); lock.unlock()
+    }
+}
+
+/// One bus per process (the warmup is a singleton run).
+private let warmupProgressBus = WarmupProgressBus()
+
 /// Models dir: explicit argument, else `OMR_MODELS_DIR` (tests / CI), else the app bundle.
 @MainActor
 final class ModelWarmup: ObservableObject {
@@ -38,24 +61,49 @@ final class ModelWarmup: ObservableObject {
 
     init() {}
 
+    /// True once any warmup has completed. Tells a post-memory-warning re-warm apart from a
+    /// first-ever warmup (launch owns that; tests with fake factories must never auto-start one).
+    private(set) var hasWarmedOnce = false
+
+    /// If a warmup is in-flight, failed (retry), or due for re-warm after a memory warning, attach
+    /// `progress` to it — starting it when needed — and return true. Returns false when already
+    /// warm, so the caller proceeds with no warmup phase. Never starts a first-ever warmup.
+    func attachProgressIfNeeded(_ progress: WarmupProgressHandler) -> Bool {
+        switch state {
+        case .ready:
+            return false
+        case .warming, .failed:
+            break
+        case .idle:
+            guard hasWarmedOnce else { return false }
+        }
+        start(progress: progress)
+        return true
+    }
+
     /// Starts the warmup once (re-runs only after a failure). Returns immediately; await the task
     /// value for the report. Never blocks the caller.
+    /// `progress`, when given, is attached to the in-flight run (even one started earlier without a
+    /// watcher, e.g. at app launch) and receives weighted 0...1 step fractions from the worker thread.
     @discardableResult
-    func start(modelsDir: URL? = nil) -> Task<WarmupReport?, Never> {
+    func start(modelsDir: URL? = nil, progress: WarmupProgressHandler? = nil) -> Task<WarmupReport?, Never> {
+        if let progress { warmupProgressBus.add(progress) }
         if let task, state != .idle, !isFailed { return task }
         state = .warming
         report = nil
         let worker = Task.detached(priority: .utility) { () -> Result<WarmedModels, Error> in
-            Result { try ModelWarmup.run(modelsDir: modelsDir) }
+            Result { try ModelWarmup.run(modelsDir: modelsDir, progress: { warmupProgressBus.broadcast($0) }) }
         }
         let t = Task { [weak self] () -> WarmupReport? in
             let result = await worker.value
+            warmupProgressBus.clear()
             guard let self else { return try? result.get().report }
             switch result {
             case let .success(m):
                 self.models = m
                 self.report = m.report
                 self.state = .ready
+                self.hasWarmedOnce = true
                 return m.report
             case let .failure(error):
                 self.state = .failed(String(describing: error))
@@ -131,13 +179,34 @@ final class ModelWarmup: ObservableObject {
         subsystem: Bundle.main.bundleIdentifier ?? "com.ragnus.vp", category: "warmup"
     )
 
-    nonisolated static func run(modelsDir: URL?) throws -> WarmedModels {
+    /// Warmup step weights (sum 1) for the "Warming up… x%" bar, from iPhone17,5 timings: the
+    /// encoder CoreML session create dominates (~28 s of ~30 s). Approximate — the bar moves
+    /// monotonically through the long step rather than stalling at a step boundary.
+    nonisolated static let warmupProgressWeights: [Double] = [
+        0.015, // segnet create
+        0.04,  // segnet first run
+        0.90,  // encoder create (compiled-model cache load + CoreML init)
+        0.01,  // encoder first run
+        0.005, // vocabulary load
+        0.01,  // decoder create
+        0.02,  // decoder first run
+    ]
+
+    nonisolated static func run(modelsDir: URL?, progress: WarmupProgressHandler? = nil) throws -> WarmedModels {
         let log = Self.log
         let onMain = Thread.isMainThread
         let t0 = DispatchTime.now()
         let startMB = physFootprintMB()
         var peak = startMB
         var timings: [WarmupReport.Session] = []
+        var completedWeight = 0.0
+        var weightIndex = 0
+        func advance() {
+            guard weightIndex < Self.warmupProgressWeights.count else { return }
+            completedWeight += Self.warmupProgressWeights[weightIndex]
+            weightIndex += 1
+            progress?(min(completedWeight, 1))
+        }
         let dir = try resolveModelsDir(modelsDir)
         log.notice("warmup start: models=\(dir.path, privacy: .public) mainThread=\(onMain) footprint=\(startMB, format: .fixed(precision: 1)) MB")
         let diag = DiagnosticsLog.shared
@@ -177,6 +246,8 @@ final class ModelWarmup: ObservableObject {
             )
         }
         record("segnet", seg.provider, segCreate, segRun)
+        advance() // segnet create
+        advance() // segnet first run
 
         // Encoder fp16, CoreML EP with the app's compiled-model cache (<AppSupport>/coreml-cache/,
         // key = model SHA-256). Zero staff tile (fp32 in, EncoderSession casts to fp16).
@@ -192,10 +263,13 @@ final class ModelWarmup: ObservableObject {
             try encoder.generateContext(staffImageNormalized: Data(count: staffBytes)).castToFP32ForDecoder()
         }
         record("encoder", .coreML, encCreate, encRun, cache: encCache)
+        advance() // encoder create
+        advance() // encoder first run
 
         // Decoder fp32, CPU EP only. One BOS step over the encoder context.
         let decURL = try modelFile("decoder_", in: dir)
         let vocab = try TokenizerLoader.loadVocabulary()
+        advance() // vocabulary load
         let (decPair, decCreate) = try timed { () -> (ORTCSession, DecoderSession) in
             let b = try ORTCSession(modelURL: decURL, provider: .cpu)
             return (b, try DecoderSession(vocabulary: vocab, backend: b, provider: .cpu, modelURL: decURL))
@@ -211,6 +285,8 @@ final class ModelWarmup: ObservableObject {
             )
         }
         record("decoder", .cpu, decCreate, decRun)
+        advance() // decoder create
+        advance() // decoder first run
 
         let totalMs = ms(since: t0)
         let endMB = physFootprintMB()

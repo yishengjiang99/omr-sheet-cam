@@ -53,7 +53,7 @@ struct ResultScreen: View {
     var body: some View {
         Group {
             if outcome == nil {
-                ReadingView(image: photo.image, fraction: progress.fraction) { dismiss() }
+                ReadingView(image: photo.image, fraction: progress.fraction, warmingUp: progress.warmingUp) { dismiss() }
             } else {
                 resultList
             }

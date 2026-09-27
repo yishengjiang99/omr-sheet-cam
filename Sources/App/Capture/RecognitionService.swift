@@ -17,8 +17,17 @@ enum RecognitionOutcome: Equatable, Sendable {
     }
 }
 
-/// Recognition progress 0...1 (called from background threads).
-typealias RecognitionProgressHandler = @Sendable (Double) -> Void
+/// Recognition progress event: which phase the scan is in plus its 0...1 fraction.
+/// The parse can block on the launch warmup for ~30 s; surfacing that as a "Warming up… x%"
+/// phase (instead of a stuck "Reading music… 0%") is the whole point of the phase.
+struct ScanProgress: Sendable, Equatable {
+    /// `true` while waiting for / running the model warmup, `false` during the page parse.
+    var warmingUp: Bool
+    var fraction: Double
+}
+
+/// Recognition progress (called from background threads).
+typealias RecognitionProgressHandler = @Sendable (ScanProgress) -> Void
 
 /// Page photo (encoded JPEG / HEIC / PNG bytes; EXIF orientation honored) → MIDI. Implementations run heavy work off the main thread.
 protocol RecognitionService: Sendable {
@@ -33,23 +42,26 @@ extension RecognitionService {
     }
 }
 
-/// Scanning-screen progress ("Reading music… 42%"), updated on the main actor only; never goes down.
+/// Scanning-screen progress, updated on the main actor only; never goes down within a phase.
+/// A phase change (warming up ⇄ reading) resets the fraction — each phase runs its own 0...100%.
 @MainActor
 final class RecognitionProgress: ObservableObject {
     @Published private(set) var fraction: Double = 0
+    @Published private(set) var warmingUp: Bool = false
 
     var percent: Int { Int((fraction * 100).rounded(.down)) }
 
-    func reset() { fraction = 0 }
+    func reset() { fraction = 0; warmingUp = false }
 
-    func report(_ f: Double) {
-        let v = min(max(f, 0), 1)
+    func report(_ e: ScanProgress) {
+        if e.warmingUp != warmingUp { warmingUp = e.warmingUp; fraction = 0 }
+        let v = min(max(e.fraction, 0), 1)
         if v > fraction { fraction = v }
     }
 
     /// Handler for `RecognitionService.recognize(imageData:progress:)`: hops each report to the main actor.
     nonisolated var handler: RecognitionProgressHandler {
-        { [weak self] f in Task { @MainActor in self?.report(f) } }
+        { [weak self] e in Task { @MainActor in self?.report(e) } }
     }
 }
 

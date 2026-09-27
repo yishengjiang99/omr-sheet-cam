@@ -173,7 +173,7 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
             guard !Task.isCancelled else { return .failed("cancelled") }
             let gate = progress.map { MonotonicProgress($0) }
             let outcome = await run(imageData, progress: gate)
-            if case .recognized = outcome { gate?.report(1) }
+            if case .recognized = outcome { gate?.report(ScanProgress(warmingUp: false, fraction: 1)) }
             return outcome
         }
 
@@ -205,6 +205,14 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
                     p["session"] = "reused"
                 } else {
                     let tb = DispatchTime.now()
+                    // The parse blocks on the launch warmup here (up to ~30 s) with no pipeline
+                    // events; surface it as "Warming up… x%" instead of a stuck 0%.
+                    if let gate = progress {
+                        let warmupHandler: WarmupProgressHandler = { f in
+                            gate.report(ScanProgress(warmingUp: true, fraction: f))
+                        }
+                        _ = await ModelWarmup.shared.attachProgressIfNeeded(warmupHandler)
+                    }
                     s = try await factory()
                     session = s
                     buildCount += 1
@@ -215,7 +223,7 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
                 }
 
                 let onStage: PageParseProgressHandler? = progress.map { gate -> PageParseProgressHandler in
-                    { p in gate.report(p.fraction) }
+                    { p in gate.report(ScanProgress(warmingUp: false, fraction: p.fraction)) }
                 }
                 let parsed = try await Task.detached(priority: .userInitiated) {
                     try Timed.run {
@@ -287,19 +295,22 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
 }
 
 /// Forwards only increasing fractions (clamped to 0...1) to `handler`; thread-safe.
+/// A phase change (warming up ⇄ reading) resets the high-water mark.
 final class MonotonicProgress: @unchecked Sendable {
     private let handler: RecognitionProgressHandler
     private let lock = NSLock()
     private var last = -1.0
+    private var lastWarmingUp = false
 
     init(_ handler: @escaping RecognitionProgressHandler) { self.handler = handler }
 
-    func report(_ fraction: Double) {
-        let f = min(max(fraction, 0), 1)
+    func report(_ e: ScanProgress) {
+        let f = min(max(e.fraction, 0), 1)
         lock.lock()
+        if e.warmingUp != lastWarmingUp { last = -1; lastWarmingUp = e.warmingUp }
         guard f > last else { lock.unlock(); return }
         last = f
         lock.unlock()
-        handler(f)
+        handler(ScanProgress(warmingUp: e.warmingUp, fraction: f))
     }
 }

@@ -383,7 +383,7 @@ final class PageRecognitionServiceTests: XCTestCase {
         let parser = ProgressParser(result: Self.goodResult())
         let service = makeService(factory: { parser }, log: log)
         let got = Fractions()
-        let outcome = await service.recognize(imageData: Self.pngData()) { got.add($0) }
+        let outcome = await service.recognize(imageData: Self.pngData()) { got.add($0.fraction) }
         guard case .recognized = outcome else { return XCTFail("expected recognized, got \(outcome)") }
         let f = got.values
         XCTAssertGreaterThanOrEqual(f.count, 11, "preprocess + 6 tiles + staffs + 3 staffs: \(f)")
@@ -392,12 +392,41 @@ final class PageRecognitionServiceTests: XCTestCase {
         XCTAssertTrue(f.allSatisfy { $0 >= 0 && $0 <= 1 })
     }
 
+    /// Phase change resets the bar: "Warming up… 90%" → "Reading music… 10%", never down within a phase.
+    @MainActor
+    func testRecognitionProgressPhaseChangeResets() {
+        let m = RecognitionProgress()
+        m.report(ScanProgress(warmingUp: true, fraction: 0.9))
+        XCTAssertTrue(m.warmingUp)
+        XCTAssertEqual(m.percent, 90)
+        XCTAssertEqual(ReadingView.title(fraction: m.fraction, warmingUp: m.warmingUp), "Warming up… 90%")
+        m.report(ScanProgress(warmingUp: false, fraction: 0.1))
+        XCTAssertFalse(m.warmingUp)
+        XCTAssertEqual(m.percent, 10, "phase change must reset the bar for the new phase")
+        m.report(ScanProgress(warmingUp: false, fraction: 0.05))
+        XCTAssertEqual(m.percent, 10, "never goes down within a phase")
+        m.reset()
+        XCTAssertEqual(m.percent, 0)
+        XCTAssertFalse(m.warmingUp)
+    }
+
+    /// Monotonic gate: phase change resets the high-water mark so the parse phase restarts at 0.
+    func testMonotonicProgressResetsOnPhaseChange() {
+        var got: [ScanProgress] = []
+        let gate = MonotonicProgress { got.append($0) }
+        gate.report(ScanProgress(warmingUp: true, fraction: 0.5))
+        gate.report(ScanProgress(warmingUp: true, fraction: 0.4))
+        gate.report(ScanProgress(warmingUp: false, fraction: 0.1))
+        XCTAssertEqual(got.map(\.fraction), [0.5, 0.1])
+        XCTAssertEqual(got.map(\.warmingUp), [true, false])
+    }
+
     /// Failed parse: progress never claims 100%.
     func testFailedRecognitionDoesNotReport100() async {
         let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
         let service = makeService(factory: { FakeParser(result: nil) }, log: log)
         let got = Fractions()
-        let outcome = await service.recognize(imageData: Self.pngData()) { got.add($0) }
+        let outcome = await service.recognize(imageData: Self.pngData()) { got.add($0.fraction) }
         XCTAssertEqual(outcome.name, "failed")
         XCTAssertFalse(got.values.contains(1.0))
     }
@@ -407,19 +436,19 @@ final class PageRecognitionServiceTests: XCTestCase {
     func testRecognitionProgressModelAndLabel() async {
         let m = RecognitionProgress()
         XCTAssertEqual(m.percent, 0)
-        m.report(0.42)
+        m.report(ScanProgress(warmingUp: false, fraction: 0.42))
         XCTAssertEqual(m.percent, 42)
         XCTAssertEqual(ReadingView.title(fraction: m.fraction), "Reading music… 42%")
-        m.report(0.3)
+        m.report(ScanProgress(warmingUp: false, fraction: 0.3))
         XCTAssertEqual(m.fraction, 0.42, "never goes down")
-        m.report(1.5)
+        m.report(ScanProgress(warmingUp: false, fraction: 1.5))
         XCTAssertEqual(m.fraction, 1)
         XCTAssertEqual(ReadingView.title(fraction: m.fraction), "Reading music… 100%")
         m.reset()
         XCTAssertEqual(m.fraction, 0)
         // Background reports hop to the main actor.
         let h = m.handler
-        await Task.detached { h(0.25) }.value
+        await Task.detached { h(ScanProgress(warmingUp: false, fraction: 0.25)) }.value
         for _ in 0..<50 where m.fraction == 0 { await Task.yield() }
         XCTAssertEqual(m.fraction, 0.25)
     }
@@ -433,7 +462,7 @@ final class PageRecognitionServiceTests: XCTestCase {
         let dir = try requireModels()
         let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
         let progress = Fractions()
-        let outcome = await realService(log).recognize(imageData: data) { progress.add($0) }
+        let outcome = await realService(log).recognize(imageData: data) { progress.add($0.fraction) }
         let e = pageEvents(log).last
         let f = progress.values
         print("PageParse sample ode-to-joy progress (\(f.count) reports): \(f.map { String(format: "%.2f", $0) }.joined(separator: " "))")

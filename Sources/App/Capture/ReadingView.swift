@@ -7,11 +7,13 @@ struct ReadingView: View {
     let image: UIImage
     /// Recognition progress 0...1 (`RecognitionProgress.fraction`).
     var fraction: Double = 0
+    /// `true` while the scan is blocked on the model warmup ("Warming up… x%").
+    var warmingUp: Bool = false
     var onCancel: () -> Void
 
-    /// "Reading music… 42%".
-    static func title(fraction: Double) -> String {
-        "Reading music… \(Int((min(max(fraction, 0), 1) * 100).rounded(.down)))%"
+    /// "Reading music… 42%" / "Warming up… 42%".
+    static func title(fraction: Double, warmingUp: Bool = false) -> String {
+        "\(warmingUp ? "Warming up" : "Reading music")… \(Int((min(max(fraction, 0), 1) * 100).rounded(.down)))%"
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -65,7 +67,7 @@ struct ReadingView: View {
     private var card: some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(Self.title(fraction: fraction))
+                Text(Self.title(fraction: fraction, warmingUp: warmingUp))
                     .font(.title3.weight(.bold))
                     .monospacedDigit()
                     .accessibilityIdentifier("reading.percent")
@@ -73,7 +75,8 @@ struct ReadingView: View {
                     .progressViewStyle(.linear)
                     .tint(Theme.coral)
                     .animation(.easeOut(duration: 0.25), value: fraction)
-                Text("This usually takes a few seconds").font(.subheadline).foregroundStyle(.white.opacity(0.7))
+                Text(warmingUp ? "One-time setup — loading the music models on your iPhone" : "This usually takes a few seconds")
+                    .font(.subheadline).foregroundStyle(.white.opacity(0.7))
             }
             Label("Read on your iPhone. No internet needed.", systemImage: "lock.fill")
                 .font(.footnote)
