@@ -73,6 +73,10 @@ public final class PageInferenceSession: @unchecked Sendable {
         mark("preprocess")
         let seg = try PagePipeline.segment(page, segnet: segnet)
         mark("segnet")
+        // SegNet sub-stage split (device diagnostics; flows into Copy-as-prompt stages).
+        timings.append(.init(stage: "segnet_pack", ms: segnet.lastPackMs))
+        timings.append(.init(stage: "segnet_run", ms: segnet.lastRunMs))
+        timings.append(.init(stage: "segnet_argmax", ms: segnet.lastArgmaxMs))
         let layout = try PagePipeline.detectStaffs(segmentation: seg, width: page.width, height: page.height)
         mark("staffs")
         let image = PagePipeline.maskedPage(page.preprocessed, noiseMask: layout.noiseMask)

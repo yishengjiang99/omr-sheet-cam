@@ -29,12 +29,26 @@ public final class SegNetSession: @unchecked Sendable {
     public static let coreMLLegacyFlags: UInt32 = 0x000
 
     public let backend: ORTSessionBackend
-    /// Tiles per `run` (homr: 8). Results do not depend on it (tiles are independent).
+    /// Tiles per `run`. Results do not depend on it (tiles are independent).
     public let tilesPerRun: Int
+
+    /// homr runs 8 tiles per SegNet batch (`ort_session.run` over a batch of 8).
+    public static let batchSize = 8
+    /// Production tiles per SegNet dispatch. Result-identical to any batch size (tiles are inferred
+    /// independently); larger batches amortize CoreML dispatch overhead on device. 32 keeps transient
+    /// memory modest (~57 MB: 19 MB fp16 input + 38 MB fp16 output).
+    public static let productionTilesPerRun = 32
+
+    /// Sub-timings (ms) of the last `segment()` call, for device diagnostics. Reset each call.
+    public private(set) var lastPackMs: Double = 0
+    public private(set) var lastRunMs: Double = 0
+    public private(set) var lastArgmaxMs: Double = 0
+    public private(set) var lastTileCount: Int = 0
+    public private(set) var lastBatchCount: Int = 0
 
     /// `backend`: the pinned SegNet fp16 model (`segnet_308-…_fp16.onnx`), `.coreML` (CPU fallback) on
     /// iOS, `.cpu` elsewhere.
-    public init(backend: ORTSessionBackend, tilesPerRun: Int = SegNetSession.batchSize) {
+    public init(backend: ORTSessionBackend, tilesPerRun: Int = SegNetSession.productionTilesPerRun) {
         precondition(tilesPerRun >= 1)
         self.backend = backend
         self.tilesPerRun = tilesPerRun
@@ -67,19 +81,25 @@ public final class SegNetSession: @unchecked Sendable {
     static let floatOfHalf: [Float] = (0..<65536).map { EncoderContext.float32(fromFloat16Bits: UInt16($0)) }
 
     /// Run SegNet on 320x320 windows of a gray page and return one argmax map (uint8, 320*320) per origin.
+    /// The short last batch is padded with repeats of its last tile so every dispatch has the same
+    /// `[tilesPerRun, 3, 320, 320]` shape (avoids ANE dynamic-shape recompiles); padded outputs are
+    /// discarded. Records `last*Ms` sub-timings for diagnostics.
     func runTiles(_ page: UnsafeBufferPointer<UInt8>, width w: Int, height h: Int,
                   origins: [(y: Int, x: Int)], each: (Int, [UInt8]) throws -> Void) throws {
         let win = Self.windowSize
         let plane = win * win
+        let batch = tilesPerRun
+        var packMs = 0.0, runMs = 0.0, argmaxMs = 0.0, batches = 0
         var start = 0
         while start < origins.count {
-            let n = min(tilesPerRun, origins.count - start)
-            var input = Data(count: n * 3 * plane * 2)
+            let n = min(batch, origins.count - start)
+            let t0 = ProcessInfo.processInfo.systemUptime
+            var input = Data(count: batch * 3 * plane * 2)
             input.withUnsafeMutableBytes { raw in
                 let dst = raw.bindMemory(to: UInt16.self)
                 let white = Self.halfOfByte[255]
-                for b in 0..<n {
-                    let (y, x) = origins[start + b]
+                for b in 0..<batch {
+                    let (y, x) = origins[start + min(b, n - 1)]
                     // extract_patch: 255-filled window, image part copied to its top-left
                     let y0 = max(y, 0), x0 = max(x, 0)
                     let y1 = min(y + win, h), x1 = min(x + win, w)
@@ -98,20 +118,22 @@ public final class SegNetSession: @unchecked Sendable {
                     }
                 }
             }
-            let tensor = ORTTensor(type: .float16, shape: [n, 3, win, win], data: input)
+            let t1 = ProcessInfo.processInfo.systemUptime
+            let tensor = ORTTensor(type: .float16, shape: [batch, 3, win, win], data: input)
             let outs = try backend.run(inputs: [Self.inputName: tensor], outputNames: [Self.outputName])
+            let t2 = ProcessInfo.processInfo.systemUptime
             guard let out = outs[Self.outputName] else {
                 throw OMRError.sessionNotConfigured("SegNet returned no '\(Self.outputName)' tensor")
             }
-            let expected = n * Self.classCount * plane * 2
+            let expected = batch * Self.classCount * plane * 2
             guard out.type == .float16, out.data.count == expected else {
                 throw OMRError.sessionNotConfigured(
-                    "SegNet output \(out.type) \(out.shape) (\(out.data.count) B), expected fp16 [\(n),6,320,320]")
+                    "SegNet output \(out.type) \(out.shape) (\(out.data.count) B), expected fp16 [\(batch),6,320,320]")
             }
             try out.data.withUnsafeBytes { raw in
                 let src = raw.bindMemory(to: UInt16.self)
                 try Self.floatOfHalf.withUnsafeBufferPointer { f in
-                    for b in 0..<n {
+                    for b in 0..<batch {
                         var am = [UInt8](repeating: 0, count: plane)
                         let base = b * Self.classCount * plane
                         for i in 0..<plane {
@@ -127,18 +149,29 @@ public final class SegNetSession: @unchecked Sendable {
                             }
                             am[i] = UInt8(bi)
                         }
-                        try each(start + b, am)
+                        if b < n { try each(start + b, am) }
                     }
                 }
             }
+            let t3 = ProcessInfo.processInfo.systemUptime
+            packMs += (t1 - t0) * 1000
+            runMs += (t2 - t1) * 1000
+            argmaxMs += (t3 - t2) * 1000
+            batches += 1
             start += n
         }
+        lastPackMs = packMs
+        lastRunMs = runMs
+        lastArgmaxMs = argmaxMs
+        lastTileCount = origins.count
+        lastBatchCount = batches
     }
 
     /// `inference(...)` up to `merge_patches`: merged class map (uint8 0..5, width*height).
     /// Memory: two page-sized uint8 accumulators; tiles are merged as they arrive.
     public func segment(preprocessed page: [UInt8], width w: Int, height h: Int) throws -> [UInt8] {
         precondition(page.count == w * h)
+        lastPackMs = 0; lastRunMs = 0; lastArgmaxMs = 0; lastTileCount = 0; lastBatchCount = 0
         let win = Self.windowSize
         let origins = Self.tileOrigins(width: w, height: h)
         var sum = [UInt8](repeating: 0, count: w * h)

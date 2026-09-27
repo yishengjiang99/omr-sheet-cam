@@ -1,6 +1,8 @@
 # Plan: cut SegNet stage time (tile batching + CPU overhead)
 
-_Status: proposed 2026-09-27, not yet implemented. Do not implement until the user approves._
+_Status: implemented 2026-09-27 — Step 1 (instrumentation) + Step 2a (batch 32 with last-batch
+padding) shipped together. Awaiting device numbers from Copy-as-prompt
+(`segnet_pack`/`segnet_run`/`segnet_argmax`) before deciding on Step 2b (CPU vectorization)._
 
 ## Why
 
