@@ -1,5 +1,5 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-09-26 PT by OMR iOS_
+_Last updated: 2026-09-27 PT by OMR iOS_
 
 Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`.
 
@@ -8,6 +8,17 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - MIDI: SMF format 1, 480 TPQ
 - AGPL package `Packages/omr-homr-ios` stays isolated from the app
 - Apple ORT SPM pinned `exact: "1.24.2"`
+
+## Suggested next steps (2026-09-27 — recognition now ON by default)
+Ordered by what unblocks the TestFlight testers first:
+- [ ] TestFlight build 7 off `main` (`36f75c0`: gate on + SheetCam name): confirm VALID, install on the real iPhone — the gate flip only takes effect in a new build — OMR iOS
+- [ ] Real-device page parse verdict (decides whether the gate stays on): 3–5 real sheet photos → parse time + peak `phys_footprint` from Copy as prompt (Linux CPU ~1.3 GB; jetsam risk on device); pass/fail per photo — OMR iOS + User
+- [ ] First-launch warmup on device: cold vs warm CoreML compile ms for encoder + SegNet (sim was 11.4 s cold); if the Scan screen sits dead during warmup, add a progress indicator — OMR iOS
+- [ ] Real-photo accuracy spot check: recognized notes vs the actual sheet for 2–3 photos; if systematically off, file it against the color-preprocessing gap (app grays first; upstream homr autocrops on BGR, resizes in color, then grays + CLAHEs) — OMR Core
+- [ ] Failed-parse UX: "Couldn't read this page" should say why when we know (no staff found vs no notes) + guidance (fill the frame, flatten the page, more light) — OMR iOS
+- [ ] Note highlighting: unblock `noteLayout.pageRect` (OMR Core) → draw boxes on Result instead of the MIDI fallback layout — OMR Core + OMR iOS
+- [ ] Regression fixtures (from the 2026-09-27 audit): tuplet cumulative-rounding drift, key signatures + accidental carry, multi-row/grand-staff timing and track semantics — OMR Core
+- [ ] ASC screenshots from the shipping consumer UI (1320x2868), upload via workflow, no submit — OMR iOS
 
 ## Now (in progress)
 - [ ] TestFlight build 4 in internal testing: Run Gate-1 (npy + png) + warmup diagnostics — OMR iOS — `c2950ae`, run 36265488038, VALID 12:21 PM PT
