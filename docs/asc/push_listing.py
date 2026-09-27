@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Push docs/asc/LISTING.md + docs/asc/screenshots/*.png to App Store Connect.
+"""Push docs/asc/LISTING.md + docs/asc/screenshots/en-US/*.png to App Store Connect.
+
+Superseded by .github/workflows/asc-music-reader-upload.yml (scripts/asc/upload_music_reader_listing.py).
 
 App: AI Camera - Music Reader (Apple ID 6816476323, com.ragnus.vp), version 1.0, en-US.
 Never submits for review.
@@ -112,7 +114,7 @@ def main():
         return
     sets = api("GET", f"/v1/appStoreVersionLocalizations/{vloc['id']}/appScreenshotSets")["data"]
     for prefix, dtype in SHOT_TYPES.items():
-        files = sorted((HERE / "screenshots").glob(f"{prefix}-*.png"))
+        files = sorted((HERE / "screenshots" / "en-US").glob(f"{prefix}-*.png"))
         if not files:
             continue
         sset = next((s for s in sets if s["attributes"]["screenshotDisplayType"] == dtype), None)
