@@ -30,7 +30,7 @@ struct RootFlowView: View {
                 case let .player(p):
                     PlayerDestination.view(for: p)
                 case .library:
-                    LibraryScreen(onOpenPlayer: { openNowPlaying() }) { entry in
+                    LibraryScreen(onOpenPlayer: { openNowPlaying() }, onTrySample: { trySample() }) { entry in
                         path.append(.player(PlayerRoute(entry: entry)))
                     }
                 }
@@ -38,6 +38,19 @@ struct RootFlowView: View {
         }
         .tint(Theme.coral)
         .sheet(isPresented: $showSettings) { SettingsView().environmentObject(playback) }
+    }
+
+    /// Empty-library "Try sample picture": same Result/recognition flow as a camera or Photos pick.
+    private func trySample() {
+        Task { @MainActor in
+            do {
+                let photo = try await SamplePicture.photo()
+                DiagnosticsLog.shared.record(.info, .capture, "Try sample picture (library): sweden.jpg")
+                path.append(.result(photo))
+            } catch {
+                DiagnosticsLog.shared.record(error: error, category: .capture, context: "Try sample picture (library)")
+            }
+        }
     }
 
     /// Mini-player tap: show the Player on whatever is loaded (without reloading it).

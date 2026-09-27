@@ -239,6 +239,19 @@ final class PageRecognitionServiceTests: XCTestCase {
         XCTAssertTrue((AppServices.recognition as? GatedRecognitionService)?.real is PageRecognitionService)
     }
 
+    /// "Try sample picture": sweden.jpg is bundled and decodes to an upright page photo that
+    /// the Result flow can feed to `AppServices.recognition`.
+    func testTrySamplePictureIsBundledAndDecodes() async throws {
+        XCTAssertEqual(SamplePicture.buttonTitle, "Try sample picture")
+        let data = try SamplePicture.data()
+        XCTAssertGreaterThan(data.count, 100_000)
+        let photo = try await SamplePicture.photo()
+        XCTAssertEqual(photo.source, .sample)
+        XCTAssertEqual(photo.image.imageOrientation, .up)
+        XCTAssertGreaterThan(photo.image.size.height, photo.image.size.width, "portrait page photo")
+        XCTAssertGreaterThanOrEqual(min(photo.image.size.width, photo.image.size.height) * photo.image.scale, 768)
+    }
+
     // MARK: - Real models (simulator CI): app path vs homr oracle pages
 
     /// `fixtures/oracle.pages/<id>/stages.json` (homr 7d97c3c): input image, staffs, voices.

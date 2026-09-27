@@ -4,7 +4,8 @@ import PhotosUI
 import SwiftUI
 
 /// Scan (home, redesign 01-scan): live camera (when available + authorized), tap-to-focus,
-/// Settings (gear) and torch on top, Photos · shutter · Library at the bottom. Hands an upright
+/// Settings (gear) and torch on top, Photos · shutter · Library at the bottom, with a
+/// "Try sample picture" button (bundled Sweden page) just above them. Hands an upright
 /// `CapturedPhoto` to `onPhoto`. The app-wide mini-player shows above the controls while
 /// something is loaded.
 struct CameraScreen: View {
@@ -18,6 +19,7 @@ struct CameraScreen: View {
     @State private var focusPoint: CGPoint?
     @State private var pickerItem: PhotosPickerItem?
     @State private var loadingPick = false
+    @State private var loadingSample = false
     @State private var error: String?
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
@@ -44,6 +46,8 @@ struct CameraScreen: View {
                         .padding(.bottom, 8)
                         .environment(\.colorScheme, .light)
                 }
+                sampleButton
+                    .padding(.bottom, 12)
                 controls
             }
         }
@@ -146,6 +150,20 @@ struct CameraScreen: View {
         .accessibilityLabel(label)
     }
 
+    /// "Try sample picture": runs the bundled Sweden photo through the same flow as a Photos pick.
+    private var sampleButton: some View {
+        Button(action: trySample) {
+            Label(SamplePicture.buttonTitle, systemImage: "music.note")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16).padding(.vertical, 9)
+                .background(.black.opacity(0.35), in: Capsule())
+                .overlay(Capsule().stroke(.white.opacity(0.25)))
+        }
+        .disabled(loadingSample || loadingPick)
+        .accessibilityIdentifier("scan.trySample")
+    }
+
     private var controls: some View {
         HStack(alignment: .center) {
             PhotosPicker(selection: $pickerItem, matching: .images, photoLibrary: .shared()) {
@@ -204,6 +222,22 @@ struct CameraScreen: View {
             case let .failure(e):
                 error = "Capture failed: \(e)"
                 DiagnosticsLog.shared.record(error: e, category: .capture, context: "photo capture")
+            }
+        }
+    }
+
+    private func trySample() {
+        loadingSample = true
+        error = nil
+        Task {
+            defer { loadingSample = false }
+            do {
+                let photo = try await SamplePicture.photo()
+                DiagnosticsLog.shared.record(.info, .capture, "Try sample picture: sweden.jpg")
+                onPhoto(photo)
+            } catch {
+                self.error = "Could not load the sample picture"
+                DiagnosticsLog.shared.record(error: error, category: .capture, context: "Try sample picture")
             }
         }
     }

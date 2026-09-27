@@ -56,11 +56,49 @@ enum CaptureStore {
 
 /// A captured or picked photo, already upright. Identity-based so it can be a navigation value.
 struct CapturedPhoto: Hashable, Identifiable {
-    enum Source: String { case camera, library }
+    enum Source: String { case camera, library, sample }
     let id = UUID()
     let image: UIImage
     let source: Source
 
     static func == (a: CapturedPhoto, b: CapturedPhoto) -> Bool { a.id == b.id }
     func hash(into h: inout Hasher) { h.combine(id) }
+}
+
+/// "Try sample picture": the bundled photo of the Sweden piano sheet music
+/// (`fixtures/samples/sweden.jpg`, bundled at the app root as `sweden.jpg`). Loaded exactly like a
+/// Photos pick (decode + `normalizedUpright`) and handed to the same `onPhoto` → `ResultScreen`
+/// recognition flow, so the result lands in the Library like any other scan.
+enum SamplePicture {
+    static let buttonTitle = "Try sample picture"
+    static let resourceName = "sweden"
+    static let resourceExtension = "jpg"
+
+    enum LoadError: Error, CustomStringConvertible {
+        case missing, unreadable
+        var description: String {
+            switch self {
+            case .missing: return "sample picture sweden.jpg is not bundled"
+            case .unreadable: return "sample picture sweden.jpg could not be decoded"
+            }
+        }
+    }
+
+    /// Encoded JPEG bytes of the bundled sample picture.
+    static func data(bundle: Bundle = .main) throws -> Data {
+        guard let url = bundle.url(forResource: resourceName, withExtension: resourceExtension) else {
+            throw LoadError.missing
+        }
+        return try Data(contentsOf: url)
+    }
+
+    /// The sample as an upright `CapturedPhoto` (decoded off the main thread, like a Photos pick).
+    static func photo(bundle: Bundle = .main) async throws -> CapturedPhoto {
+        let data = try data(bundle: bundle)
+        let image = await Task.detached(priority: .userInitiated) { () -> UIImage? in
+            UIImage(data: data).map(CaptureStore.normalizedUpright)
+        }.value
+        guard let image else { throw LoadError.unreadable }
+        return CapturedPhoto(image: image, source: .sample)
+    }
 }

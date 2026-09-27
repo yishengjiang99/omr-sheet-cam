@@ -10,6 +10,8 @@ struct LibraryScreen: View {
     var showsMiniPlayer = true
     var onSelect: (PlaylistEntry) -> Void
     var onOpenPlayer: (() -> Void)?
+    /// Empty-library "Try sample picture" (nil hides it, e.g. the Player's library sheet).
+    var onTrySample: (() -> Void)?
 
     @State private var query = ""
     @State private var deleteError: String?
@@ -17,10 +19,14 @@ struct LibraryScreen: View {
     @State private var renameText = ""
 
     @MainActor
-    init(showsMiniPlayer: Bool = true, onOpenPlayer: (() -> Void)? = nil, onSelect: @escaping (PlaylistEntry) -> Void) {
+    init(
+        showsMiniPlayer: Bool = true, onOpenPlayer: (() -> Void)? = nil, onTrySample: (() -> Void)? = nil,
+        onSelect: @escaping (PlaylistEntry) -> Void
+    ) {
         _store = ObservedObject(wrappedValue: PlaylistStore.shared)
         self.showsMiniPlayer = showsMiniPlayer
         self.onOpenPlayer = onOpenPlayer
+        self.onTrySample = onTrySample
         self.onSelect = onSelect
     }
 
@@ -34,6 +40,14 @@ struct LibraryScreen: View {
                 if scans.isEmpty {
                     Text(query.isEmpty ? "No scans yet. Scan a page and it shows up here." : "No scans match “\(query)”.")
                         .font(.subheadline).foregroundStyle(.secondary)
+                    if query.isEmpty, let onTrySample {
+                        Button(action: onTrySample) {
+                            Label(SamplePicture.buttonTitle, systemImage: "music.note")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .foregroundStyle(Theme.coral)
+                        .accessibilityIdentifier("library.trySample")
+                    }
                 }
                 ForEach(scans) { e in
                     row(e)
