@@ -71,6 +71,9 @@ jobs:
             -project OMRSheetCam.xcodeproj \
             -scheme OMRSheetCam \
             -destination "${{ steps.sim.outputs.destination }}" \
+            -only-testing:OMRSheetCamTests/Gate1StaffTokenMatchTests \
+            -only-testing:OMRSheetCamTests/ModelWarmupTests \
+            -only-testing:OMRSheetCamTests/PageRecognitionServiceTests \
             -resultBundlePath "$RUNNER_TEMP/OMRSheetCam.xcresult" \
             CODE_SIGNING_ALLOWED=NO \
             | tee "$RUNNER_TEMP/xcodebuild.log"
