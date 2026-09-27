@@ -27,13 +27,13 @@ struct StubRecognitionService: RecognitionService {
     func recognize(imageData: Data) async -> RecognitionOutcome { .comingSoon }
 }
 
-/// Page recognition gate. OFF: a capture shows "Recognition coming soon" (the page path is never
-/// called). ON: the real `PageRecognitionService`. Developers override it in Settings → Developer →
-/// "Experimental page recognition" (UserDefaults `key`); everyone else gets `defaultEnabled`.
+/// Page recognition gate. ON: the real `PageRecognitionService` runs on every capture.
+/// Developers can still override it in Settings → Developer →
+/// "Experimental page recognition" (UserDefaults `key`).
 enum RecognitionGate {
-    /// THE switch: set to `true` to turn page recognition on for everyone (once SegNet on the CoreML
-    /// EP is fixed in OMRHomrIOS and green on ios-sim).
-    static let defaultEnabled = false
+    /// THE switch: `true` = page recognition on for everyone. Turned on 2026-09-27:
+    /// SegNet on the CoreML EP is fixed in OMRHomrIOS and green on ios-sim (12/12 Gate-1).
+    static let defaultEnabled = true
 
     static let key = "developer.experimentalPageRecognition"
 
