@@ -32,9 +32,10 @@ public final class SegNetSession: @unchecked Sendable {
     /// Tiles per `run`. Results do not depend on it (tiles are independent).
     public let tilesPerRun: Int
 
-    /// Production tiles per SegNet dispatch. Result-identical to any batch size (tiles are inferred
-    /// independently); larger batches amortize CoreML dispatch overhead on device. 32 keeps transient
-    /// memory modest (~57 MB: 19 MB fp16 input + 38 MB fp16 output).
+    /// Production batch size measured on device (iPhone17,5, 2026-09-27): 32 tiles/dispatch ran
+    /// ~10x slower per tile than 8 (segnet_run 13.8s for 20 tiles vs ~1.5s at batch 8 on the same
+    /// 1170x1431 photo; consistent across two runs, so not a one-time compile — the ANE executes
+    /// the [32,3,320,320] shape pathologically slowly). Kept for reference; do not use.
     public static let productionTilesPerRun = 32
 
     /// Sub-timings (ms) of the last `segment()` call, for device diagnostics. Reset each call.
@@ -46,7 +47,7 @@ public final class SegNetSession: @unchecked Sendable {
 
     /// `backend`: the pinned SegNet fp16 model (`segnet_308-…_fp16.onnx`), `.coreML` (CPU fallback) on
     /// iOS, `.cpu` elsewhere.
-    public init(backend: ORTSessionBackend, tilesPerRun: Int = SegNetSession.productionTilesPerRun) {
+    public init(backend: ORTSessionBackend, tilesPerRun: Int = SegNetSession.batchSize) {
         precondition(tilesPerRun >= 1)
         self.backend = backend
         self.tilesPerRun = tilesPerRun

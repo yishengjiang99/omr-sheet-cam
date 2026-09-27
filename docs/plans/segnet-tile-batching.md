@@ -4,6 +4,22 @@ _Status: implemented 2026-09-27 — Step 1 (instrumentation) + Step 2a (batch 32
 padding) shipped together. Awaiting device numbers from Copy-as-prompt
 (`segnet_pack`/`segnet_run`/`segnet_argmax`) before deciding on Step 2b (CPU vectorization)._
 
+## Device benchmark result (iPhone17,5, 2026-09-27, build 8)
+
+Same 1170×1431 photo (20 tiles), two runs each:
+
+| batch | segnet_run | verdict |
+|---|---|---|
+| 8 (build 7) | ~1.5s (inferred from 22s total) | baseline |
+| 32 (build 8) | 13,990ms → 13,795ms | **~10x slower per tile, consistent across runs** |
+
+Not a one-time compile (second run identical) — the ANE executes the `[32,3,320,320]`
+shape pathologically slowly. Split also measured: pack=9ms, argmax=34–37ms, i.e. CPU work
+is negligible → **Step 2b (vectorization) cancelled, not worth building.**
+Default reverted to 8 (`SegNetSession.batchSize`); `productionTilesPerRun` kept as a
+do-not-use reference with the measurement noted. Batch 16 untested — possible future
+experiment, needs a device run to judge.
+
 ## Why
 
 Device log (iPhone17,5, app v1.0 build 7, 4284×5712 photo, 2 staves):
