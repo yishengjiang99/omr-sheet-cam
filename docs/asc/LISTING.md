@@ -69,6 +69,15 @@ https://grepawk.com/music-reader/support.html
 https://grepawk.com/music-reader/privacy.html
 ```
 
+## Terms of Use URL
+```
+https://grepawk.com/music-reader/terms.html
+```
+
+Not an App Store Connect field. The privacy and support pages link to it.
+The page says Apple's standard Licensed Application EULA also applies, so the
+listing does not upload a custom license agreement.
+
 ## Copyright
 ```
 2026 Yisheng Jiang
@@ -84,7 +93,7 @@ Early build. The app opens a diagnostics screen: it loads the bundled recognitio
 ```
 
 ## URLs: publishing status
-Both pages are live on grepawk.com (HTTP 200, mention "Music Reader"). Marketing URL: blank.
+Privacy, support, and terms pages are live on grepawk.com (HTTP 200). Marketing URL: blank. Terms of Use is not sent as a custom EULA.
 
 ## App Privacy
 No network calls, no analytics, no IAP: "Data Not Collected". The public ASC API has no endpoint for
