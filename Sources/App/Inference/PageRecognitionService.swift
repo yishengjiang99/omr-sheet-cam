@@ -208,8 +208,8 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
                     // The parse blocks on the launch warmup here (up to ~30 s) with no pipeline
                     // events; surface it as "Warming up… x%" instead of a stuck 0%.
                     if let gate = progress {
-                        let warmupHandler: WarmupProgressHandler = { f in
-                            gate.report(ScanProgress(warmingUp: true, fraction: f))
+                        let warmupHandler: WarmupProgressHandler = { p in
+                            gate.report(ScanProgress(warmingUp: true, fraction: p.fraction, etaSeconds: p.etaSeconds))
                         }
                         _ = await ModelWarmup.shared.attachProgressIfNeeded(warmupHandler)
                     }
@@ -311,6 +311,6 @@ final class MonotonicProgress: @unchecked Sendable {
         guard f > last else { lock.unlock(); return }
         last = f
         lock.unlock()
-        handler(ScanProgress(warmingUp: e.warmingUp, fraction: f))
+        handler(ScanProgress(warmingUp: e.warmingUp, fraction: f, etaSeconds: e.etaSeconds))
     }
 }

@@ -18,22 +18,39 @@ import os
 ///   and provider, `phys_footprint` MB after each session, total ms and peak MB.
 ///
 /// Warmup step progress 0...1, called from the warmup worker thread.
-typealias WarmupProgressHandler = @Sendable (Double) -> Void
+/// The payload carries a simple ETA (seconds remaining, estimated from the previous warmup's
+/// total; nil when unknown). A plain estimate is fine — what matters is that the bar keeps
+/// moving and the ETA ticks down during the long steps.
+struct WarmupProgress: Sendable, Equatable {
+    var fraction: Double
+    var etaSeconds: Double?
+}
+/// Called from a background thread; the call site hops to the main actor as needed.
+typealias WarmupProgressHandler = @Sendable (WarmupProgress) -> Void
 
 /// Thread-safe multicast for warmup progress: the launch warmup starts without a watcher, and a
 /// scan that arrives mid-warmup attaches its handler to the in-flight run.
 private final class WarmupProgressBus: @unchecked Sendable {
     private let lock = NSLock()
     private var handlers: [WarmupProgressHandler] = []
+    /// Last broadcast, replayed to handlers attached mid-run so a scan that starts during the
+    /// warmup flips to "Warming up…" immediately instead of sitting at "Reading music… 0%"
+    /// until the next step boundary.
+    private var last = WarmupProgress(fraction: 0, etaSeconds: nil)
     func add(_ h: @escaping WarmupProgressHandler) {
-        lock.lock(); handlers.append(h); lock.unlock()
+        lock.lock(); handlers.append(h); let cur = last; lock.unlock()
+        h(cur)
     }
-    func broadcast(_ f: Double) {
-        lock.lock(); let hs = handlers; lock.unlock()
-        for h in hs { h(f) }
+    func broadcast(_ p: WarmupProgress) {
+        lock.lock(); last = p; let hs = handlers; lock.unlock()
+        for h in hs { h(p) }
     }
     func clear() {
-        lock.lock(); handlers.removeAll(); lock.unlock()
+        lock.lock(); handlers.removeAll(); last = WarmupProgress(fraction: 0, etaSeconds: nil); lock.unlock()
+    }
+    /// Drop a stale `last` when a fresh run begins (retry after failure); handlers re-attach after.
+    func reset() {
+        lock.lock(); last = WarmupProgress(fraction: 0, etaSeconds: nil); lock.unlock()
     }
 }
 
@@ -87,8 +104,15 @@ final class ModelWarmup: ObservableObject {
     /// watcher, e.g. at app launch) and receives weighted 0...1 step fractions from the worker thread.
     @discardableResult
     func start(modelsDir: URL? = nil, progress: WarmupProgressHandler? = nil) -> Task<WarmupReport?, Never> {
+        if let task, state != .idle, !isFailed {
+            // Attach to the in-flight run: the bus replays the current fraction immediately.
+            if let progress { warmupProgressBus.add(progress) }
+            return task
+        }
+        // Fresh run (first, retry, or post-memory-warning re-warm): drop any stale fraction
+        // before attaching, so a late attacher never latches onto the previous run's ~95%.
+        warmupProgressBus.reset()
         if let progress { warmupProgressBus.add(progress) }
-        if let task, state != .idle, !isFailed { return task }
         state = .warming
         report = nil
         let worker = Task.detached(priority: .utility) { () -> Result<WarmedModels, Error> in
@@ -180,8 +204,9 @@ final class ModelWarmup: ObservableObject {
     )
 
     /// Warmup step weights (sum 1) for the "Warming up… x%" bar, from iPhone17,5 timings: the
-    /// encoder CoreML session create dominates (~28 s of ~30 s). Approximate — the bar moves
-    /// monotonically through the long step rather than stalling at a step boundary.
+    /// encoder CoreML session create dominates (~32 s of ~40 s). The encoder-create step is
+    /// additionally interpolated by a 0.5 s ticker so the bar moves monotonically through the
+    /// long step instead of stalling at a step boundary.
     nonisolated static let warmupProgressWeights: [Double] = [
         0.015, // segnet create
         0.04,  // segnet first run
@@ -201,11 +226,19 @@ final class ModelWarmup: ObservableObject {
         var timings: [WarmupReport.Session] = []
         var completedWeight = 0.0
         var weightIndex = 0
+        // Simple ETA, self-calibrating per device: the last warmup's total, smoothed.
+        // Nominal 40 s before the first warmup ever completes.
+        var expectedTotalMs = UserDefaults.standard.double(forKey: "omr.warmup.expectedTotalMs")
+        if expectedTotalMs <= 0 { expectedTotalMs = 40_000 }
+        func etaSeconds() -> Double {
+            let elapsedMs = Double(DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds) / 1_000_000
+            return max(0, expectedTotalMs - elapsedMs) / 1_000
+        }
         func advance() {
             guard weightIndex < Self.warmupProgressWeights.count else { return }
             completedWeight += Self.warmupProgressWeights[weightIndex]
             weightIndex += 1
-            progress?(min(completedWeight, 1))
+            progress?(WarmupProgress(fraction: min(completedWeight, 1), etaSeconds: etaSeconds()))
         }
         let dir = try resolveModelsDir(modelsDir)
         log.notice("warmup start: models=\(dir.path, privacy: .public) mainThread=\(onMain) footprint=\(startMB, format: .fixed(precision: 1)) MB")
@@ -253,10 +286,33 @@ final class ModelWarmup: ObservableObject {
         // key = model SHA-256). Zero staff tile (fp32 in, EncoderSession casts to fp16).
         let encURL = try modelFile("encoder_", in: dir)
         var encCache = EncoderCacheInfo()
+        // The encoder create is ~90% of the bar and ~30 s of silence: tick the fraction toward
+        // the end of its weight every 0.5 s (and tick the ETA down) instead of stalling at 5%.
+        // The ticker never completes the step — the real advance() below does that — and the
+        // UI only accepts increasing fractions, so a late tick can never move the bar backward.
+        let encStepBase = completedWeight
+        let encStepWeight = Self.warmupProgressWeights[weightIndex]
+        var expectedEncMs = UserDefaults.standard.double(forKey: "omr.warmup.expectedEncoderCreateMs")
+        if expectedEncMs <= 0 { expectedEncMs = 32_000 }
+        let encStepT0 = DispatchTime.now()
+        let encTicker = Task.detached { [progress, t0, expectedTotalMs, encStepT0, expectedEncMs, encStepBase, encStepWeight] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                guard !Task.isCancelled else { break }
+                let now = DispatchTime.now()
+                let stepMs = Double(now.uptimeNanoseconds - encStepT0.uptimeNanoseconds) / 1_000_000
+                let totalMs = Double(now.uptimeNanoseconds - t0.uptimeNanoseconds) / 1_000_000
+                let k = min(stepMs / expectedEncMs, 0.97)
+                progress?(WarmupProgress(
+                    fraction: min(encStepBase + encStepWeight * k, 1),
+                    etaSeconds: max(0, expectedTotalMs - totalMs) / 1_000))
+            }
+        }
         let (encPair, encCreate) = try timed { () -> (ORTCSession, EncoderSession) in
             let b = try openCachedEncoder(encURL, info: &encCache)
             return (b, try EncoderSession(backend: b, provider: .coreMLFP16, inputElementType: .float16, modelURL: encURL))
         }
+        encTicker.cancel()
         let (encBackend, encoder) = encPair
         let staffBytes = StaffInputSpec.nchwShape.reduce(1, *) * 4
         let (context, encRun) = try timed {
@@ -299,6 +355,13 @@ final class ModelWarmup: ObservableObject {
                       "end_mb": String(format: "%.1f", endMB), "peak_mb": String(format: "%.1f", peak),
                       "providers": providers.joined(separator: " "), "ort": ORTCSession.runtimeVersion]
         )
+        // Self-calibrating ETA for the next launch (exponentially smoothed against outliers).
+        let ud = UserDefaults.standard
+        let prevTotal = ud.double(forKey: "omr.warmup.expectedTotalMs")
+        ud.set(prevTotal > 0 ? 0.7 * prevTotal + 0.3 * totalMs : totalMs, forKey: "omr.warmup.expectedTotalMs")
+        let prevEnc = ud.double(forKey: "omr.warmup.expectedEncoderCreateMs")
+        ud.set(prevEnc > 0 ? 0.7 * prevEnc + 0.3 * encCreate : encCreate, forKey: "omr.warmup.expectedEncoderCreateMs")
+
         let report = WarmupReport(
             sessions: timings, totalMs: totalMs, startMB: startMB, endMB: endMB, peakMB: peak,
             ranOnMainThread: onMain, modelsDir: dir

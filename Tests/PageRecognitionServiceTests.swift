@@ -410,6 +410,37 @@ final class PageRecognitionServiceTests: XCTestCase {
         XCTAssertFalse(m.warmingUp)
     }
 
+    /// Warmup ETA: forwarded through the progress chain and cleared on phase change / reset.
+    @MainActor
+    func testRecognitionProgressForwardsWarmupETA() {
+        let m = RecognitionProgress()
+        m.report(ScanProgress(warmingUp: true, fraction: 0.2, etaSeconds: 30))
+        XCTAssertTrue(m.warmingUp)
+        XCTAssertEqual(m.etaSeconds, 30)
+        XCTAssertEqual(
+            ReadingView.subtitle(warmingUp: m.warmingUp, etaSeconds: m.etaSeconds),
+            "About 30 seconds left · one-time setup")
+        m.report(ScanProgress(warmingUp: true, fraction: 0.5, etaSeconds: 12))
+        XCTAssertEqual(m.etaSeconds, 12, "ETA ticks down")
+        m.report(ScanProgress(warmingUp: false, fraction: 0.1))
+        XCTAssertNil(m.etaSeconds, "ETA cleared when the parse phase starts")
+        m.reset()
+        XCTAssertNil(m.etaSeconds)
+    }
+
+    /// Warmup subtitle falls back gracefully when no ETA is known yet.
+    func testReadingViewSubtitleFallback() {
+        XCTAssertEqual(
+            ReadingView.subtitle(warmingUp: true, etaSeconds: nil),
+            "One-time setup — loading the music models on your iPhone")
+        XCTAssertEqual(
+            ReadingView.subtitle(warmingUp: true, etaSeconds: 0.5),
+            "One-time setup — loading the music models on your iPhone")
+        XCTAssertEqual(
+            ReadingView.subtitle(warmingUp: false, etaSeconds: 30),
+            "This usually takes a few seconds")
+    }
+
     /// Monotonic gate: phase change resets the high-water mark so the parse phase restarts at 0.
     func testMonotonicProgressResetsOnPhaseChange() {
         var got: [ScanProgress] = []

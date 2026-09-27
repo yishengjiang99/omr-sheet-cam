@@ -9,11 +9,22 @@ struct ReadingView: View {
     var fraction: Double = 0
     /// `true` while the scan is blocked on the model warmup ("Warming up… x%").
     var warmingUp: Bool = false
+    /// Seconds of warmup remaining (ticking estimate); shown under the title while warming up.
+    var etaSeconds: Double? = nil
     var onCancel: () -> Void
 
     /// "Reading music… 42%" / "Warming up… 42%".
     static func title(fraction: Double, warmingUp: Bool = false) -> String {
         "\(warmingUp ? "Warming up" : "Reading music")… \(Int((min(max(fraction, 0), 1) * 100).rounded(.down)))%"
+    }
+
+    /// Subtitle under the bar; while warming up shows the ticking ETA when known.
+    static func subtitle(warmingUp: Bool, etaSeconds: Double?) -> String {
+        guard warmingUp else { return "This usually takes a few seconds" }
+        if let eta = etaSeconds, eta > 1 {
+            return "About \(Int(eta.rounded())) seconds left · one-time setup"
+        }
+        return "One-time setup — loading the music models on your iPhone"
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -75,7 +86,7 @@ struct ReadingView: View {
                     .progressViewStyle(.linear)
                     .tint(Theme.coral)
                     .animation(.easeOut(duration: 0.25), value: fraction)
-                Text(warmingUp ? "One-time setup — loading the music models on your iPhone" : "This usually takes a few seconds")
+                Text(Self.subtitle(warmingUp: warmingUp, etaSeconds: etaSeconds))
                     .font(.subheadline).foregroundStyle(.white.opacity(0.7))
             }
             Label("Read on your iPhone. No internet needed.", systemImage: "lock.fill")

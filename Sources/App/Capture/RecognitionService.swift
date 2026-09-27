@@ -24,6 +24,8 @@ struct ScanProgress: Sendable, Equatable {
     /// `true` while waiting for / running the model warmup, `false` during the page parse.
     var warmingUp: Bool
     var fraction: Double
+    /// Seconds of warmup remaining (simple estimate); nil when not warming up or unknown.
+    var etaSeconds: Double? = nil
 }
 
 /// Recognition progress (called from background threads).
@@ -48,15 +50,18 @@ extension RecognitionService {
 final class RecognitionProgress: ObservableObject {
     @Published private(set) var fraction: Double = 0
     @Published private(set) var warmingUp: Bool = false
+    /// Ticking ETA while warming up; nil otherwise.
+    @Published private(set) var etaSeconds: Double?
 
     var percent: Int { Int((fraction * 100).rounded(.down)) }
 
-    func reset() { fraction = 0; warmingUp = false }
+    func reset() { fraction = 0; warmingUp = false; etaSeconds = nil }
 
     func report(_ e: ScanProgress) {
-        if e.warmingUp != warmingUp { warmingUp = e.warmingUp; fraction = 0 }
+        if e.warmingUp != warmingUp { warmingUp = e.warmingUp; fraction = 0; etaSeconds = nil }
         let v = min(max(e.fraction, 0), 1)
         if v > fraction { fraction = v }
+        etaSeconds = e.warmingUp ? e.etaSeconds : nil
     }
 
     /// Handler for `RecognitionService.recognize(imageData:progress:)`: hops each report to the main actor.
