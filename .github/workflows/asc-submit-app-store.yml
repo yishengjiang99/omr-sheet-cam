@@ -48,26 +48,35 @@ jobs:
             p8, algorithm='ES256', headers={'kid': key_id},
           )
 
-          def api(method, path, body=None, ok_statuses=None):
+          def api(method, path, body=None, ok_statuses=None, base='https://api.appstoreconnect.apple.com'):
             data = None if body is None else json.dumps(body).encode()
+            url = path if path.startswith('http') else base + path
             req = urllib.request.Request(
-              'https://api.appstoreconnect.apple.com' + path,
+              url,
               data=data, method=method,
-              headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'},
+              headers={
+                'Authorization': f'Bearer {token}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
             )
             try:
               with urllib.request.urlopen(req, timeout=90) as r:
                 raw = r.read().decode() or '{}'
-                return r.status, json.loads(raw)
+                try:
+                  parsed = json.loads(raw)
+                except json.JSONDecodeError:
+                  parsed = {'raw': raw[:500]}
+                return r.status, parsed
             except urllib.error.HTTPError as e:
               err = e.read().decode()
               if ok_statuses and e.code in ok_statuses:
                 try:
                   parsed = json.loads(err) if err else {}
                 except json.JSONDecodeError:
-                  parsed = {'raw': err}
+                  parsed = {'raw': err[:500]}
                 return e.code, parsed
-              raise SystemExit(f'{method} {path} -> {e.code}: {err[:2000]}')
+              raise SystemExit(f'{method} {url} -> {e.code}: {err[:2000]}')
 
           EDITABLE = {
             'PREPARE_FOR_SUBMISSION',
@@ -481,8 +490,11 @@ jobs:
               print('reusing READY_FOR_REVIEW that already has items/version', submission_id)
               break
 
-            # Prefer creating a fresh submission after cancel so we own the item set.
-            # But if we already have a non-empty READY_FOR_REVIEW, submit that instead.
+            # Empty READY_FOR_REVIEW shells cannot be deleted (403). Reuse one
+            # instead of creating another on every failed submit.
+            if not submission_id and ready:
+              submission_id = ready[-1]['id']
+              print('reusing empty READY_FOR_REVIEW', submission_id)
             if not submission_id:
               st_c, created = create_review_submission()
               if st_c < 400:
@@ -518,12 +530,6 @@ jobs:
                   print('created second reviewSubmission', submission_id)
                   ok_add, st_add, add_resp = add_version_to_submission(submission_id)
               if not ok_add:
-                if 'APP_DATA_USAGES_REQUIRED' in blob or 'ENTITY_STATE_INVALID' in blob:
-                  dst, dresp = api(
-                    'DELETE', f'/v1/reviewSubmissions/{submission_id}',
-                    ok_statuses={403, 404, 405, 409, 422},
-                  )
-                  print('removed empty reviewSubmission', submission_id, dst, json.dumps(dresp)[:300])
                 return True, 409, {
                   'submission_id': submission_id,
                   'errors': (add_resp.get('errors') if isinstance(add_resp, dict) else []),
@@ -725,18 +731,88 @@ jobs:
               if st >= 400:
                 print('supportUrl warning', json.dumps(patched)[:400])
 
-            # Nutrition label is not on the public API (404 PATH_ERROR). Do not POST it.
+            # Nutrition label is not on api.appstoreconnect.apple.com (404). fastlane
+            # posts it to the iris host. Try that with the same API-key JWT.
+            iris = 'https://appstoreconnect.apple.com/iris'
             st_u, usages = api(
-              'GET', f'/v1/apps/{app_id}/dataUsages?limit=5', ok_statuses={404},
+              'GET',
+              f'/v1/apps/{app_id}/dataUsages?limit=20&include=dataProtection',
+              ok_statuses={401, 403, 404},
+              base=iris,
             )
-            if st_u == 404:
+            print('iris dataUsages', st_u, json.dumps(usages)[:400])
+            iris_ok = st_u < 400 and isinstance(usages, dict) and 'data' in usages
+            if not iris_ok:
               print(
-                'PRIVACY_LABEL_MANUAL The public API cannot publish App Privacy. '
+                'PRIVACY_LABEL_MANUAL iris did not accept the API key. '
                 'App Store Connect → App Privacy → Get Started → '
                 'No, we do not collect data from this app → Publish. Then re-run.'
               )
             else:
-              print('app data usages', st_u, len((usages.get('data') or [])))
+              rows = usages.get('data') or []
+              print('iris usage rows', len(rows))
+              declare_failed = False
+              if not rows:
+                st_add, add_u = api(
+                  'POST', '/v1/appDataUsages',
+                  {
+                    'data': {
+                      'type': 'appDataUsages',
+                      'relationships': {
+                        'app': {'data': {'type': 'apps', 'id': app_id}},
+                        'dataProtection': {
+                          'data': {
+                            'type': 'appDataUsageDataProtections',
+                            'id': 'DATA_NOT_COLLECTED',
+                          },
+                        },
+                      },
+                    }
+                  },
+                  ok_statuses={401, 403, 404, 409, 422},
+                  base=iris,
+                )
+                print('iris declare DATA_NOT_COLLECTED', st_add, json.dumps(add_u)[:500])
+                add_blob = json.dumps(add_u)
+                if st_add >= 400 and 'DUPLICATE' not in add_blob and 'already' not in add_blob.lower() and 'EXIST' not in add_blob:
+                  declare_failed = True
+                  print(
+                    'PRIVACY_LABEL_MANUAL could not declare Data Not Collected via iris. '
+                    'Publish it in App Store Connect → App Privacy, then re-run.'
+                  )
+              if not declare_failed:
+                st_ps, pub = api(
+                  'GET', f'/v1/apps/{app_id}/dataUsagePublishState',
+                  ok_statuses={401, 403, 404},
+                  base=iris,
+                )
+                print('iris publish state', st_ps, json.dumps(pub)[:400])
+                if st_ps < 400 and isinstance(pub, dict):
+                  pdata = pub.get('data') or {}
+                  if isinstance(pdata, list):
+                    pdata = pdata[0] if pdata else {}
+                  published = (pdata.get('attributes') or {}).get('published')
+                  pub_id = pdata.get('id')
+                  if published is not True and pub_id:
+                    st_pub, pub_resp = api(
+                      'PATCH', f'/v1/appDataUsagesPublishState/{pub_id}',
+                      {
+                        'data': {
+                          'type': 'appDataUsagesPublishState',
+                          'id': pub_id,
+                          'attributes': {'published': True},
+                        }
+                      },
+                      ok_statuses={401, 403, 404, 409, 422},
+                      base=iris,
+                    )
+                    print('iris published', st_pub, json.dumps(pub_resp)[:400])
+                    if st_pub >= 400:
+                      print('PRIVACY_LABEL_MANUAL publish failed; do it in the App Privacy UI, then re-run.')
+                  else:
+                    print('iris privacy published=', published, 'id=', pub_id)
+                else:
+                  print('PRIVACY_LABEL_MANUAL could not read publish state. Publish in the App Privacy UI, then re-run.')
 
           ensure_submission_prerequisites(app_id)
           print('=== submitting for review (reviewSubmissions) ===')
