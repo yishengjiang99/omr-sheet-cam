@@ -167,13 +167,17 @@ public final class SegNetSession: @unchecked Sendable {
 
     /// `inference(...)` up to `merge_patches`: merged class map (uint8 0..5, width*height).
     /// Memory: two page-sized uint8 accumulators; tiles are merged as they arrive.
-    public func segment(preprocessed page: [UInt8], width w: Int, height h: Int) throws -> [UInt8] {
+    /// `onTile(done, total)` runs after each tile is merged (on the calling thread).
+    public func segment(
+        preprocessed page: [UInt8], width w: Int, height h: Int, onTile: ((Int, Int) -> Void)? = nil
+    ) throws -> [UInt8] {
         precondition(page.count == w * h)
         lastPackMs = 0; lastRunMs = 0; lastArgmaxMs = 0; lastTileCount = 0; lastBatchCount = 0
         let win = Self.windowSize
         let origins = Self.tileOrigins(width: w, height: h)
         var sum = [UInt8](repeating: 0, count: w * h)
         var weight = [UInt8](repeating: 0, count: w * h)
+        var done = 0
         try page.withUnsafeBufferPointer { p in
             try runTiles(p, width: w, height: h, origins: origins) { idx, am in
                 let (y, x) = origins[idx]
@@ -186,6 +190,8 @@ public final class SegNetSession: @unchecked Sendable {
                         weight[row + px] &+= 1
                     }
                 }
+                done += 1
+                onTile?(done, origins.count)
             }
         }
         var merged = [UInt8](repeating: 0, count: w * h)

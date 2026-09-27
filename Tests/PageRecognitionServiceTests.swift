@@ -35,6 +35,34 @@ final class PageRecognitionServiceTests: XCTestCase {
         }
     }
 
+    /// Fake page session that reports stage progress like `PageInferenceSession.parsePage` (plus one stale,
+    /// lower report the service must drop).
+    private final class ProgressParser: PageParser, @unchecked Sendable {
+        let result: ParseSheetMusicResult
+        init(result: ParseSheetMusicResult) { self.result = result }
+
+        func parse(gray8: Data, width: Int, height: Int) throws -> PageParseOutput {
+            try parse(gray8: gray8, width: width, height: height, progress: nil)
+        }
+
+        func parse(gray8: Data, width: Int, height: Int, progress: PageParseProgressHandler?) throws -> PageParseOutput {
+            progress?(PageParseProgress(stage: .preprocess, completed: 1, total: 1))
+            for t in 1...6 { progress?(PageParseProgress(stage: .segnet, completed: t, total: 6)) }
+            progress?(PageParseProgress(stage: .segnet, completed: 3, total: 6))  // stale / out of order
+            progress?(PageParseProgress(stage: .staffs, completed: 1, total: 1))
+            for s in 1...3 { progress?(PageParseProgress(stage: .decode, completed: s, total: 3)) }
+            return PageParseOutput(result: result)
+        }
+    }
+
+    /// Thread-safe list of progress fractions.
+    private final class Fractions: @unchecked Sendable {
+        private let lock = NSLock()
+        private var items: [Double] = []
+        func add(_ f: Double) { lock.lock(); items.append(f); lock.unlock() }
+        var values: [Double] { lock.lock(); defer { lock.unlock() }; return items }
+    }
+
     private final class Counter: @unchecked Sendable {
         private let lock = NSLock()
         private var n = 0
@@ -346,6 +374,56 @@ final class PageRecognitionServiceTests: XCTestCase {
         XCTAssertNil(Gate1Oracle.firstMismatch(got, expected), "staff 0 tokens \(matched)/\(expected.count) vs homr")
     }
 
+    // MARK: - Progress ("Reading music… 42%")
+
+    /// Service-level progress from the pipeline's stage reports: strictly increasing, ends at exactly 1.0,
+    /// stale lower reports dropped.
+    func testRecognitionProgressOnlyGoesUpAndEndsAt100() async throws {
+        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
+        let parser = ProgressParser(result: Self.goodResult())
+        let service = makeService(factory: { parser }, log: log)
+        let got = Fractions()
+        let outcome = await service.recognize(imageData: Self.pngData()) { got.add($0) }
+        guard case .recognized = outcome else { return XCTFail("expected recognized, got \(outcome)") }
+        let f = got.values
+        XCTAssertGreaterThanOrEqual(f.count, 11, "preprocess + 6 tiles + staffs + 3 staffs: \(f)")
+        for (a, b) in zip(f, f.dropFirst()) { XCTAssertLessThan(a, b, "progress went down or repeated: \(f)") }
+        XCTAssertEqual(f.last, 1.0)
+        XCTAssertTrue(f.allSatisfy { $0 >= 0 && $0 <= 1 })
+    }
+
+    /// Failed parse: progress never claims 100%.
+    func testFailedRecognitionDoesNotReport100() async {
+        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
+        let service = makeService(factory: { FakeParser(result: nil) }, log: log)
+        let got = Fractions()
+        let outcome = await service.recognize(imageData: Self.pngData()) { got.add($0) }
+        XCTAssertEqual(outcome.name, "failed")
+        XCTAssertFalse(got.values.contains(1.0))
+    }
+
+    /// Main-actor model behind the Reading screen: never decreases, clamps to 0...1, label "Reading music… 42%".
+    @MainActor
+    func testRecognitionProgressModelAndLabel() async {
+        let m = RecognitionProgress()
+        XCTAssertEqual(m.percent, 0)
+        m.report(0.42)
+        XCTAssertEqual(m.percent, 42)
+        XCTAssertEqual(ReadingView.title(fraction: m.fraction), "Reading music… 42%")
+        m.report(0.3)
+        XCTAssertEqual(m.fraction, 0.42, "never goes down")
+        m.report(1.5)
+        XCTAssertEqual(m.fraction, 1)
+        XCTAssertEqual(ReadingView.title(fraction: m.fraction), "Reading music… 100%")
+        m.reset()
+        XCTAssertEqual(m.fraction, 0)
+        // Background reports hop to the main actor.
+        let h = m.handler
+        await Task.detached { h(0.25) }.value
+        for _ in 0..<50 where m.fraction == 0 { await Task.yield() }
+        XCTAssertEqual(m.fraction, 0.25)
+    }
+
     /// "Try sample picture" end to end: the bundled Ode to Joy page through the same
     /// `PageRecognitionService.recognize(imageData:)` the Result screen uses (warmed sessions) must
     /// recognize at least one staff and some notes. Melody range is C4...G4 (MIDI 60...67).
@@ -354,8 +432,14 @@ final class PageRecognitionServiceTests: XCTestCase {
         let data = try SamplePicture.data()
         let dir = try requireModels()
         let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
-        let outcome = await realService(log).recognize(imageData: data)
+        let progress = Fractions()
+        let outcome = await realService(log).recognize(imageData: data) { progress.add($0) }
         let e = pageEvents(log).last
+        let f = progress.values
+        print("PageParse sample ode-to-joy progress (\(f.count) reports): \(f.map { String(format: "%.2f", $0) }.joined(separator: " "))")
+        for (a, b) in zip(f, f.dropFirst()) { XCTAssertLessThan(a, b, "progress went down") }
+        XCTAssertEqual(f.last, 1.0)
+        XCTAssertGreaterThanOrEqual(f.count, 6, "preprocess, SegNet tiles, staffs, 4 staffs decoded")
         print("PageParse sample ode-to-joy: \(e?.message ?? "no event") | \(e?.payload ?? [:])")
         guard case let .recognized(d) = outcome else { return XCTFail("expected recognized, got \(outcome) (models \(dir.path))") }
         let pitches = d.notes.compactMap(\.midiNote)

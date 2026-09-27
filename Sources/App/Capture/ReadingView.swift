@@ -1,10 +1,18 @@
 import SwiftUI
 
 /// Redesign 02-reading: the page with a moving scan line and a progress card while recognition
-/// runs on-device. Cancel pops back to Scan (which cancels the recognition task).
+/// runs on-device ("Reading music… 42%" + determinate bar fed by the real page pipeline progress,
+/// `RecognitionProgress`). Cancel pops back to Scan (which cancels the recognition task).
 struct ReadingView: View {
     let image: UIImage
+    /// Recognition progress 0...1 (`RecognitionProgress.fraction`).
+    var fraction: Double = 0
     var onCancel: () -> Void
+
+    /// "Reading music… 42%".
+    static func title(fraction: Double) -> String {
+        "Reading music… \(Int((min(max(fraction, 0), 1) * 100).rounded(.down)))%"
+    }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var sweep = false
@@ -56,12 +64,16 @@ struct ReadingView: View {
 
     private var card: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 14) {
-                ProgressView().tint(Theme.coral).controlSize(.large)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Reading your music…").font(.title3.weight(.bold))
-                    Text("This usually takes a few seconds").font(.subheadline).foregroundStyle(.white.opacity(0.7))
-                }
+            VStack(alignment: .leading, spacing: 8) {
+                Text(Self.title(fraction: fraction))
+                    .font(.title3.weight(.bold))
+                    .monospacedDigit()
+                    .accessibilityIdentifier("reading.percent")
+                ProgressView(value: min(max(fraction, 0), 1))
+                    .progressViewStyle(.linear)
+                    .tint(Theme.coral)
+                    .animation(.easeOut(duration: 0.25), value: fraction)
+                Text("This usually takes a few seconds").font(.subheadline).foregroundStyle(.white.opacity(0.7))
             }
             Label("Read on your iPhone. No internet needed.", systemImage: "lock.fill")
                 .font(.footnote)

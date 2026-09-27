@@ -5,6 +5,15 @@ import UIKit
 /// What the service needs from a page session: `PageInferenceSession` in the app, fakes in tests.
 protocol PageParser: AnyObject, Sendable {
     func parse(gray8: Data, width: Int, height: Int) throws -> PageParseOutput
+    /// Same, reporting pipeline progress (`PageParseProgress`, on the parsing thread).
+    func parse(gray8: Data, width: Int, height: Int, progress: PageParseProgressHandler?) throws -> PageParseOutput
+}
+
+extension PageParser {
+    /// Parsers without stage reporting: no intermediate progress (the service still reports 1.0 on success).
+    func parse(gray8: Data, width: Int, height: Int, progress: PageParseProgressHandler?) throws -> PageParseOutput {
+        try parse(gray8: gray8, width: width, height: height)
+    }
 }
 
 /// A value plus how long it took (Sendable across detached tasks).
@@ -31,7 +40,11 @@ struct PageParseOutput: Sendable {
 
 extension PageInferenceSession: PageParser {
     func parse(gray8: Data, width: Int, height: Int) throws -> PageParseOutput {
-        let r = try parsePage(gray8: gray8, width: width, height: height)
+        try parse(gray8: gray8, width: width, height: height, progress: nil)
+    }
+
+    func parse(gray8: Data, width: Int, height: Int, progress: PageParseProgressHandler?) throws -> PageParseOutput {
+        let r = try parsePage(gray8: gray8, width: width, height: height, progress: progress)
         return PageParseOutput(result: r.result, stages: r.timings.map { .init(name: $0.stage, ms: $0.ms) })
     }
 }
@@ -85,7 +98,13 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
     }
 
     func recognize(imageData: Data) async -> RecognitionOutcome {
-        await engine.recognize(imageData: imageData)
+        await engine.recognize(imageData: imageData, progress: nil)
+    }
+
+    /// `progress` gets the page pipeline's fraction (0...1, never decreasing, 1.0 on success) from a
+    /// background thread; hop to the main actor before touching UI (`RecognitionProgress`).
+    func recognize(imageData: Data, progress: @escaping RecognitionProgressHandler) async -> RecognitionOutcome {
+        await engine.recognize(imageData: imageData, progress: progress)
     }
 
     // MARK: - Pure helpers (unit-tested)
@@ -147,15 +166,18 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
             if waiters.isEmpty { busy = false } else { waiters.removeFirst().resume() }
         }
 
-        func recognize(imageData: Data) async -> RecognitionOutcome {
+        func recognize(imageData: Data, progress: RecognitionProgressHandler?) async -> RecognitionOutcome {
             await acquire()
             defer { release() }
             // A task cancelled while queued must not burn a full parse when its turn arrives.
             guard !Task.isCancelled else { return .failed("cancelled") }
-            return await run(imageData)
+            let gate = progress.map { MonotonicProgress($0) }
+            let outcome = await run(imageData, progress: gate)
+            if case .recognized = outcome { gate?.report(1) }
+            return outcome
         }
 
-        private func run(_ imageData: Data) async -> RecognitionOutcome {
+        private func run(_ imageData: Data, progress: MonotonicProgress?) async -> RecognitionOutcome {
             parseCount += 1
             let t0 = DispatchTime.now()
             let before = MemoryStats.snapshot()
@@ -191,8 +213,13 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
                     dropReason = nil
                 }
 
+                let onStage: PageParseProgressHandler? = progress.map { gate -> PageParseProgressHandler in
+                    { p in gate.report(p.fraction) }
+                }
                 let parsed = try await Task.detached(priority: .userInitiated) {
-                    try Timed.run { try s.parse(gray8: gray.pixels, width: gray.width, height: gray.height) }
+                    try Timed.run {
+                        try s.parse(gray8: gray.pixels, width: gray.width, height: gray.height, progress: onStage)
+                    }
                 }.value
                 let out = parsed.value, parseMs = parsed.ms
                 let r = out.result
@@ -255,5 +282,23 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
         }
 
         private func fmt(_ v: Double) -> String { PageRecognitionService.fmt(v) }
+    }
+}
+
+/// Forwards only increasing fractions (clamped to 0...1) to `handler`; thread-safe.
+final class MonotonicProgress: @unchecked Sendable {
+    private let handler: RecognitionProgressHandler
+    private let lock = NSLock()
+    private var last = -1.0
+
+    init(_ handler: @escaping RecognitionProgressHandler) { self.handler = handler }
+
+    func report(_ fraction: Double) {
+        let f = min(max(fraction, 0), 1)
+        lock.lock()
+        guard f > last else { lock.unlock(); return }
+        last = f
+        lock.unlock()
+        handler(f)
     }
 }

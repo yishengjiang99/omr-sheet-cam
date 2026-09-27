@@ -17,9 +17,40 @@ enum RecognitionOutcome: Equatable, Sendable {
     }
 }
 
+/// Recognition progress 0...1 (called from background threads).
+typealias RecognitionProgressHandler = @Sendable (Double) -> Void
+
 /// Page photo (encoded JPEG / HEIC / PNG bytes; EXIF orientation honored) → MIDI. Implementations run heavy work off the main thread.
 protocol RecognitionService: Sendable {
     func recognize(imageData: Data) async -> RecognitionOutcome
+    /// Same, reporting real pipeline progress (0...1, never decreasing). Default: no progress reports.
+    func recognize(imageData: Data, progress: @escaping RecognitionProgressHandler) async -> RecognitionOutcome
+}
+
+extension RecognitionService {
+    func recognize(imageData: Data, progress: @escaping RecognitionProgressHandler) async -> RecognitionOutcome {
+        await recognize(imageData: imageData)
+    }
+}
+
+/// Scanning-screen progress ("Reading music… 42%"), updated on the main actor only; never goes down.
+@MainActor
+final class RecognitionProgress: ObservableObject {
+    @Published private(set) var fraction: Double = 0
+
+    var percent: Int { Int((fraction * 100).rounded(.down)) }
+
+    func reset() { fraction = 0 }
+
+    func report(_ f: Double) {
+        let v = min(max(f, 0), 1)
+        if v > fraction { fraction = v }
+    }
+
+    /// Handler for `RecognitionService.recognize(imageData:progress:)`: hops each report to the main actor.
+    nonisolated var handler: RecognitionProgressHandler {
+        { [weak self] f in Task { @MainActor in self?.report(f) } }
+    }
 }
 
 /// Placeholder recognizer (previews / tests); the app uses `PageRecognitionService`.
@@ -51,6 +82,11 @@ struct GatedRecognitionService: RecognitionService {
     func recognize(imageData: Data) async -> RecognitionOutcome {
         guard isEnabled() else { return .comingSoon }
         return await real.recognize(imageData: imageData)
+    }
+
+    func recognize(imageData: Data, progress: @escaping RecognitionProgressHandler) async -> RecognitionOutcome {
+        guard isEnabled() else { return .comingSoon }
+        return await real.recognize(imageData: imageData, progress: progress)
     }
 }
 

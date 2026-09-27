@@ -87,7 +87,9 @@ public enum PagePipeline {
 
     /// SegNet over the preprocessed page: merged class map (uint8 0..5, `width * height`;
     /// 1 stems_rests, 2 notehead, 3 clefs_keys, 4 staff, 5 symbols).
-    public static func segment(_ page: PreprocessedPage, segnet: SegNetSession) throws -> [UInt8] {
-        try segnet.segment(preprocessed: page.preprocessed, width: page.width, height: page.height)
+    public static func segment(
+        _ page: PreprocessedPage, segnet: SegNetSession, onTile: ((Int, Int) -> Void)? = nil
+    ) throws -> [UInt8] {
+        try segnet.segment(preprocessed: page.preprocessed, width: page.width, height: page.height, onTile: onTile)
     }
 }

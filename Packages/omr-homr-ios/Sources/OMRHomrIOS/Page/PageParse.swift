@@ -57,7 +57,11 @@ public final class PageInferenceSession: @unchecked Sendable {
     }
 
     /// Raw 8-bit gray page (row-major, no padding, upright; e.g. a camera photo's luma) -> full homr page parse.
-    public func parsePage(gray8: Data, width: Int, height: Int) throws -> PageParseResult {
+    /// `progress` (optional) is called on the parsing thread after preprocessing, after every SegNet tile,
+    /// after staff detection, after each staff's encoder + decoder, and once at the end (fraction 1.0).
+    public func parsePage(
+        gray8: Data, width: Int, height: Int, progress: PageParseProgressHandler? = nil
+    ) throws -> PageParseResult {
         lock.lock()
         defer { lock.unlock() }
         var timings: [PageParseResult.StageTiming] = []
@@ -71,7 +75,11 @@ public final class PageInferenceSession: @unchecked Sendable {
 
         let page = try PagePipeline.preprocess(gray8: gray8, width: width, height: height)
         mark("preprocess")
-        let seg = try PagePipeline.segment(page, segnet: segnet)
+        progress?(PageParseProgress(stage: .preprocess, completed: 1, total: 1))
+        let onTile: ((Int, Int) -> Void)? = progress.map { report -> (Int, Int) -> Void in
+            { done, total in report(PageParseProgress(stage: .segnet, completed: done, total: total)) }
+        }
+        let seg = try PagePipeline.segment(page, segnet: segnet, onTile: onTile)
         mark("segnet")
         // SegNet sub-stage split (device diagnostics; flows into Copy-as-prompt stages).
         timings.append(.init(stage: "segnet_pack", ms: segnet.lastPackMs))
@@ -79,6 +87,7 @@ public final class PageInferenceSession: @unchecked Sendable {
         timings.append(.init(stage: "segnet_argmax", ms: segnet.lastArgmaxMs))
         let layout = try PagePipeline.detectStaffs(segmentation: seg, width: page.width, height: page.height)
         mark("staffs")
+        progress?(PageParseProgress(stage: .staffs, completed: 1, total: 1))
         let image = PagePipeline.maskedPage(page.preprocessed, noiseMask: layout.noiseMask)
 
         var raw: [[EncodedSymbol]] = []
@@ -88,21 +97,23 @@ public final class PageInferenceSession: @unchecked Sendable {
             let symbols = try staff.decodeStaff(tensor: StaffTensor.fromCanvas(canvas))
             raw.append(symbols)
             filtered.append(SymbolCleanup.positionFilter(symbols, isGrandstaff: s.isGrandstaff))
+            progress?(PageParseProgress(stage: .decode, completed: raw.count, total: layout.staffs.count))
         }
         mark("decode")
 
         let voices = PagePipeline.voices(layout: layout, staffSymbols: filtered)
         let result = PagePipeline.render(voices: voices, grandstaffVoices: PagePipeline.grandstaffVoices(layout))
         mark("render")
+        progress?(PageParseProgress(stage: .render, completed: 1, total: 1))
         return PageParseResult(
             result: result, voices: voices, staffSymbols: raw, filteredStaffSymbols: filtered, layout: layout,
             crop: page.crop, pageWidth: page.width, pageHeight: page.height, timings: timings)
     }
 
     /// PNG page (decoded like homr's `cv2.imread` + BGR2GRAY) -> `parsePage(gray8:width:height:)`.
-    public func parsePage(png: Data) throws -> PageParseResult {
+    public func parsePage(png: Data, progress: PageParseProgressHandler? = nil) throws -> PageParseResult {
         let g = try PagePipeline.decodePagePNG(png)
-        return try parsePage(gray8: Data(g.pixels), width: g.width, height: g.height)
+        return try parsePage(gray8: Data(g.pixels), width: g.width, height: g.height, progress: progress)
     }
 }
 

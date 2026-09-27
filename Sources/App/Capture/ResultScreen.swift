@@ -24,6 +24,8 @@ struct ResultScreen: View {
     @State private var attempt = 0
     @State private var titleText = ""
     @State private var savedToLibrary = false
+    /// Real pipeline progress for the Reading screen (main actor).
+    @StateObject private var progress = RecognitionProgress()
     @Environment(\.dismiss) private var dismiss
 
     /// "Recognition coming soon" row: plain text, no glyph (nil = no icon; any value must be a valid SF Symbol).
@@ -51,7 +53,7 @@ struct ResultScreen: View {
     var body: some View {
         Group {
             if outcome == nil {
-                ReadingView(image: photo.image) { dismiss() }
+                ReadingView(image: photo.image, fraction: progress.fraction) { dismiss() }
             } else {
                 resultList
             }
@@ -225,7 +227,8 @@ struct ResultScreen: View {
 
     private func recognize(_ jpeg: Data) async {
         let t0 = DispatchTime.now()
-        let result = await service.recognize(imageData: jpeg)
+        progress.reset()
+        let result = await service.recognize(imageData: jpeg, progress: progress.handler)
         let ms = Double(DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds) / 1_000_000
         outcome = result
         Self.recordRecognition(result, capture: captureName, inputBytes: jpeg.count, pixels: pixelSize, ms: ms)
