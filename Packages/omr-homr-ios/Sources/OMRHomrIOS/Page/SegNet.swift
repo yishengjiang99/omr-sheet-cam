@@ -32,8 +32,6 @@ public final class SegNetSession: @unchecked Sendable {
     /// Tiles per `run`. Results do not depend on it (tiles are independent).
     public let tilesPerRun: Int
 
-    /// homr runs 8 tiles per SegNet batch (`ort_session.run` over a batch of 8).
-    public static let batchSize = 8
     /// Production tiles per SegNet dispatch. Result-identical to any batch size (tiles are inferred
     /// independently); larger batches amortize CoreML dispatch overhead on device. 32 keeps transient
     /// memory modest (~57 MB: 19 MB fp16 input + 38 MB fp16 output).
