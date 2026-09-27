@@ -17,8 +17,8 @@ public final class StaffInferenceSession: @unchecked Sendable {
     public let smfWriter: SMFWriter
 
     /// Sub-timings (ms) of the last `decodeStaff` call. Reset each call.
-    public private(set) var lastEncoderMs: Double = 0
-    public private(set) var lastDecoderMs: Double = 0
+    public internal(set) var lastEncoderMs: Double = 0
+    public internal(set) var lastDecoderMs: Double = 0
 
     public init(
         vocabulary: HomrVocabulary,
