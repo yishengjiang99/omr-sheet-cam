@@ -33,8 +33,18 @@ final class PlaybackController: ObservableObject {
         player.onFinished = { [weak self] in
             guard let self else { return }
             self.log("finished", [:])
-            if let next = self.nextRoute { self.open(next, reason: "auto-next") }
+            if let next = self.autoNextRoute() { self.open(next, reason: "auto-next") }
         }
+    }
+
+    /// The route to auto-advance to when the current item finishes, or nil to stop.
+    /// Only non-nil in playlist mode (`advanceOnFinish` set at open time); a
+    /// just-scanned sheet plays once and stops.
+    func autoNextRoute() -> PlayerRoute? {
+        guard current?.advanceOnFinish == true, let n = nextRoute else { return nil }
+        var r = n
+        r.advanceOnFinish = true
+        return r
     }
 
     // MARK: Current item
@@ -86,14 +96,20 @@ final class PlaybackController: ObservableObject {
         }
     }
 
-    func next() { if let n = nextRoute { open(n, reason: "next") } }
+    func next() {
+        if var n = nextRoute {
+            n.advanceOnFinish = true // manual list navigation engages playlist mode
+            open(n, reason: "next")
+        }
+    }
 
     /// Restarts if more than 3 s in (or first in the list), else goes to the previous item.
     func previous() {
         if player.position.seconds > 3 || previousRoute == nil {
             player.seek(to: 0)
             log("restart", [:])
-        } else if let p = previousRoute {
+        } else if var p = previousRoute {
+            p.advanceOnFinish = true // manual list navigation engages playlist mode
             open(p, reason: "previous")
         }
     }

@@ -111,6 +111,7 @@ struct PlayerScreen: View {
                     showLibrary = false
                     var r = PlayerRoute(entry: entry)
                     r.autoplay = true
+                    r.advanceOnFinish = true // playlist mode: keep going at track end
                     controller.open(r, reason: "library")
                 }
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { showLibrary = false } } }

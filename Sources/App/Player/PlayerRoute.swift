@@ -14,6 +14,10 @@ struct PlayerRoute: Hashable {
     var title: String = "Player"
     /// Start playing as soon as the SoundFont + MIDI are loaded.
     var autoplay = true
+    /// Auto-advance to the next Library item when this one finishes.
+    /// True only when playback starts from the Library (playlist mode);
+    /// a just-scanned sheet plays once and stops.
+    var advanceOnFinish = false
 
     init(midi: Data, title: String = "Player", autoplay: Bool = true) {
         item = .midi(midi); self.title = title; self.autoplay = autoplay

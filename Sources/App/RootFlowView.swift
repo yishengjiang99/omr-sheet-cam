@@ -31,7 +31,9 @@ struct RootFlowView: View {
                     PlayerDestination.view(for: p)
                 case .library:
                     LibraryScreen(onOpenPlayer: { openNowPlaying() }, onTrySample: { trySample() }) { entry in
-                        path.append(.player(PlayerRoute(entry: entry)))
+                        var r = PlayerRoute(entry: entry)
+                        r.advanceOnFinish = true // playlist mode: keep going at track end
+                        path.append(.player(r))
                     }
                 }
             }
