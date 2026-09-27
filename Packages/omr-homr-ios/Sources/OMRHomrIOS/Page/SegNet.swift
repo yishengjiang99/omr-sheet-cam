@@ -42,6 +42,8 @@ public final class SegNetSession: @unchecked Sendable {
     public private(set) var lastPackMs: Double = 0
     public private(set) var lastRunMs: Double = 0
     public private(set) var lastArgmaxMs: Double = 0
+    /// `backend.run` ms of the first dispatch only (spots lazy per-shape CoreML compiles).
+    public private(set) var lastFirstBatchRunMs: Double = 0
     public private(set) var lastTileCount: Int = 0
     public private(set) var lastBatchCount: Int = 0
 
@@ -89,6 +91,7 @@ public final class SegNetSession: @unchecked Sendable {
         let plane = win * win
         let batch = tilesPerRun
         var packMs = 0.0, runMs = 0.0, argmaxMs = 0.0, batches = 0
+        var firstBatchRunMs = 0.0
         var start = 0
         while start < origins.count {
             let n = min(batch, origins.count - start)
@@ -154,7 +157,9 @@ public final class SegNetSession: @unchecked Sendable {
             }
             let t3 = ProcessInfo.processInfo.systemUptime
             packMs += (t1 - t0) * 1000
-            runMs += (t2 - t1) * 1000
+            let batchRunMs = (t2 - t1) * 1000
+            if batches == 0 { firstBatchRunMs = batchRunMs }
+            runMs += batchRunMs
             argmaxMs += (t3 - t2) * 1000
             batches += 1
             start += n
@@ -162,6 +167,7 @@ public final class SegNetSession: @unchecked Sendable {
         lastPackMs = packMs
         lastRunMs = runMs
         lastArgmaxMs = argmaxMs
+        lastFirstBatchRunMs = firstBatchRunMs
         lastTileCount = origins.count
         lastBatchCount = batches
     }
@@ -173,7 +179,7 @@ public final class SegNetSession: @unchecked Sendable {
         preprocessed page: [UInt8], width w: Int, height h: Int, onTile: ((Int, Int) -> Void)? = nil
     ) throws -> [UInt8] {
         precondition(page.count == w * h)
-        lastPackMs = 0; lastRunMs = 0; lastArgmaxMs = 0; lastTileCount = 0; lastBatchCount = 0
+        lastPackMs = 0; lastRunMs = 0; lastArgmaxMs = 0; lastFirstBatchRunMs = 0; lastTileCount = 0; lastBatchCount = 0
         let win = Self.windowSize
         let origins = Self.tileOrigins(width: w, height: h)
         var sum = [UInt8](repeating: 0, count: w * h)

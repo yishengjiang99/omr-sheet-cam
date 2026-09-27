@@ -84,6 +84,7 @@ public final class PageInferenceSession: @unchecked Sendable {
         // SegNet sub-stage split (device diagnostics; flows into Copy-as-prompt stages).
         timings.append(.init(stage: "segnet_pack", ms: segnet.lastPackMs))
         timings.append(.init(stage: "segnet_run", ms: segnet.lastRunMs))
+        timings.append(.init(stage: "segnet_run_first", ms: segnet.lastFirstBatchRunMs))
         timings.append(.init(stage: "segnet_argmax", ms: segnet.lastArgmaxMs))
         let layout = try PagePipeline.detectStaffs(segmentation: seg, width: page.width, height: page.height)
         mark("staffs")
@@ -92,14 +93,20 @@ public final class PageInferenceSession: @unchecked Sendable {
 
         var raw: [[EncodedSymbol]] = []
         var filtered: [[EncodedSymbol]] = []
-        for s in layout.staffs {
+        var canvasMs = 0.0
+        for (i, s) in layout.staffs.enumerated() {
+            let tc = ProcessInfo.processInfo.systemUptime
             let canvas = try PagePipeline.staffCanvas(page: image, width: page.width, height: page.height, staff: s)
+            canvasMs += (ProcessInfo.processInfo.systemUptime - tc) * 1000
             let symbols = try staff.decodeStaff(tensor: StaffTensor.fromCanvas(canvas))
+            timings.append(.init(stage: "decode_s\(i)_enc", ms: staff.lastEncoderMs))
+            timings.append(.init(stage: "decode_s\(i)_dec", ms: staff.lastDecoderMs))
             raw.append(symbols)
             filtered.append(SymbolCleanup.positionFilter(symbols, isGrandstaff: s.isGrandstaff))
             progress?(PageParseProgress(stage: .decode, completed: raw.count, total: layout.staffs.count))
         }
         mark("decode")
+        timings.append(.init(stage: "decode_canvas", ms: canvasMs))
 
         let voices = PagePipeline.voices(layout: layout, staffSymbols: filtered)
         let result = PagePipeline.render(voices: voices, grandstaffVoices: PagePipeline.grandstaffVoices(layout))

@@ -210,6 +210,7 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
                     buildCount += 1
                     p["session"] = dropReason.map { "rebuilt after \($0)" } ?? (buildCount == 1 ? "built" : "rebuilt")
                     p["session_build_ms"] = fmt(ModelWarmup.ms(since: tb))
+                    p["session_warmup_wait_ms"] = fmt(await ModelWarmup.shared.lastReadyWaitMs)
                     dropReason = nil
                 }
 

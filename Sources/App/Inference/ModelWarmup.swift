@@ -32,6 +32,9 @@ final class ModelWarmup: ObservableObject {
     /// Warm sessions, reused by `PageRecognitionService` and Gate-1.
     private(set) var models: WarmedModels?
     private var task: Task<WarmupReport?, Never>?
+    /// ms the last `readyModels()` call spent inside (0 when already warm). Diagnostic only:
+    /// lets the parse log split "session built" into warmup-wait vs actual build.
+    private(set) var lastReadyWaitMs: Double = 0
 
     init() {}
 
@@ -70,6 +73,8 @@ final class ModelWarmup: ObservableObject {
 
     /// Warm sessions, starting the warmup if needed; suspends (never blocks) until ready.
     func readyModels(modelsDir: URL? = nil) async throws -> WarmedModels {
+        let t0 = DispatchTime.now()
+        defer { lastReadyWaitMs = ModelWarmup.ms(since: t0) }
         if let models, state == .ready { return models }
         _ = await start(modelsDir: modelsDir).value
         if let models, state == .ready { return models }
@@ -234,6 +239,7 @@ final class ModelWarmup: ObservableObject {
         var state = "off"
         var key: String?
         var keyMs: Double = 0
+        var modelMB: Double = 0
         var directory: String?
         var error: String?
         var removedStale: [String] = []
@@ -241,6 +247,8 @@ final class ModelWarmup: ObservableObject {
         var summary: String {
             var s = state
             if let key { s += " key \(key.prefix(12))" }
+            if modelMB > 0 { s += String(format: " model %.0f MB", modelMB) }
+            if keyMs > 0 { s += String(format: " key_ms %.0f", keyMs) }
             if let error { s += " (\(error))" }
             return s
         }
@@ -248,6 +256,7 @@ final class ModelWarmup: ObservableObject {
         var payload: [String: String] {
             var p = ["coreml_cache": state, "coreml_cache_used": state == "hit" ? "1" : "0",
                      "coreml_cache_key_ms": String(format: "%.1f", keyMs)]
+            if modelMB > 0 { p["coreml_cache_model_mb"] = String(format: "%.1f", modelMB) }
             if let key { p["coreml_cache_key"] = key }
             if let directory { p["coreml_cache_dir"] = directory }
             if let error { p["coreml_cache_error"] = error }
@@ -273,6 +282,8 @@ final class ModelWarmup: ObservableObject {
             key = k
             info.key = k
             info.keyMs = ms
+            let modelBytes = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.doubleValue ?? 0
+            info.modelMB = modelBytes / 1_048_576
             info.directory = store.root.path
             info.removedStale = store.removeStale(keeping: [k])
         } catch {
