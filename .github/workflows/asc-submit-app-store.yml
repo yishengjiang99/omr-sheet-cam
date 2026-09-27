@@ -27,6 +27,7 @@ jobs:
           BUILD_NUMBER: ${{ inputs.build_number }}
           VERSION_STRING: ${{ inputs.version_string }}
           BUNDLE_ID: com.ragnus.vp
+          PYTHONUNBUFFERED: "1"
         run: |
           set -euo pipefail
           pip install -q PyJWT cryptography
@@ -517,6 +518,12 @@ jobs:
                   print('created second reviewSubmission', submission_id)
                   ok_add, st_add, add_resp = add_version_to_submission(submission_id)
               if not ok_add:
+                if 'APP_DATA_USAGES_REQUIRED' in blob or 'ENTITY_STATE_INVALID' in blob:
+                  dst, dresp = api(
+                    'DELETE', f'/v1/reviewSubmissions/{submission_id}',
+                    ok_statuses={403, 404, 405, 409, 422},
+                  )
+                  print('removed empty reviewSubmission', submission_id, dst, json.dumps(dresp)[:300])
                 return True, 409, {
                   'submission_id': submission_id,
                   'errors': (add_resp.get('errors') if isinstance(add_resp, dict) else []),
@@ -657,70 +664,79 @@ jobs:
                     f'Could not set free price schedule: {blob[:1200]}'
                   )
 
-            # --- App Privacy: publish, declaring Data Not Collected if empty ---
-            st_u, usages = api(
+            # --- Listing URLs ---
+            # Privacy policy + support are required ASC fields. Terms of Use has no
+            # URL field. terms.html says Apple's standard EULA also applies, so do
+            # not upload a custom license agreement.
+            privacy_url = 'https://grepawk.com/music-reader/privacy.html'
+            support_url = 'https://grepawk.com/music-reader/support.html'
+            terms_url = 'https://grepawk.com/music-reader/terms.html'
+            print('terms URL', terms_url, '(linked from privacy and support pages; standard Apple EULA kept)')
+            _, infos = api('GET', f'/v1/apps/{app_id}/appInfos?limit=20')
+            for info in infos.get('data') or []:
+              istate = (info.get('attributes') or {}).get('state')
+              print('appInfo', info['id'], istate)
+              _, ilocs = api(
+                'GET', f'/v1/appInfos/{info["id"]}/appInfoLocalizations?limit=50',
+                ok_statuses={404, 409},
+              )
+              for loc in (ilocs.get('data') or []) if isinstance(ilocs, dict) else []:
+                loc_id = loc['id']
+                attrs = loc.get('attributes') or {}
+                locale = attrs.get('locale')
+                current = attrs.get('privacyPolicyUrl')
+                if current == privacy_url:
+                  print('privacyPolicyUrl ok', locale)
+                  continue
+                st, patched = api('PATCH', f'/v1/appInfoLocalizations/{loc_id}', {
+                  'data': {
+                    'type': 'appInfoLocalizations',
+                    'id': loc_id,
+                    'attributes': {'privacyPolicyUrl': privacy_url},
+                  }
+                }, ok_statuses={409, 422})
+                print('privacyPolicyUrl', locale, st, 'was', current)
+                if st >= 400:
+                  print('privacyPolicyUrl warning', json.dumps(patched)[:400])
+            _, vlocs = api(
               'GET',
-              f'/v1/apps/{app_id}/dataUsages?limit=50&include=dataProtection',
+              f'/v1/appStoreVersions/{version_id}/appStoreVersionLocalizations?limit=50',
               ok_statuses={404},
             )
-            usage_rows = (usages.get('data') or []) if st_u < 400 else []
-            print('app data usages', st_u, len(usage_rows))
-            if not usage_rows:
-              st_add, add_u = api('POST', '/v1/appDataUsages', {
+            vrows = (vlocs.get('data') or []) if isinstance(vlocs, dict) else []
+            if not vrows:
+              print('WARN no version localizations; support URL not set')
+            for loc in vrows:
+              loc_id = loc['id']
+              attrs = loc.get('attributes') or {}
+              locale = attrs.get('locale')
+              current = attrs.get('supportUrl')
+              if current == support_url:
+                print('supportUrl ok', locale)
+                continue
+              st, patched = api('PATCH', f'/v1/appStoreVersionLocalizations/{loc_id}', {
                 'data': {
-                  'type': 'appDataUsages',
-                  'relationships': {
-                    'app': {'data': {'type': 'apps', 'id': app_id}},
-                    'dataProtection': {
-                      'data': {
-                        'type': 'appDataUsageDataProtections',
-                        'id': 'DATA_NOT_COLLECTED',
-                      },
-                    },
-                  },
+                  'type': 'appStoreVersionLocalizations',
+                  'id': loc_id,
+                  'attributes': {'supportUrl': support_url},
                 }
               }, ok_statuses={409, 422})
-              print('declare DATA_NOT_COLLECTED', st_add, json.dumps(add_u)[:500])
-              if st_add >= 400:
-                blob = json.dumps(add_u)
-                if 'DUPLICATE' not in blob and 'already' not in blob.lower() and 'EXIST' not in blob:
-                  raise SystemExit(
-                    'Could not declare App Privacy (Data Not Collected). '
-                    f'Set it in App Store Connect, then re-run. {blob[:800]}'
-                  )
-            st_ps, pub = api(
-              'GET', f'/v1/apps/{app_id}/dataUsagePublishState', ok_statuses={404},
+              print('supportUrl', locale, st, 'was', current)
+              if st >= 400:
+                print('supportUrl warning', json.dumps(patched)[:400])
+
+            # Nutrition label is not on the public API (404 PATH_ERROR). Do not POST it.
+            st_u, usages = api(
+              'GET', f'/v1/apps/{app_id}/dataUsages?limit=5', ok_statuses={404},
             )
-            if st_ps >= 400:
-              raise SystemExit(
-                f'Could not read dataUsagePublishState: {st_ps} {json.dumps(pub)[:500]}'
+            if st_u == 404:
+              print(
+                'PRIVACY_LABEL_MANUAL The public API cannot publish App Privacy. '
+                'App Store Connect → App Privacy → Get Started → '
+                'No, we do not collect data from this app → Publish. Then re-run.'
               )
-            pdata = pub.get('data') or {}
-            if isinstance(pdata, list):
-              pdata = pdata[0] if pdata else {}
-            if pdata.get('id') and 'attributes' not in pdata:
-              _, pub = api('GET', f'/v1/appDataUsagesPublishState/{pdata["id"]}')
-              pdata = pub.get('data') or pdata
-            published = (pdata.get('attributes') or {}).get('published')
-            pub_id = pdata.get('id')
-            print('privacy publish state', pub_id, 'published=', published)
-            if published is not True:
-              if not pub_id:
-                raise SystemExit(f'privacy publish state missing id: {json.dumps(pub)[:500]}')
-              st_pub, pub_resp = api(
-                'PATCH', f'/v1/appDataUsagesPublishState/{pub_id}',
-                {
-                  'data': {
-                    'type': 'appDataUsagesPublishState',
-                    'id': pub_id,
-                    'attributes': {'published': True},
-                  }
-                },
-                ok_statuses={409, 422},
-              )
-              print('published app privacy', st_pub, json.dumps(pub_resp)[:400])
-              if st_pub >= 400:
-                raise SystemExit(f'Could not publish App Privacy: {json.dumps(pub_resp)[:800]}')
+            else:
+              print('app data usages', st_u, len((usages.get('data') or [])))
 
           ensure_submission_prerequisites(app_id)
           print('=== submitting for review (reviewSubmissions) ===')
@@ -736,17 +752,23 @@ jobs:
             print('legacy submit ok', st, json.dumps(resp)[:800])
           else:
             if st >= 400:
-              print('reviewSubmissions submit PATCH failed', st)
+              print('reviewSubmissions submit failed', st)
               print('ASC_ERROR_BODY', json.dumps(resp)[:2000])
-              # try legacy as last resort
-              print('falling back to legacy appStoreVersionSubmissions...')
-              lst, lresp = submit_via_legacy()
-              if lst >= 400:
-                print('ASC_ERROR_BODY_LEGACY', json.dumps(lresp)[:2000])
+              blob = json.dumps(resp)
+              if 'APP_DATA_USAGES_REQUIRED' in blob or 'data usages' in blob:
                 raise SystemExit(
-                  f'Submit blocked. reviewSubmissions={st}, legacy={lst}. See ASC_ERROR_BODY.'
+                  'Submit blocked: App Privacy nutrition label is not published. '
+                  'The API cannot set it. In App Store Connect open '
+                  'AI Camera - Music Reader → App Privacy → Get Started → '
+                  'No, we do not collect data from this app → Publish, then re-run. '
+                  'Privacy policy, support URL, content rights, and the free price '
+                  'are already set. Terms of Use stays on '
+                  'https://grepawk.com/music-reader/terms.html (linked from those pages; '
+                  'Apple standard EULA kept).'
                 )
-              print('legacy submit ok', lst, json.dumps(lresp)[:800])
+              raise SystemExit(
+                f'Submit blocked (reviewSubmissions={st}). See ASC_ERROR_BODY above.'
+              )
             else:
               sattrs = resp.get('data', {}).get('attributes', {})
               print('SUBMIT_OK submission_id=', resp.get('data', {}).get('id'),
