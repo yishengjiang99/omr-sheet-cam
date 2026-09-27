@@ -68,7 +68,7 @@ final class ModelWarmup: ObservableObject {
     /// If a warmup is in-flight, failed (retry), or due for re-warm after a memory warning, attach
     /// `progress` to it — starting it when needed — and return true. Returns false when already
     /// warm, so the caller proceeds with no warmup phase. Never starts a first-ever warmup.
-    func attachProgressIfNeeded(_ progress: WarmupProgressHandler) -> Bool {
+    func attachProgressIfNeeded(_ progress: @escaping WarmupProgressHandler) -> Bool {
         switch state {
         case .ready:
             return false
