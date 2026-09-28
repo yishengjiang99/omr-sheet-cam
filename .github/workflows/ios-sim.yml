@@ -74,6 +74,7 @@ jobs:
             -only-testing:OMRSheetCamTests/Gate1StaffTokenMatchTests \
             -only-testing:OMRSheetCamTests/ModelWarmupTests \
             -only-testing:OMRSheetCamTests/PageRecognitionServiceTests \
+            -only-testing:OMRSheetCamTests/Gray8ImageTests \
             -resultBundlePath "$RUNNER_TEMP/OMRSheetCam.xcresult" \
             CODE_SIGNING_ALLOWED=NO \
             | tee "$RUNNER_TEMP/xcodebuild.log"
