@@ -88,7 +88,10 @@ jobs:
                 raise SystemExit(f"RESULT cancel refused for {s['id']} ({st})")
           for i in range(60):
             time.sleep(10)
-            sst = [api("GET", f"/v1/reviewSubmissions/{s['id']}")[1]["data"]["attributes"].get("state") for s in open_]
+            sst = []
+            for s in open_:  # a cancelled submission can vanish (404) once Apple finishes: count as done
+              code, resp = api("GET", f"/v1/reviewSubmissions/{s['id']}", ok=(404,))
+              sst.append("GONE(404)" if code == 404 else resp["data"]["attributes"].get("state"))
             vstate = api("GET", f"/v1/appStoreVersions/{vid}")[1]["data"]["attributes"].get("appStoreState")
             print(f"poll {i+1}: submissions={sst} version={vstate}")
             if vstate in ("DEVELOPER_REJECTED", "PREPARE_FOR_SUBMISSION") and all(x not in ("CANCELING", "WAITING_FOR_REVIEW", "IN_REVIEW") for x in sst):
