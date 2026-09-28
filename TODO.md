@@ -1,5 +1,5 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-09-27 PT by OMR iOS_
+_Last updated: 2026-09-28 9:21 AM PT by Chief of Staff_
 
 Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`.
 
@@ -9,79 +9,36 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - AGPL package `Packages/omr-homr-ios` stays isolated from the app
 - Apple ORT SPM pinned `exact: "1.24.2"`
 
-## Suggested next steps (2026-09-27 — recognition now ON by default)
-Ordered by what unblocks the TestFlight testers first:
-- [ ] TestFlight build 7 off `main` (`36f75c0`: gate on + SheetCam name): confirm VALID, install on the real iPhone — the gate flip only takes effect in a new build — OMR iOS
-- [ ] Real-device page parse verdict (decides whether the gate stays on): 3–5 real sheet photos → parse time + peak `phys_footprint` from Copy as prompt (Linux CPU ~1.3 GB; jetsam risk on device); pass/fail per photo — OMR iOS + User
-- [ ] First-launch warmup on device: cold vs warm CoreML compile ms for encoder + SegNet (sim was 11.4 s cold); if the Scan screen sits dead during warmup, add a progress indicator — OMR iOS
-- [ ] Real-photo accuracy spot check: recognized notes vs the actual sheet for 2–3 photos; if systematically off, file it against the color-preprocessing gap (app grays first; upstream homr autocrops on BGR, resizes in color, then grays + CLAHEs) — OMR Core
-- [ ] Failed-parse UX: "Couldn't read this page" should say why when we know (no staff found vs no notes) + guidance (fill the frame, flatten the page, more light) — OMR iOS
-- [ ] Note highlighting: unblock `noteLayout.pageRect` (OMR Core) → draw boxes on Result instead of the MIDI fallback layout — OMR Core + OMR iOS
-- [ ] Regression fixtures (from the 2026-09-27 audit): tuplet cumulative-rounding drift, key signatures + accidental carry, multi-row/grand-staff timing and track semantics — OMR Core
-- [ ] ASC screenshots from the shipping consumer UI (1320x2868), upload via workflow, no submit — OMR iOS
-
 ## Now (in progress)
-- [ ] TestFlight build 4 in internal testing: Run Gate-1 (npy + png) + warmup diagnostics — OMR iOS — `c2950ae`, run 36265488038, VALID 12:21 PM PT
-- [x] Page pipeline port (homr 7d97c3c `detect_staffs_in_image` + `parse_staffs`): page → SegNet → staffs → per-staff decode → SMF + noteLayout — OMR Core — oracle fixtures in `9839f13`
-  - [x] M1: page preprocessing (autocrop, PIL bicubic resize, CLAHE) + SegNet tiling/merge: all 9 oracle pages byte-identical (crop, resized, CLAHE) and 0 SegNet class mismatches; `omr-test segnet-page --compare` — `5fd4ff3`
-  - [x] M2: symbol boxes + staff detection + brace/grand-staff → `StaffGeometry` (`PagePipeline.detectStaffs` → `PageStaffLayout`): identical to homr on all 9 oracle pages (every symbol box list, note-head height, staff grids, grand staffs, ensured rows, per-staff geometry + regions); cv2 5.0.0 shape ports (hull, minAreaRect, fitEllipse, intersectConvexConvex, fillPoly, ellipse kernels) exact vs `page_cv2/shapes.json`; `omr-test detect-staffs` — `f9ca549`, ios-sim run 36270574216 green
-  - [x] M3: `OMRHomrIOS.parseSheetMusicWithLayout(gray8:width:height:)` (+ `(gray8:width:height:session:)`, `(png:)`, `input:` with `staffOnly: false` for PNG; non-PNG → `unsupportedImageFormat`), `PageInferenceSession` (`load()` from bundle `models/` / `OMR_MODELS_DIR`, or the app's warmed backends), noise mask, per-staff crop/dewarp + decode, position filter, `remove_duplicated_symbols` port, one SMF track per staff (grand staff = 2); `omr-test parse-page --compare` — `d0c1536`, ios-sim run 36271119585 green
-  - [x] M4 gate: C-scale page end-to-end 1 staff, 12/12 tokens (== `oracle.c_scale_staff/expected.tokens.json`), valid SMF (8 notes); all 9 oracle pages identical to homr (staff canvases SHA-256, raw + filtered tokens, voices: edit 0); Linux CPU ~4–6 s/page, peak RSS ~1.3 GB (ORT CPU sessions; 12 MP input adds <30 MB) — `d0c1536`
-- [x] Swap `StubRecognitionService` for the page path: `PageRecognitionService` (ImageIO → `Gray8Image` upright, bytesPerRow == width → `PageInferenceSession` over `ModelWarmup`'s warmed ORT sessions, lazy + reused, FIFO one parse at a time off main, dropped with the warm sessions on memory warning) → playlist + pinned Play; "Couldn't read this page" + Try again; `page_parse` diagnostics (ms, image, staffCount, warnings, phys_footprint before/after/peak, stages, exact error) + "Page parse" in Copy as prompt; sim tests: gray8 orientation/no-padding, decoder parity vs package PNG decode on 9 oracle inputs, C-scale + all oracle pages on the app path — OMR iOS — `53e1a6a`, `5f1cb2a`, ios-sim run 36273244411 green (60 tests, 1 skipped; page parse = expected failure, see OMR Core item)
-- [x] OMRHomrIOS page path fails on the iOS simulator ("no noteheads found"): FIXED + ios-sim green. Root cause: SegNet on the CoreML EP MLProgram format returns all zeros (E5RT rejects its unbounded input / upsample dims; ORT 1.24.2 returns zeros silently) → every pixel class 0. Fix: SegNet opens via `SegNetSession.openBackend(modelURL:provider:)` = CoreML EP NeuralNetwork, legacy flags 0x000 (all compute units, ANE on device) + CPU fallback (`PageInferenceSession.load`, the app's `ModelWarmup` and the Developer "SegNet self-test" NeuralNetwork row all use it; one-line app changes in `ModelWarmup.swift` + `SegNetSelfTest.swift`, done by OMR Core). Encoder unchanged (MLProgram 0x030), decoder CPU. Page tests: `XCTExpectFailure` from `5f1cb2a` removed, C-scale page test now also asserts staff 0 = 12/12 tokens; `testSegNetClassCountsCoreMLvsCPUvsHomr` asserts CoreML == CPU class counts — OMR Core — `83c335d`, ios-sim run 36278831267 green (2026-09-26)
-- [x] SegNet all-class-0 on CoreML (sim): root cause found with `SegNetCoreMLDiagTests` (run 36275275275, job 108496704896, `8c4c445`): NeuralNetwork 0x000/0x020/0x001 == CPU EP (0 px, max diff 0.0, create 89–192 ms); MLProgram 0x010/0x011/0x030 + provider-options/cache paths = all zeros (create 1.1–17.7 s); 0x038 static-only == CPU; batch_size=1 override 5 px off. Diag test kept, skipped unless `OMR_SEGNET_DIAG=1` / `OMR_SEGNET_DIAG_VERBOSE=1` (coreml-diag.yml sets it) — OMR Core — `8c4c445`, this commit
-- [ ] Build 6 prep (held until SegNet CoreML fix; TestFlight NOT triggered): Developer → "SegNet self-test" (bundled C-scale page `selftest/c_major_scale_page.png`, SegNet via public API: CoreML MLProgram / CoreML NeuralNetwork (production path; `unavailable` at 8c4c445: `SessionPlan` + `init(modelURL:plan:)` internal) / CPU EP diag; per-class counts, min/max/NaN, create/run ms, detectStaffs; `segnet_selftest` event + "SegNet self-test (latest)" in Copy as prompt); recognition gated: `RecognitionGate.defaultEnabled = false` (Sources/App/Capture/RecognitionService.swift, the one-line switch) + Developer toggle "Experimental page recognition" (UserDefaults `developer.experimentalPageRecognition`), OFF = "Recognition coming soon" (no glyph); encoder CoreML cache in warmup (`<AppSupport>/coreml-cache/`, excluded from backup, key = model SHA-256, `.complete` marker, stale/half entries deleted, failed cached create → uncached retry; `coreml_cache` hit/miss + create ms in warmup diagnostics; decoder never; SegNet not wired, Core's fix makes it a no-op); ios-testflight.yml: P8 under `$RUNNER_TEMP`, notes via env — OMR iOS — this commit, ios-sim pending
-- [x] Flip `RecognitionGate.defaultEnabled` to `true` — SegNet fix green on ios-sim (run 36278831267); user approved 2026-09-27 — OMR iOS
-- [ ] Page parse on a real iPhone: time + peak `phys_footprint` from Copy as prompt (Linux CPU ~1.3 GB; jetsam risk) with 3–5 real sheet photos — OMR iOS + User
-- [ ] Draw note highlight boxes once `noteLayout.pageRect` carries page positions (hidden while `.null`) — OMR iOS (waiting on OMR Core)
-- [ ] Memory warning re-warm costs ~10 s on the next scan; revisit (keep SegNet, drop decoder?) after device numbers — OMR iOS
-- [ ] Build 6 player + playlist: ONE app-wide `PlaybackController` (@MainActor, `.environmentObject` from the App) so playback continues across navigation; Library = scans newest first then samples, tap to play, rename (index.json title only) + delete for scans via swipe / long-press / ⋯; Player play/pause, prev/next, seek + times, tempo 0.5–2× (persisted), instrument; mini-player on Scan + Library; consumer redesign (coral, Scan home, Reading, Result pinned Play + Save to Library, Settings with hidden Developer section); About → Source code & license (bundled LICENSE/NOTICE, every NOTICE entry, ORT 1.24.2 ThirdPartyNotices); SF2Player relicensed AGPL-3.0-or-later with SPDX headers — OMR iOS — `75debea` + `a127804` (ios-sim 36273244411 green on `5f1cb2a`, 60 tests / 1 skipped), `91ce74f`, date-ordered scans in this commit; screenshots run 36274375344
-- [ ] In-app diagnostics: `DiagnosticsLog` (JSONL in Application Support, 2000 entries / 5 MB cap, os_log mirror; warmup, Gate-1, capture, camera, recognition, playback, feedback), Log screen (filters, Clear), "Copy as prompt" (≤4 KB Markdown), visual OMR compare + accuracy feedback on Result + Diagnostics → Compare Gate-1 staff — OMR iOS — `e853f3c` pushed, not yet built on CI (Actions billing block below)
+- [ ] v1.0 build 15 in App Review (WAITING_FOR_REVIEW, submitted 2026-09-28 ~8:30 PM PT / 03:30 UTC; listing = captioned peach screenshots + rewritten copy, no Sweden). Check with read-only **ASC status** only; do NOT re-run cancel/submit while waiting — Chief of Staff — submit run 36373908988, status run 36374044212
+- [ ] Real-device page parse verdict: 3–5 real sheet photos → parse time + peak `phys_footprint` from Copy as prompt; pass/fail per photo — OMR iOS + User
+- [ ] Real-photo accuracy spot check (2–3 photos); if systematically off, file against color-preprocessing gap — OMR Core
+- [ ] Failed-parse UX: say why when known (no staff vs no notes) + guidance — OMR iOS
+- [ ] Note highlighting: unblock `noteLayout.pageRect` (OMR Core) → boxes on Result — OMR Core + OMR iOS
+- [ ] Regression fixtures (2026-09-27 audit): tuplet rounding, key signatures + accidentals, multi-row/grand-staff timing — OMR Core
+- [ ] Memory warning re-warm (~10 s); revisit after device numbers — OMR iOS
 
 ## Next
-- [ ] Color-photo preprocessing gap: the app converts camera photos to gray8 before `PagePipeline` (upstream homr autocrops on BGR channel 0, resizes in color, then grays + CLAHEs); real-photo accuracy unverified, fixtures are gray — OMR Core
-- [x] iOS: 'Open source (AGPL-3.0)' line in the ASC description + `docs/asc/COPY.md` — OMR iOS — `391c898`
-- [ ] ASC screenshots from build 6 consumer UI, 1320x2868, upload via workflow, no submit — OMR iOS
-- [ ] Swap in post-ship ASO copy (`docs/asc/COPY.md` → PENDING table) as recognition / highlighting / library / level meter / instrument ship; rerun `docs/asc/check_copy.py` — OMR iOS
-- [ ] SF2Player gaps inherited from gbk: pitch bend, drum channel 10, the file's own CC7/10/11, SF2 modulators, filter Q; gbk export's master dynamics not ported — OMR iOS
-- [ ] SF2Player seek doesn't retrigger notes held across the seek point — OMR iOS
-- [x] CoreML compiled-model cache, package side: `ORTCSession(modelURL:provider:cacheDirectory:cacheKey:)` (provider options `ModelFormat=MLProgram`, `MLComputeUnits=CPUAndGPU`, `ModelCacheDirectory`; model loaded from bytes with `COREML_CACHE_KEY` = file SHA-256 so the key never depends on the bundle path), `EncoderSession.open(…cacheDirectory:cacheKey:)`, `PageInferenceSession.load(…segnetCacheDirectory:encoderCacheDirectory:)`; nil = unchanged legacy path; `.cpu` + cache throws; decoder never cached; new ios-sim step runs `CoreMLModelCacheTests` on macOS against the real CoreML EP (continue-on-error until proven) — OMR Core — `a94dab9` (per `docs/coreml-tradeoffs.md`); ios-sim run 36272839631 on `a1278046`: app built with it, Gate-1 12/12 on sim (encoder CoreML), macOS step stopped on a pre-existing omr-test compile error (fixed this commit), waiting on ios-sim
-- [x] App side of the CoreML cache, encoder only (SegNet moves to NeuralNetwork in Core's fix) — OMR iOS — see Build 6 prep item. SegNet: `segnetCacheDirectory` / `SegNetSession.openBackend(cacheDirectory:)` are accepted and ignored (NeuralNetwork, ~150 ms create, no cache). Original spec: (device encoder create 30,751 ms, SegNet 2,750 ms on build 5): in `ModelWarmup` pass `cacheDirectory: <AppSupport>/coreml-cache/<sha256>/` + `cacheKey: <models.lock sha256>` for SegNet and encoder (never the decoder); `isExcludedFromBackup`; delete folders whose sha256 is not a bundled model; write a "complete" marker after the session is created and delete unmarked folders before creating (a jetsam mid-compile leaves a half entry that ORT reuses and fails on every launch); never create two sessions for the same model concurrently; log `coreMLCacheKey` + cold/warm create ms — OMR iOS
-- [ ] Real-device numbers with the cache: encoder / SegNet create ms cold vs warm (and after an app update: path changes, key must still hit) — OMR iOS + User
-- [ ] Bump Apple ORT to `exact: "1.30.0"` to match `ort.lock` once upstream tags it (microsoft/onnxruntime-swift-package-manager#46) — OMR Core — blocked upstream
+- [ ] Color-photo preprocessing gap (app grays before `PagePipeline`; upstream homr autocrops on BGR) — OMR Core
+- [ ] Swap in post-ship ASO copy (`docs/asc/COPY.md` → PENDING) as features ship; rerun `docs/asc/check_copy.py` — OMR iOS
+- [ ] SF2Player gaps (pitch bend, drum ch 10, CC7/10/11, modulators, filter Q; seek across held notes) — OMR iOS
+- [ ] Real-device CoreML cache numbers (encoder/SegNet cold vs warm) — OMR iOS + User
+- [ ] Bump Apple ORT to `exact: "1.30.0"` once upstream tags it — OMR Core — blocked upstream
 
 ## Blocked / waiting on user
-- [ ] GitHub Actions jobs not starting: "recent account payments have failed or your spending limit needs to be increased" (Billing & plans). ios-sim runs 36268535216 (`9839f13`), 36269031273 (`f38272a`), 36269132629 (`e853f3c`, re-run too) never started — User — resolved: ios-sim run 36269240737 on `7432a87` green 1:41 PM PT
-- [ ] SF2 playback on a real device (latency, interruptions, headphone unplug, route changes, level meter, playlist prev/next) — User
-- [x] Pick a license for SF2Player / gbk — User — decided: AGPL-3.0-or-later like the app (`Packages/SF2Player/LICENSE`, SPDX headers), this commit
-- [ ] Build 4 Warmup + Gate-1 screenshots from a real device — User
-- [ ] Publish Support/Privacy pages? Drafts in docs/asc/web/, proposed at grepawk.com/music-reader/ — User
-- [x] AGPL implications before going public — User — decided: repo public, whole app AGPL-3.0-or-later (root LICENSE + NOTICE, this commit)
+- [ ] App Review outcome for build 15 — User
+- [ ] SF2 playback on a real device (latency, interruptions, route changes, level meter, playlist) — User
 - [ ] Optional: written OK from the homr authors (liebharc) for App Store distribution of the AGPL port + ONNX weights — Yisheng
-- [ ] Replace marketing screenshots with real captures before App Store submission — User
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
-- [x] Accuracy/bug audit (2026-09-27): grayscale conversion verified bit-exact vs cv2 5.0.0 on 2M random pixels RGB+BGR (suspected coefficient bug was wrong — no change); `resetCursorOnClef` now only rewinds on a lower-staff clef (mid-piece same-staff clef changes no longer restart time) + 2 regression tests; cancelled queued `recognize` calls now return `.failed("cancelled")` instead of burning a parse + 1 regression test; warmup/cache/dropSession lifecycle audited (no use-after-free: in-flight parses hold the session); TESTFLIGHT.md history updated to build 6 — uncommitted
-- [x] CoreML trade-off decision and measurements: keep the ORT CoreML EP plus a persistent model cache; `docs/coreml-tradeoffs.md` — OMR iOS — approved by Yisheng — 2026-09-26
-- [x] CoreML compiled-model cache API in `OMRHomrIOS` (verified against ORT v1.24.2 source: cache works for MLProgram and NeuralNetwork, key = `COREML_CACHE_KEY` metadata else a path hash; we embed the SHA-256), 122 Linux tests, Gate 1 12/12 — OMR Core — this commit — 2026-09-26
-- [x] Root license: `LICENSE` = verbatim GNU AGPL-3.0 (gnu.org text), `NOTICE` = app copyright (AGPL-3.0-or-later, source URL) + third-party credits (homr, homr ONNX weights, oemer, Polyphonic-TrOMR, GeneralUser GS, ONNX Runtime, OpenCV/Pillow/NumPy ports), README `## License` — OMR Core — this commit — 2026-09-26
-- [x] Playlist (samples + every recognized scan saved to Application Support/playlist, swipe-delete scans), Player prev/next + elapsed/total + lock-free live level meter, pinned pulsing Play on Result, Debug screenshot deep links — `fea6193`, ios-sim run 36271239029 green (app 39/39, SF2Player 55/55) — 2026-09-26
-- [x] ASC copy: "Open source (AGPL-3.0)." in description (metadata, LISTING.md, COPY.md post-ship), check_copy.py re-run — this commit — 2026-09-26
-- [x] ASO copy: upload-ready `docs/asc/metadata/en-US/` (fastlane layout) = `LISTING.md`, shipped-now claims only (capture, import, sample SF2 playback, tempo, model self-test); post-ship copy + pending gates + screenshot captions in `docs/asc/COPY.md`; `check_copy.py` — OMR iOS — this commit — 2026-09-26
-- [x] Page pipeline M3 + M4 (`parseSheetMusicWithLayout(gray8:width:height:)`, `PageInferenceSession`, `omr-test parse-page`): all 9 oracle pages identical to homr end to end, 110 tests — `d0c1536`, ios-sim run 36271119585 — 2026-09-26
-- [x] SF2 player wired into the app (Result "Play sample" + Diagnostics → `PlayerView`, bundled sweden.midi + GeneralUser-GS.sf2), ios-sim green — `f38272a`, run 36269240737 — 2026-09-26
-- [x] Page pipeline M2 (`PagePipeline.detectStaffs(segmentation:width:height:)` → `PageStaffLayout`): identical to homr staff detection on 9 pages, 104 tests — `f9ca549`, ios-sim run 36270574216 — 2026-09-26
-- [x] Page pipeline M1 (`PagePipeline.preprocess(gray8:width:height:)`, `SegNetSession`): exact vs homr on 9 pages, 92 tests — `5fd4ff3` — 2026-09-26
-- [x] `Packages/SF2Player` (non-AGPL gbk port): c_scale + sweden render bit-identical PCM to gbk (SHA-256), 44 Linux tests; GeneralUser-GS.sf2 pinned in models.lock — `466c22d` — 2026-09-26
-- [x] homr page-pipeline oracle fixtures: 8 fixtures + synthetic 12 MP page-on-table (`tools/oracle/export_page_pipeline.py`) — `9839f13` — 2026-09-26
-- [x] Camera → Result → Player flow: AVCaptureSession, tap focus/expose, torch, PhotosPicker, "Recognition coming soon" stub, Play sample (C scale), Diagnostics sheet; Player is a placeholder — `b1df33e`, ios-sim run 36268276336 16/16 — 2026-09-26
-- [x] TestFlight build 4 VALID (Run Gate-1 npy + png, warmup diagnostics) — `c2950ae`, run 36265488038 — 2026-09-26
-- [x] OMRPNG Xcode type-check fix; sim CI green — `c2950ae`, run 36265297500 — 2026-09-26
-- [x] In-app Run Gate-1 (npy on warmed sessions, png vs npy diff) — `b82e54b`, `eac69aa` — 2026-09-26
-- [x] Public PNG entry points `StaffTensor.fromStaffImage(pngURL:/pngData:)`, `fromPage(pngURL:geometry:)` — `a2e43b9` — 2026-09-26
-- [x] Staff crop + dewarp port matches homr, 0 pixels different — `c80c04c`, `247c39a` — 2026-09-26
-- [x] Step 2 models + warmup + memory: 98 MB models; sim warmup 11.4s (9.8s encoder CoreML compile), peak 259 MB — `1f2aa91`, run 36264666784 — 2026-09-26
-- [x] TestFlight build 3 VALID, internal testers — `a4c2e06` — 2026-09-26
-- [x] Old ObjC ORT session (`ORTObjCSession`) deleted — `f5be12d` — 2026-09-26
-- [x] Gate 1 passes 12/12: Linux ORT CPU and iOS sim (macOS CI) with encoder on CoreML EP — `bd9074e`, run 36263874805 — 2026-09-26
+- [x] v1.0 build 15 resubmitted WAITING_FOR_REVIEW after pull-from-review + captioned listing (hero mockup first, no Sweden) — `7f68a2f`, cancel `50cf2cf`/`258986c`, submit run 36373908988 — 2026-09-28
+- [x] Listing repeatable from repo: `docs/asc/screenshots/en-US/`, `docs/asc/metadata/en-US/`; submit syncs listing; ios-sim skips listing-only pushes — `7f68a2f` — 2026-09-28
+- [x] Playlist: auto-advance only in playlist mode (scan/sample play once) — `dd13ea5` — 2026-09-27
+- [x] Warmup progress: replay on attach, encoder-step interpolate, ticking ETA ("Warming up… x%") — `bef0fdb`, `b9e4a97`, `1d0e6ea` — 2026-09-27
+- [x] Reading screen real recognition progress ("Reading music… 42%") — `affe62c` — 2026-09-27
+- [x] Try sample picture: public-domain Ode to Joy (LilyPond) replaces copyrighted Sweden sheet — `ba3564c` (supersedes `d1d9d05`) — 2026-09-27
+- [x] Support/Privacy/Terms live at grepawk.com/music-reader/ (pages also in finalcut `public/music-reader/`) — 2026-09-27
+- [x] Manual ASC submit + cancel-review + listing-upload workflows — `bf5bff9`, `1d0a257`, `258986c` — 2026-09-27
+- [x] Recognition on by default (`RecognitionGate.defaultEnabled = true`) after SegNet CoreML NeuralNetwork fix — `36f75c0`, `83c335d` — 2026-09-27
+- [x] Compile fix `lastEncoderMs`/`lastDecoderMs` `public internal(set)` — `4d46162` — 2026-09-27
