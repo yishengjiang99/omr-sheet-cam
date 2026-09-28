@@ -12,7 +12,7 @@ on:
         description: CFBundleVersion to attach to the version (export compliance cleared too)
         required: true
         type: string
-        default: "10"
+        default: "15"
       screenshots:
         description: Replace screenshots from docs/asc/screenshots/en-US
         type: boolean

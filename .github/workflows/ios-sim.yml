@@ -4,7 +4,19 @@ name: iOS Simulator
 on:
   push:
     branches: [main]
+    paths-ignore:
+      # App Store listing, docs and ASC-only workflows/scripts are not app inputs (the app bundles
+      # fixtures/, Sources/, Packages/, never docs/). fixtures/samples/ode-to-joy.jpg IS bundled.
+      - "docs/**"
+      - "**/*.md"
+      - "scripts/asc/**"
+      - ".github/workflows/asc-*.yml"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "scripts/asc/**"
+      - ".github/workflows/asc-*.yml"
   workflow_dispatch:
     inputs:
       oracle_pages:

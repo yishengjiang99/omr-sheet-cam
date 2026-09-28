@@ -1,17 +1,30 @@
-Photograph pages of sheet music with your camera, and play the included sample song on a built-in synthesizer, all on your device.
+Point your camera at printed sheet music and hear it played. AI Camera - Music Reader reads the notes right on your iPhone or iPad, then plays the page back so you can listen, learn and practice.
 
-AI Camera - Music Reader is a private, offline camera and music player for musicians. Capture a page or import one from your photo library. Open the player to hear the sample song performed with the GeneralUser GS SoundFont, and slow it down or speed it up while you listen.
-
-WHAT YOU CAN DO
-• Capture sheet music with the camera: tap to focus, torch for dim rooms
-• Import a page from your photo library
-• Play the bundled sample song on a General MIDI synthesizer
-• Play, pause, stop and seek
-• Change tempo from half speed to double speed
+HOW IT WORKS
+1. Take a photo of a page, or pick one from your photo library.
+2. Watch the live progress bar while the app reads the music.
+3. Tap Play to hear it.
 
 PRIVATE BY DESIGN
-Everything runs on your device. No account, no sign-in, and no internet connection needed. Your photos are never uploaded.
+Reading happens entirely on your device, using machine-learning models built into the app. No internet connection is needed, there is no account or sign-in, and the app collects no data. Your photos are never uploaded.
 
-BUILT ON OPEN SOURCE
-The app bundles an optical music recognition model based on homr, an open-source project, and runs it entirely on your device. A built-in self-test reads a sample staff of music with it. The recognition engine is licensed under AGPL-3.0.
-Open source (AGPL-3.0).
+A PLAYER MADE FOR PRACTICE
+• Tempo from 0.5x to 2x: slow a tricky passage down or speed it up
+• Choose the sound: piano, electric piano, harpsichord, music box, vibraphone, organ, guitar, violin, strings, choir or flute
+• Play, pause, seek and skip between pieces
+• Playback keeps going while you browse
+
+YOUR LIBRARY
+Every page the app reads is saved to your Library on your device, ready to play again anytime, one piece after another.
+
+TRY IT INSTANTLY
+No sheet music nearby? Tap "Try sample picture" to read a bundled page of Beethoven's "Ode to Joy" and hear the result.
+
+WHO IT'S FOR
+Piano students who want to hear how a new piece should sound, teachers preparing lessons, choir singers getting to know a piece before rehearsal, and hobbyists who read a little and want to hear the rest.
+
+GOOD TO KNOW
+It works best with clean, printed sheet music, one page at a time. Keep the whole page in frame, flat and well lit. Handwritten music, very dense scores and worn or crumpled pages may not read correctly, and results can contain mistakes.
+
+OPEN SOURCE
+The recognition engine is based on the open-source homr project, and the app is open source under the AGPL-3.0 license.

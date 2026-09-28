@@ -18,8 +18,9 @@ version + (UPLOAD_SCREENSHOTS=true) replace screenshots, then a read-only verifi
 1 if anything is off. VERIFY_ONLY=true skips every write.
 
 Env: APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_API_KEY_P8,
-     BUNDLE_ID (com.ragnus.vp), VERSION_STRING (1.0), BUILD_NUMBER (10),
-     UPLOAD_SCREENSHOTS (true/false), VERIFY_ONLY (true/false)
+     BUNDLE_ID (com.ragnus.vp), VERSION_STRING (1.0), BUILD_NUMBER (15),
+     UPLOAD_SCREENSHOTS (true/false), VERIFY_ONLY (true/false), SKIP_IF_NOT_EDITABLE (true/false)
+Used by asc-music-reader-upload.yml and, before submitting, by asc-submit-app-store.yml (sync_listing).
 """
 from __future__ import annotations
 import hashlib, os, struct, sys, time
@@ -37,7 +38,9 @@ EDITABLE = {"PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADAT
 
 BUNDLE_ID = os.environ.get("BUNDLE_ID", "com.ragnus.vp").strip()
 VERSION = os.environ.get("VERSION_STRING", "1.0").strip()
-BUILD_NUMBER = os.environ.get("BUILD_NUMBER", "10").strip()
+BUILD_NUMBER = os.environ.get("BUILD_NUMBER", "15").strip()
+# Submit workflow sync: a version still in review is left alone (the submit step cancels + resubmits)
+SKIP_IF_NOT_EDITABLE = os.environ.get("SKIP_IF_NOT_EDITABLE", "false").strip().lower() == "true"
 UPLOAD_SHOTS = os.environ.get("UPLOAD_SCREENSHOTS", "true").strip().lower() == "true"
 VERIFY_ONLY = os.environ.get("VERIFY_ONLY", "false").strip().lower() == "true"
 _tok = {"v": None, "t": 0}
@@ -120,6 +123,9 @@ def main():
     warnings = []
     if not VERIFY_ONLY:
         if ver["attributes"].get("appStoreState") not in EDITABLE and vstate not in EDITABLE:
+            if SKIP_IF_NOT_EDITABLE:
+                print(f"WARNING: version {VERSION} not editable ({vstate}); listing sync skipped, nothing written")
+                return
             raise SystemExit(f"version {VERSION} not editable ({vstate}); nothing written")
         write(app_id, ver, info, build, L, copyright_, cat1, cat2, R, shots, warnings)
     ok = verify(app_id, app, ver["id"], info["id"], L, copyright_, cat1, R, shots, warnings)
@@ -275,7 +281,7 @@ def verify(app_id, app, vid, info_id, L, copyright_, cat1, R, shots, warnings) -
         print(f"[{'OK ' if cond else 'BAD'}] {label} {detail}")
 
     v = api("GET", f"/v1/appStoreVersions/{vid}")["data"]["attributes"]
-    check("version state", v.get("appStoreState") == "PREPARE_FOR_SUBMISSION" or v.get("appVersionState") == "PREPARE_FOR_SUBMISSION",
+    check("version state (editable)", v.get("appStoreState") in EDITABLE or v.get("appVersionState") in EDITABLE,
           f"{VERSION} appStoreState={v.get('appStoreState')} appVersionState={v.get('appVersionState')}")
     check("copyright", v.get("copyright") == copyright_, repr(v.get("copyright")))
     b = (api("GET", f"/v1/appStoreVersions/{vid}/build", ok404=True) or {}).get("data")

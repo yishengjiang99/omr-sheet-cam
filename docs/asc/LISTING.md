@@ -9,10 +9,11 @@ shipped-now** copy and must equal `metadata/en-US/*.txt` (fastlane deliver layou
 and the lines gated on unshipped features (recognition, highlighting, library, level meter,
 instrument): `COPY.md`. Check: `python3 docs/asc/check_copy.py`.
 
-Status: listing prep for build 10. Upload + verify with the manual workflow
+Status: listing prep for build 15 (pulled from review 2026-09-27 with `asc-cancel-review.yml`). Upload + verify with the manual workflow
 `.github/workflows/asc-music-reader-upload.yml` (script `scripts/asc/upload_music_reader_listing.py`,
 reads `metadata/` in fastlane layout incl. URLs, copyright, categories, App Review contact).
-Submitting for review is a separate manual step (`asc-submit-app-store.yml`), run by the owner only.
+Submitting for review is a separate manual step (`asc-submit-app-store.yml`), run by the owner only;
+it re-syncs this listing from the repo files first (input `sync_listing`, default true).
 
 ## Name (30)
 ```
@@ -21,38 +22,51 @@ AI Camera - Music Reader
 
 ## Subtitle (30)
 ```
-Sheet music capture & playback
+Scan sheet music, hear it play
 ```
 
 ## Promotional text (170)
 ```
-Capture sheet music with your camera or import a photo, then play the included sample song on a built-in synthesizer. Private and offline. No account needed.
+Point your camera at printed sheet music and hear it played back. Slow it down to practice, or pick an instrument. Runs on your device: no internet, no account.
 ```
 
 ## Keywords (100, comma-separated)
 ```
-scanner,scan,OMR,MIDI,piano,notes,score,notation,sight,reading,practice,tempo,synth,choir,band,learn
+OMR,piano,score,notation,notes,MIDI,sightreading,practice,tempo,choir,teacher,student,scanner,synth
 ```
 
 ## Description (4000)
 ```
-Photograph pages of sheet music with your camera, and play the included sample song on a built-in synthesizer, all on your device.
+Point your camera at printed sheet music and hear it played. AI Camera - Music Reader reads the notes right on your iPhone or iPad, then plays the page back so you can listen, learn and practice.
 
-AI Camera - Music Reader is a private, offline camera and music player for musicians. Capture a page or import one from your photo library. Open the player to hear the sample song performed with the GeneralUser GS SoundFont, and slow it down or speed it up while you listen.
-
-WHAT YOU CAN DO
-• Capture sheet music with the camera: tap to focus, torch for dim rooms
-• Import a page from your photo library
-• Play the bundled sample song on a General MIDI synthesizer
-• Play, pause, stop and seek
-• Change tempo from half speed to double speed
+HOW IT WORKS
+1. Take a photo of a page, or pick one from your photo library.
+2. Watch the live progress bar while the app reads the music.
+3. Tap Play to hear it.
 
 PRIVATE BY DESIGN
-Everything runs on your device. No account, no sign-in, and no internet connection needed. Your photos are never uploaded.
+Reading happens entirely on your device, using machine-learning models built into the app. No internet connection is needed, there is no account or sign-in, and the app collects no data. Your photos are never uploaded.
 
-BUILT ON OPEN SOURCE
-The app bundles an optical music recognition model based on homr, an open-source project, and runs it entirely on your device. A built-in self-test reads a sample staff of music with it. The recognition engine is licensed under AGPL-3.0.
-Open source (AGPL-3.0).
+A PLAYER MADE FOR PRACTICE
+• Tempo from 0.5x to 2x: slow a tricky passage down or speed it up
+• Choose the sound: piano, electric piano, harpsichord, music box, vibraphone, organ, guitar, violin, strings, choir or flute
+• Play, pause, seek and skip between pieces
+• Playback keeps going while you browse
+
+YOUR LIBRARY
+Every page the app reads is saved to your Library on your device, ready to play again anytime, one piece after another.
+
+TRY IT INSTANTLY
+No sheet music nearby? Tap "Try sample picture" to read a bundled page of Beethoven's "Ode to Joy" and hear the result.
+
+WHO IT'S FOR
+Piano students who want to hear how a new piece should sound, teachers preparing lessons, choir singers getting to know a piece before rehearsal, and hobbyists who read a little and want to hear the rest.
+
+GOOD TO KNOW
+It works best with clean, printed sheet music, one page at a time. Keep the whole page in frame, flat and well lit. Handwritten music, very dense scores and worn or crumpled pages may not read correctly, and results can contain mistakes.
+
+OPEN SOURCE
+The recognition engine is based on the open-source homr project, and the app is open source under the AGPL-3.0 license.
 ```
 
 ## Support URL
@@ -101,13 +115,16 @@ the privacy nutrition label, so set it in the App Store Connect web UI (App Priv
 "No, we do not collect data" → Publish).
 
 ## Screenshots
-Real-device player captures (`screenshots/en-US/source/*.jpg`), turned into store sizes by
-`screenshots/en-US/make_store_screenshots.py` (Lanczos to width/height, padded with the capture's
-own edge colour, no captions). Order: 01 Die Letzte Kompanie, 02 Für Elise.
+Peach marketing frames built by `screenshots/en-US/make_store_screenshots.py` from `screenshots/en-US/source/`
+(hero mockup, real-device player captures, and crops of the scanning screen that exclude the photo preview).
+Every frame has a large caption. Uploaded in filename order:
+01 "Snap sheet music. Hear it play." (hero mockup) · 02 "Slow it down to practice" (Für Elise player) ·
+03 "Reads music right on your iPhone" (progress card + privacy badges; iPad: "on your device") ·
+04 "Piano, strings, choir and more" (player controls + the app's instrument list).
 
 | ASC display type | Size | Files |
 |---|---|---|
-| `APP_IPHONE_67` (6.9" iPhone) | 1320 × 2868 | `screenshots/en-US/iphone-69-0{1,2}-*.png` |
-| `APP_IPAD_PRO_3GEN_129` (13" iPad) | 2064 × 2752 | `screenshots/en-US/ipad-13-0{1,2}-*.png` |
+| `APP_IPHONE_67` (6.9" iPhone) | 1320 × 2868 | `screenshots/en-US/iphone-69-0{1..4}-*.png` |
+| `APP_IPAD_PRO_3GEN_129` (13" iPad) | 2064 × 2752 | `screenshots/en-US/ipad-13-0{1..4}-*.png` |
 
 The older illustrative frames in `screenshots/*.png` (and `screenshots/simulator/`) are not uploaded.

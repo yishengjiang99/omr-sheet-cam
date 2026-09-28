@@ -15,9 +15,8 @@ META = HERE / "metadata" / "en-US"
 FIELDS = [("name", "Name", 30), ("subtitle", "Subtitle", 30), ("keywords", "Keywords", 100),
           ("promotional_text", "Promotional text", 170), ("description", "Description", 4000)]
 # Phrases that describe unshipped features; must never reach the upload-ready files.
-PENDING = [r"highlight", r"(?<!photo )library", r"playlist", r"level meter", r"instrument",
-           r"reads the notes", r"reads clefs", r"hear it", r"recognition runs", r"your scan",
-           r"\bscans\b", r"coming soon"]
+# Page recognition, the Library/playlist and the instrument picker shipped (build 15), so they are allowed now.
+PENDING = [r"highlight", r"level meter", r"reads clefs", r"coming soon"]
 errors: list[str] = []
 
 

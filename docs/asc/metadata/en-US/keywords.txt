@@ -1,1 +1,1 @@
-scanner,scan,OMR,MIDI,piano,notes,score,notation,sight,reading,practice,tempo,synth,choir,band,learn
+OMR,piano,score,notation,notes,MIDI,sightreading,practice,tempo,choir,teacher,student,scanner,synth
