@@ -32,6 +32,41 @@ final class Build16Tests: XCTestCase {
         }
     }
 
+    // MARK: - Failed scans
+
+    func testScanFailureClassifiesPipelineMessages() {
+        XCTAssertEqual(ScanFailure.classify("page staff detection: no noteheads found (homr: 'No noteheads found')"), .noMusicFound)
+        XCTAssertEqual(ScanFailure.classify("page staff detection: no staffs found"), .noStaffFound)
+        XCTAssertEqual(ScanFailure.classify("no music staff found on the page (staffCount 0)"), .noStaffFound)
+        XCTAssertEqual(ScanFailure.classify("no notes recognized (2 staffs)"), .noNotesFound(staffCount: 2))
+        XCTAssertEqual(ScanFailure.classify("image not decodable: unknown format (12 B)"), .unreadableImage)
+        XCTAssertEqual(ScanFailure.classify("boom: models unavailable"), .readerUnavailable)
+        XCTAssertEqual(ScanFailure.classify("cancelled"), .other)
+        XCTAssertTrue(ScanFailure.noNotesFound(staffCount: 1).explanation.contains("1 staff "))
+    }
+
+    func testScanFailureTipsLeadWithPhotoSpecificAdvice() {
+        let dark = PhotoQuality(meanLuma: 40, lumaStdDev: 30, pixelWidth: 4032, pixelHeight: 3024)
+        let tips = ScanFailure.noStaffFound.tips(quality: dark)
+        XCTAssertEqual(tips.first, .dark)
+        XCTAssertTrue(tips.contains(.fitPage) && tips.contains(.light))
+        XCTAssertEqual(Set(tips.map(\.text)).count, tips.count, "no duplicates")
+        let fine = PhotoQuality(meanLuma: 180, lumaStdDev: 50, pixelWidth: 4032, pixelHeight: 3024)
+        XCTAssertEqual(ScanFailure.noMusicFound.tips(quality: fine).first, .printed)
+        let small = PhotoQuality(meanLuma: 180, lumaStdDev: 10, pixelWidth: 640, pixelHeight: 480)
+        XCTAssertEqual(Array(ScanFailure.noNotesFound(staffCount: nil).tips(quality: small).prefix(2)), [.washedOut, .small])
+        XCTAssertTrue(ScanFailure.readerUnavailable.tips(quality: dark).isEmpty, "not the photo's fault")
+    }
+
+    func testPhotoQualityMeasuresThumbnail() throws {
+        let r = UIGraphicsImageRenderer(size: CGSize(width: 200, height: 100), format: { let f = UIGraphicsImageRendererFormat(); f.scale = 1; return f }())
+        let black = r.image { ctx in UIColor.black.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 200, height: 100)) }
+        let q = try XCTUnwrap(PhotoQuality.measure(black))
+        XCTAssertTrue(q.isDark)
+        XCTAssertTrue(q.isSmall)
+        XCTAssertEqual(q.pixelWidth, 200)
+    }
+
     static func luminance(_ c: UIColor) -> Double {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         c.getRed(&r, green: &g, blue: &b, alpha: &a)

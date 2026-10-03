@@ -21,6 +21,7 @@
 		5F0000000000000000000005 /* SF2Player in Frameworks */ = {isa = PBXBuildFile; productRef = 5D0000000000000000000002 /* SF2Player */; };
 		CA0000000000000000000001 /* CaptureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000001 /* CaptureStore.swift */; };
 		CA0000000000000000000002 /* RecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000002 /* RecognitionService.swift */; };
+		7F0000000000000000000003 /* ScanFailure.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E0000000000000000000002 /* ScanFailure.swift */; };
 		CA0000000000000000000003 /* CameraController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000003 /* CameraController.swift */; };
 		CA0000000000000000000004 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000004 /* CameraPreviewView.swift */; };
 		CA0000000000000000000005 /* CameraScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000005 /* CameraScreen.swift */; };
@@ -93,6 +94,7 @@
 		5E0000000000000000000004 /* SF2PlayerAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SF2PlayerAppTests.swift; sourceTree = "<group>"; };
 		CB0000000000000000000001 /* CaptureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStore.swift; sourceTree = "<group>"; };
 		CB0000000000000000000002 /* RecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecognitionService.swift; sourceTree = "<group>"; };
+		7E0000000000000000000002 /* ScanFailure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFailure.swift; sourceTree = "<group>"; };
 		CB0000000000000000000003 /* CameraController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraController.swift; sourceTree = "<group>"; };
 		CB0000000000000000000004 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
 		CB0000000000000000000005 /* CameraScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraScreen.swift; sourceTree = "<group>"; };
@@ -168,6 +170,7 @@
 			children = (
 				CB0000000000000000000001 /* CaptureStore.swift */,
 				CB0000000000000000000002 /* RecognitionService.swift */,
+				7E0000000000000000000002 /* ScanFailure.swift */,
 				CB0000000000000000000003 /* CameraController.swift */,
 				CB0000000000000000000004 /* CameraPreviewView.swift */,
 				CB0000000000000000000005 /* CameraScreen.swift */,
@@ -490,6 +493,7 @@
 				A1000000000000000000000B /* Gate1Runner.swift in Sources */,
 				CA0000000000000000000001 /* CaptureStore.swift in Sources */,
 				CA0000000000000000000002 /* RecognitionService.swift in Sources */,
+				7F0000000000000000000003 /* ScanFailure.swift in Sources */,
 				CA0000000000000000000003 /* CameraController.swift in Sources */,
 				CA0000000000000000000004 /* CameraPreviewView.swift in Sources */,
 				CA0000000000000000000005 /* CameraScreen.swift in Sources */,

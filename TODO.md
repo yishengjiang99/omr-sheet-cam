@@ -13,7 +13,6 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] v1.0 build 15 in App Review (WAITING_FOR_REVIEW, submitted 2026-09-28 ~8:30 PM PT / 03:30 UTC; listing = captioned peach screenshots + rewritten copy, no Sweden). Check with read-only **ASC status** only; do NOT re-run cancel/submit while waiting — Chief of Staff — submit run 36373908988, status run 36374044212
 - [ ] Real-device page parse verdict: 3–5 real sheet photos → parse time + peak `phys_footprint` from Copy as prompt; pass/fail per photo — OMR iOS + User
 - [ ] Real-photo accuracy spot check (2–3 photos); if systematically off, file against color-preprocessing gap — OMR Core
-- [ ] Failed-parse UX: say why when known (no staff vs no notes) + guidance — OMR iOS
 - [ ] Note highlighting: unblock `noteLayout.pageRect` (OMR Core) → boxes on Result — OMR Core + OMR iOS
 - [ ] Regression fixtures (2026-09-27 audit): tuplet rounding, key signatures + accidentals, multi-row/grand-staff timing — OMR Core
 - [ ] Memory warning re-warm (~10 s); revisit after device numbers — OMR iOS
@@ -32,6 +31,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] Failed-scan explanation: `ScanFailure` (no notes found / no staff / staff but no notes / unreadable photo / reader not ready) with framing + lighting tips, photo-specific tips (dark, washed out, small) from a 64×64 luma thumbnail, Retake photo; `failure_reason` in diagnostics — 2026-10-03
 - [x] Build 16 quick fixes: "Play a sample" + Library sample = public-domain Ode to Joy (`fixtures/samples/ode-to-joy.mid`, `scripts/samples/make-ode-to-joy-midi.py`; gbk parity ref `fixtures/sf2/ode-to-joy.gbk.json`), old copyrighted MIDI deleted; Theme cream/coralSoft adapt to Dark Mode (Player text readable); SegNetTests expects padded batch 8; ios-sim also runs PlaylistStoreTests, SF2PlayerAppTests, Build16Tests — 2026-10-03
 - [x] v1.0 build 15 resubmitted WAITING_FOR_REVIEW after pull-from-review + captioned listing (hero mockup first, no Sweden) — `7f68a2f`, cancel `50cf2cf`/`258986c`, submit run 36373908988 — 2026-09-28
 - [x] Listing repeatable from repo: `docs/asc/screenshots/en-US/`, `docs/asc/metadata/en-US/`; submit syncs listing; ios-sim skips listing-only pushes — `7f68a2f` — 2026-09-28

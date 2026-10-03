@@ -24,6 +24,8 @@ struct ResultScreen: View {
     @State private var attempt = 0
     @State private var titleText = ""
     @State private var savedToLibrary = false
+    /// Brightness / contrast / size of the photo, measured only when a scan fails (tips).
+    @State private var photoQuality: PhotoQuality?
     /// Real pipeline progress for the Reading screen (main actor).
     @StateObject private var progress = RecognitionProgress()
     @Environment(\.dismiss) private var dismiss
@@ -118,12 +120,27 @@ struct ResultScreen: View {
                 Section("Recognition") {
                     switch outcome {
                     case .failed(let msg):
-                        Label("Couldn't read this page", systemImage: "exclamationmark.triangle")
+                        let reason = ScanFailure.classify(msg)
+                        Label(reason.title, systemImage: "exclamationmark.triangle")
+                            .font(.headline)
                             .foregroundStyle(.orange)
                             .accessibilityIdentifier("result.error")
-                        Text("Make sure the whole page is in frame, flat and well lit, then try again.")
-                            .font(.footnote).foregroundStyle(.secondary)
-                        Button { retry() } label: { Label("Try again", systemImage: "arrow.clockwise") }
+                        Text(reason.explanation)
+                            .font(.subheadline).foregroundStyle(.secondary)
+                            .accessibilityIdentifier("result.errorExplanation")
+                        ForEach(reason.tips(quality: photoQuality)) { tip in
+                            Label {
+                                Text(tip.text).font(.footnote)
+                            } icon: {
+                                Image(systemName: tip.symbol).foregroundStyle(Theme.coral)
+                            }
+                            .accessibilityIdentifier("result.tip")
+                        }
+                        if reason.isPhotoProblem {
+                            Button { dismiss() } label: { Label("Retake photo", systemImage: "camera") }
+                                .accessibilityIdentifier("result.retakeFromError")
+                        }
+                        Button { retry() } label: { Label(reason.isPhotoProblem ? "Try this photo again" : "Try again", systemImage: "arrow.clockwise") }
                             .accessibilityIdentifier("result.retry")
                         DisclosureGroup("Details") {
                             Text(msg).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
@@ -230,8 +247,12 @@ struct ResultScreen: View {
         progress.reset()
         let result = await service.recognize(imageData: jpeg, progress: progress.handler)
         let ms = Double(DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds) / 1_000_000
+        if case .failed = result, photoQuality == nil {
+            let image = photo.image
+            photoQuality = await Task.detached(priority: .userInitiated) { PhotoQuality.measure(image) }.value
+        }
         outcome = result
-        Self.recordRecognition(result, capture: captureName, inputBytes: jpeg.count, pixels: pixelSize, ms: ms)
+        Self.recordRecognition(result, capture: captureName, inputBytes: jpeg.count, pixels: pixelSize, ms: ms, quality: photoQuality)
         if case let .recognized(d) = result {
             feedback.staffCount = d.staffCount
             feedback.noteCount = d.notes.count
@@ -288,7 +309,7 @@ struct ResultScreen: View {
     /// `recognition` event: input size, ms, staffCount, noteCount, warnings, layoutSource, errors.
     static func recordRecognition(
         _ result: RecognitionOutcome, capture: String, inputBytes: Int, pixels: String, ms: Double,
-        log: DiagnosticsLog = .shared
+        quality: PhotoQuality? = nil, log: DiagnosticsLog = .shared
     ) {
         var p: [String: String] = [
             "kind": "run", "capture": capture, "input_bytes": "\(inputBytes)", "pixels": pixels,
@@ -308,8 +329,14 @@ struct ResultScreen: View {
             msg += " · staffs \(d.staffCount) · notes \(d.notes.count) · layout \(d.layoutSource)"
             if !d.warnings.isEmpty { msg += " · \(d.warnings.count) warning(s)"; level = .warn }
         case let .failed(error):
+            let reason = ScanFailure.classify(error)
             p["error"] = error
-            msg += " · \(error)"
+            p["failure_reason"] = reason.title
+            if let q = quality {
+                p["photo_mean_luma"] = String(format: "%.0f", q.meanLuma)
+                p["photo_luma_std"] = String(format: "%.0f", q.lumaStdDev)
+            }
+            msg += " · \(reason.title) · \(error)"
             level = .error
         }
         log.record(level, .recognition, msg, payload: p)
