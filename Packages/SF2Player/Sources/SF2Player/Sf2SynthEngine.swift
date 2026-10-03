@@ -327,6 +327,18 @@ public final class Sf2SynthEngine: @unchecked Sendable {
         }
     }
 
+    /// Releases voices of tracks in `mask` (bit i = SMF track i). Used when tracks are muted.
+    func releaseTracksRT(_ mask: UInt64) {
+        let s = st.pointee
+        for i in 0 ..< s.count {
+            let v = s.voices + Int(s.order[i])
+            let t = v.pointee.trackIndex
+            guard t >= 0 && t < 64 && mask & (UInt64(1) << UInt64(t)) != 0 else { continue }
+            v.pointee.volEnv.noteOff(); v.pointee.modEnv.noteOff()
+            if v.pointee.loopUntilReleaseThenTail { v.pointee.inReleaseTail = true }
+        }
+    }
+
     @inline(__always) private func removeVoice(at idx: Int) {
         let s = st
         let slot = s.pointee.order[idx]

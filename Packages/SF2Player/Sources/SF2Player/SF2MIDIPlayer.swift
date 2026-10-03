@@ -20,6 +20,23 @@ public struct SF2NotePosition: Hashable, Sendable {
     public init(id: Int, startTick: Int, endTick: Int) { self.id = id; self.startTick = startTick; self.endTick = endTick }
 }
 
+/// A–B practice loop in song seconds (`start < end`).
+public struct SF2LoopRange: Equatable, Sendable {
+    public var start: Double
+    public var end: Double
+    public init(start: Double, end: Double) { self.start = start; self.end = end }
+}
+
+/// A note-carrying SMF track the UI can mute (e.g. one staff / hand of a scan).
+public struct SF2TrackInfo: Equatable, Sendable, Identifiable {
+    public var id: Int { index }
+    /// SMF track index (the conductor track 0 never has notes in OMR files).
+    public var index: Int
+    public var name: String
+    public var noteCount: Int
+    public init(index: Int, name: String, noteCount: Int) { self.index = index; self.name = name; self.noteCount = noteCount }
+}
+
 /// Real-time SoundFont MIDI player: AVAudioEngine + AVAudioSourceNode driving `SF2RealtimeCore`.
 /// The render block only calls `SF2RealtimeCore.render` (preallocated voices, lock-free command
 /// ring); all parsing, region building and allocation happen on the main actor or a background task.
@@ -60,6 +77,14 @@ public final class SF2MIDIPlayer: ObservableObject {
             if c != transpose { transpose = c; return }
             if transpose != oldValue { recompileKeepingPosition() }
         }
+    }
+    /// SMF track indices whose notes are silent (per song; cleared when another MIDI loads).
+    @Published public private(set) var mutedTracks: Set<Int> = []
+    /// Active A–B loop (per song).
+    @Published public private(set) var loop: SF2LoopRange?
+    /// Tracks with notes in the loaded song, in file order.
+    public var noteTracks: [SF2TrackInfo] {
+        (song?.tracks ?? []).filter { !$0.notes.isEmpty }.map { SF2TrackInfo(index: $0.index, name: $0.name, noteCount: $0.notes.count) }
     }
     public var notePositions: [SF2NotePosition] = [] {
         didSet { updateActiveNotes() }
@@ -112,6 +137,8 @@ public final class SF2MIDIPlayer: ObservableObject {
     /// Parses SMF (format 0/1) and prepares its sample-accurate schedule. Stops current playback.
     public func load(midi: Data) throws {
         let parsed = try SMFSong(data: midi)
+        mutedTracks = []
+        loop = nil
         guard soundFont != nil else { song = parsed; throw PlayerError.soundFontNotLoaded }
         song = parsed
         try compile()
@@ -126,6 +153,8 @@ public final class SF2MIDIPlayer: ObservableObject {
         sequence = seq
         c.setSequence(seq)
         c.setTempoScale(tempoScale)
+        c.setMutedTracks(mutedTracks)
+        if let loop { c.setLoop(startSeconds: loop.start, endSeconds: loop.end) } else { c.clearLoop() }
         duration = song.durationSec
         isPlaying = false
         position = SF2PlaybackPosition()
@@ -331,6 +360,42 @@ public final class SF2MIDIPlayer: ObservableObject {
         guard isPlaying, let song else { return position.tick }
         let lag = outputLatency * tempoScale
         return lag > 0 ? song.secToTick(max(0, position.seconds - lag)) : position.tick
+    }
+
+    // MARK: Practice: mute / solo, A–B loop
+
+    public func setMuted(_ track: Int, _ muted: Bool) {
+        var m = mutedTracks
+        if muted { m.insert(track) } else { m.remove(track) }
+        setMutedTracks(m)
+    }
+
+    public func setMutedTracks(_ tracks: Set<Int>) {
+        guard tracks != mutedTracks else { return }
+        mutedTracks = tracks
+        core?.setMutedTracks(tracks)
+    }
+
+    /// Only `track` sounds (nil = all tracks).
+    public func solo(_ track: Int?) {
+        guard let track else { setMutedTracks([]); return }
+        setMutedTracks(Set(noteTracks.map(\.index).filter { $0 != track }))
+    }
+
+    /// Loops [start, end) seconds (ordered, clamped to the song); an empty range clears it.
+    public func setLoop(start: Double, end: Double) {
+        let a = max(0, min(start, end)), b = min(max(start, end), duration)
+        guard b - a >= 0.05 else { clearLoop(); return }
+        let r = SF2LoopRange(start: a, end: b)
+        loop = r
+        core?.setLoop(startSeconds: a, endSeconds: b)
+        if position.seconds < a || position.seconds >= b { seek(to: a) }
+    }
+
+    public func clearLoop() {
+        guard loop != nil else { return }
+        loop = nil
+        core?.clearLoop()
     }
 
     /// Seek to a MIDI tick of the loaded song (e.g. a tapped note's onset).

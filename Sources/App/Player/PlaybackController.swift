@@ -21,6 +21,10 @@ final class PlaybackController: ObservableObject {
     @Published private(set) var layout: ScanLayout?
     /// The scan photo `layout` refers to (loaded once per song).
     @Published private(set) var sheetImage: UIImage?
+    /// A–B loop being set: A (seconds) is marked, waiting for B.
+    @Published private(set) var pendingLoopStart: Double?
+    /// Notes tapped as A / B in Sheet mode (badges).
+    @Published private(set) var loopNoteIDs: [Int: String] = [:]
     private var loadTask: Task<Void, Never>?
     private var bag: Set<AnyCancellable> = []
 
@@ -149,6 +153,79 @@ final class PlaybackController: ObservableObject {
         log("seek", ["to": String(format: "%.2f", s)])
     }
 
+    // MARK: Practice: A–B loop, hands
+
+    /// Marks A, then B (B before A swaps them). With a loop on, starts a new A.
+    /// `endSeconds`: where B ends when marking a tapped note (its release), else `seconds`.
+    func markLoopPoint(at seconds: Double, noteID: Int? = nil, endSeconds: Double? = nil) {
+        if player.loop != nil { player.clearLoop(); pendingLoopStart = nil; loopNoteIDs = [:] }
+        if let a = pendingLoopStart {
+            let b = endSeconds ?? seconds
+            pendingLoopStart = nil
+            player.setLoop(start: min(a, seconds), end: max(a, b))
+            if let noteID { loopNoteIDs[noteID] = "B" }
+            if player.loop == nil { loopNoteIDs = [:] }
+            log("loop", ["a": String(format: "%.2f", player.loop?.start ?? a), "b": String(format: "%.2f", player.loop?.end ?? b)])
+        } else {
+            pendingLoopStart = seconds
+            loopNoteIDs = noteID.map { [$0: "A"] } ?? [:]
+        }
+    }
+
+    /// Sheet tap in loop mode: A = the note's onset, B = the end of the tapped note.
+    func markLoopPoint(note: RecognizedNote) {
+        guard let song = player.song else { return }
+        markLoopPoint(at: song.tickToSec(note.onsetTicks), noteID: note.noteIndex,
+                      endSeconds: song.tickToSec(note.onsetTicks + max(1, note.durationTicks)))
+    }
+
+    func clearLoop() {
+        player.clearLoop()
+        pendingLoopStart = nil
+        loopNoteIDs = [:]
+        log("loop_clear", [:])
+    }
+
+    /// Notes (layout ids) whose onset is inside the loop, for the Sheet tint.
+    var loopNoteSet: Set<Int> {
+        guard let loop = player.loop, let song = player.song, let layout else { return [] }
+        return Set(layout.notes.filter {
+            let t = song.tickToSec($0.onsetTicks)
+            return t >= loop.start - 1e-6 && t < loop.end - 1e-6
+        }.map(\.noteIndex))
+    }
+
+    /// UI names for note tracks: an unnamed two-staff scan reads as right / left hand.
+    nonisolated static func handNames(_ tracks: [SF2TrackInfo]) -> [Int: String] {
+        let generic = tracks.allSatisfy { $0.name.hasPrefix("Track ") || $0.name.isEmpty }
+        if tracks.count == 2 && generic {
+            return [tracks[0].index: "Right hand", tracks[1].index: "Left hand"]
+        }
+        return Dictionary(uniqueKeysWithValues: tracks.enumerated().map { i, t in
+            (t.index, generic ? "Staff \(i + 1)" : t.name)
+        })
+    }
+
+    /// Chip text: "Both hands", "Right hand only", "Left hand muted", "2 of 3 parts".
+    nonisolated static func handsLabel(_ tracks: [SF2TrackInfo], muted: Set<Int>) -> String {
+        let names = handNames(tracks)
+        let playing = tracks.filter { !muted.contains($0.index) }
+        if playing.count == tracks.count { return tracks.count == 2 ? "Both hands" : "All parts" }
+        if playing.isEmpty { return "All muted" }
+        if playing.count == 1, let n = names[playing[0].index] { return "\(n) only" }
+        return "\(playing.count) of \(tracks.count) parts"
+    }
+
+    func solo(_ track: Int?) {
+        player.solo(track)
+        log("hands", ["muted": player.mutedTracks.sorted().map(String.init).joined(separator: ",")])
+    }
+
+    func setMuted(_ track: Int, _ muted: Bool) {
+        player.setMuted(track, muted)
+        log("hands", ["muted": player.mutedTracks.sorted().map(String.init).joined(separator: ",")])
+    }
+
     /// Sheet mode tap: jump to a note's onset (keeps playing / paused state).
     func seek(toNote note: RecognizedNote) {
         player.seek(toTick: note.onsetTicks)
@@ -177,6 +254,8 @@ final class PlaybackController: ObservableObject {
         ready = false
         layout = nil
         sheetImage = nil
+        pendingLoopStart = nil
+        loopNoteIDs = [:]
         player.notePositions = []
         status = "Loading…"
         do {

@@ -64,6 +64,8 @@ struct PlayerScreen: View {
     /// Sheet (scan photo with the playing notes highlighted) vs. Cover artwork.
     @State private var showSheet = true
     @State private var followPlayback = true
+    /// Sheet taps mark the A–B loop instead of seeking.
+    @State private var tapSetsLoop = false
 
     private var sheetAvailable: Bool { controller.layout != nil && controller.sheetImage != nil }
 
@@ -149,19 +151,33 @@ struct PlayerScreen: View {
 
     private func sheet(layout: ScanLayout, image: UIImage) -> some View {
         VStack(spacing: 6) {
-            SheetFollowView(image: image, layout: layout, activeIDs: player.activeNoteIDs, follow: followPlayback) { note in
-                controller.seek(toNote: note)
+            SheetFollowView(image: image, layout: layout, activeIDs: player.activeNoteIDs, follow: followPlayback,
+                            tinted: controller.loopNoteSet, badges: controller.loopNoteIDs) { note in
+                if tapSetsLoop {
+                    controller.markLoopPoint(note: note)
+                    if player.loop != nil { tapSetsLoop = false }
+                } else {
+                    controller.seek(toNote: note)
+                }
             }
             .frame(height: 380)
             HStack {
                 Toggle(isOn: $followPlayback) { Label("Follow", systemImage: "scope") }
                     .toggleStyle(.button)
                     .accessibilityIdentifier("player.sheet.follow")
+                Toggle(isOn: $tapSetsLoop) { Label("Tap A–B", systemImage: "repeat") }
+                    .toggleStyle(.button)
+                    .accessibilityIdentifier("player.sheet.tapLoop")
                 Spacer()
-                Text("Tap a note to play from there").font(.caption).foregroundStyle(.secondary)
+                Text(sheetHint).font(.caption).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
             }
             .font(.caption.weight(.semibold))
         }
+    }
+
+    private var sheetHint: String {
+        guard tapSetsLoop else { return "Tap a note to play from there" }
+        return controller.pendingLoopStart == nil ? "Tap the first note of the loop" : "Tap the last note of the loop"
     }
 
     private var seekBar: some View {
@@ -218,8 +234,74 @@ struct PlayerScreen: View {
     private var chips: some View {
         VStack(spacing: 10) {
             HStack(spacing: 12) { tempoChip; instrumentChip }
-            HStack(spacing: 12) { keyChip }
+            HStack(spacing: 12) {
+                keyChip
+                if player.noteTracks.count >= 2 { handsChip }
+            }
+            loopControl
         }
+    }
+
+    private var handsChip: some View {
+        let tracks = player.noteTracks
+        let names = PlaybackController.handNames(tracks)
+        return Menu {
+            Button { controller.solo(nil) } label: {
+                Self.menuItem(tracks.count == 2 ? "Both hands" : "All parts", checked: player.mutedTracks.isEmpty)
+            }
+            ForEach(tracks) { t in
+                Button { controller.solo(t.index) } label: {
+                    Self.menuItem("\(names[t.index] ?? t.name) only",
+                                  checked: player.mutedTracks == Set(tracks.map(\.index).filter { $0 != t.index }))
+                }
+            }
+            Divider()
+            ForEach(tracks) { t in
+                Toggle("Mute \(names[t.index] ?? t.name)", isOn: Binding(
+                    get: { player.mutedTracks.contains(t.index) }, set: { controller.setMuted(t.index, $0) }))
+            }
+        } label: {
+            chip(icon: "hand.raised", text: PlaybackController.handsLabel(tracks, muted: player.mutedTracks))
+        }
+        .disabled(!controller.ready)
+        .accessibilityLabel("Hands")
+        .accessibilityValue(PlaybackController.handsLabel(tracks, muted: player.mutedTracks))
+        .accessibilityIdentifier("player.hands")
+    }
+
+    /// A–B loop: "A" marks the current position, then "B" closes the loop; ✕ clears it.
+    private var loopControl: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "repeat").foregroundStyle(player.loop != nil ? Theme.coral : Color.secondary)
+            if let loop = player.loop {
+                Text("Loop \(Self.clock(loop.start))–\(Self.clock(loop.end))")
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .accessibilityIdentifier("player.loop.range")
+                Spacer()
+                Button { controller.clearLoop() } label: { Label("Clear loop", systemImage: "xmark.circle.fill") }
+                    .labelStyle(.iconOnly)
+                    .accessibilityIdentifier("player.loop.clear")
+            } else {
+                Text(controller.pendingLoopStart.map { "A at \(Self.clock($0)) · set B" } ?? "Loop a passage")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                Spacer()
+                Button(controller.pendingLoopStart == nil ? "Set A" : "Set B") {
+                    controller.markLoopPoint(at: player.position.seconds)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("player.loop.mark")
+                if controller.pendingLoopStart != nil {
+                    Button { controller.clearLoop() } label: { Label("Cancel loop", systemImage: "xmark.circle.fill") }
+                        .labelStyle(.iconOnly)
+                }
+            }
+        }
+        .foregroundStyle(Color.primary)
+        .disabled(!controller.ready)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(.background, in: Capsule())
+        .overlay(Capsule().stroke(Color.primary.opacity(0.08)))
     }
 
     private var keyChip: some View {
@@ -258,6 +340,11 @@ struct PlayerScreen: View {
             chip(icon: "pianokeys", text: settings.instrument.name)
         }
         .accessibilityIdentifier("player.instrument")
+    }
+
+    @ViewBuilder
+    private static func menuItem(_ title: String, checked: Bool) -> some View {
+        if checked { Label(title, systemImage: "checkmark") } else { Text(title) }
     }
 
     private func chip(icon: String, text: String) -> some View {

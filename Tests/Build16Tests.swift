@@ -176,6 +176,45 @@ final class Build16Tests: XCTestCase {
         XCTAssertEqual(player.audibleTick, 0) // not playing: no lag applied
     }
 
+    // MARK: - A–B loop and hands
+
+    func testHandNamesAndLabels() {
+        let scan = [SF2TrackInfo(index: 1, name: "Track 2", noteCount: 10), SF2TrackInfo(index: 2, name: "Track 3", noteCount: 6)]
+        XCTAssertEqual(PlaybackController.handNames(scan), [1: "Right hand", 2: "Left hand"])
+        XCTAssertEqual(PlaybackController.handsLabel(scan, muted: []), "Both hands")
+        XCTAssertEqual(PlaybackController.handsLabel(scan, muted: [2]), "Right hand only")
+        XCTAssertEqual(PlaybackController.handsLabel(scan, muted: [1]), "Left hand only")
+        XCTAssertEqual(PlaybackController.handsLabel(scan, muted: [1, 2]), "All muted")
+        let ode = [SF2TrackInfo(index: 1, name: "Right hand", noteCount: 59), SF2TrackInfo(index: 2, name: "Left hand", noteCount: 22)]
+        XCTAssertEqual(PlaybackController.handNames(ode), [1: "Right hand", 2: "Left hand"])
+        let three = (1 ... 3).map { SF2TrackInfo(index: $0, name: "Track \($0 + 1)", noteCount: 1) }
+        XCTAssertEqual(PlaybackController.handNames(three)[3], "Staff 3")
+        XCTAssertEqual(PlaybackController.handsLabel(three, muted: [3]), "2 of 3 parts")
+    }
+
+    @MainActor
+    func testPlayerLoopAndMuteState() async throws {
+        guard BundledSoundFont.url() != nil else { throw XCTSkip("GeneralUser-GS.sf2 not bundled") }
+        let player = SF2MIDIPlayer()
+        try player.load(soundFont: try await BundledSoundFont.load())
+        try player.load(midi: try SampleMIDI.odeToJoy())
+        XCTAssertEqual(player.noteTracks.map(\.name), ["Right hand", "Left hand"])
+        player.solo(player.noteTracks[1].index)
+        XCTAssertEqual(player.mutedTracks, [player.noteTracks[0].index])
+        player.solo(nil)
+        XCTAssertEqual(player.mutedTracks, [])
+        player.setLoop(start: 12, end: 4) // reversed: ordered
+        XCTAssertEqual(player.loop, SF2LoopRange(start: 4, end: 12))
+        XCTAssertEqual(player.position.seconds, 4, accuracy: 1e-9, "seeks into the loop")
+        player.setLoop(start: 5, end: 5.01) // too short: cleared
+        XCTAssertNil(player.loop)
+        player.setLoop(start: 1, end: 2)
+        player.setMuted(player.noteTracks[0].index, true)
+        try player.load(midi: try SampleMIDI.odeToJoy()) // per song
+        XCTAssertNil(player.loop)
+        XCTAssertEqual(player.mutedTracks, [])
+    }
+
     static func luminance(_ c: UIColor) -> Double {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         c.getRed(&r, green: &g, blue: &b, alpha: &a)

@@ -19,7 +19,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 ## Next
 - [ ] Color-photo preprocessing gap (app grays before `PagePipeline`; upstream homr autocrops on BGR) — OMR Core
 - [ ] Swap in post-ship ASO copy (`docs/asc/COPY.md` → PENDING) as features ship; rerun `docs/asc/check_copy.py` — OMR iOS
-- [ ] SF2Player gaps (pitch bend, drum ch 10, CC7/10/11, modulators, filter Q; seek across held notes) — OMR iOS
+- [ ] SF2Player gaps (pitch bend, drum ch 10, CC7/10/11, modulators, filter Q) — OMR iOS
 - [ ] Real-device CoreML cache numbers (encoder/SegNet cold vs warm) — OMR iOS + User
 - [ ] Bump Apple ORT to `exact: "1.30.0"` once upstream tags it — OMR Core — blocked upstream
 
@@ -30,6 +30,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] A–B loop (Set A / Set B in the Player, or "Tap A–B" on notes in Sheet mode; loop wraps with a soft release) and per-hand mute / solo ("Hands" chip: both / right only / left only / mute each staff track); notes held across a seek, a pause or a loop wrap now re-sound (`SF2CompiledSequence.noteEnds`) — 2026-10-03
 - [x] Note highlighting: port of homr dda4d2f image positions (`Page/PointMapping.swift`: inverse piecewise affine + `to_page` chain + undo autocrop/resize), snapped to SegNet notehead boxes → `noteLayout.pageRect` (layout `attention`); scans save `<stem>.layout.json`; Player **Sheet** mode highlights sounding notes (output-latency compensated), follows playback, tap a note to play from there. Matches homr within 1.7 px on 5 oracle pages (`tools/oracle/export_image_positions.py` + `compare_image_positions.py`) — 2026-10-03
 - [x] Share MIDI from Library (⋯ / long-press, scans + samples) and Player toolbar (`MIDIExport`, `<title>.mid`); transpose ±12 semitones in the Player ("Key" chip, per song; `SF2SequenceBuilder.plan(transpose:)`, drums untouched) — 2026-10-03
 - [x] Failed-scan explanation: `ScanFailure` (no notes found / no staff / staff but no notes / unreadable photo / reader not ready) with framing + lighting tips, photo-specific tips (dark, washed out, small) from a 64×64 luma thumbnail, Retake photo; `failure_reason` in diagnostics — 2026-10-03
