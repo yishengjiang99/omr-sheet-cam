@@ -14,17 +14,35 @@
 
 import Foundation
 
-/// Read-only 8-bit gray view (row-major, `stride` bytes per row) over caller memory. Never copies.
+/// Read-only 8-bit single-channel view (row-major, `stride` bytes per row, `pixelStride` bytes between
+/// pixels: 1 for gray, 3 / 4 for one channel of interleaved color) over caller memory. Never copies.
 struct GrayPlane {
     let base: UnsafePointer<UInt8>
     let width: Int
     let height: Int
     let stride: Int
+    var pixelStride: Int = 1
 
     @inline(__always) func row(_ y: Int) -> UnsafePointer<UInt8> { base + y * stride }
+    @inline(__always) func at(_ row: UnsafePointer<UInt8>, _ x: Int) -> UInt8 { row[x * pixelStride] }
 
     func cropped(x: Int, y: Int, width w: Int, height h: Int) -> GrayPlane {
-        GrayPlane(base: base + y * stride + x, width: w, height: h, stride: stride)
+        GrayPlane(base: base + y * stride + x * pixelStride, width: w, height: h, stride: stride, pixelStride: pixelStride)
+    }
+}
+
+/// Read-only interleaved 8-bit color view (RGB / RGBA / BGRA ... : `bytesPerPixel` bytes per pixel and
+/// the byte offsets of R, G and B inside a pixel).
+struct ColorPlane {
+    let base: UnsafePointer<UInt8>
+    let width: Int
+    let height: Int
+    let stride: Int
+    let bytesPerPixel: Int
+    let offsets: (r: Int, g: Int, b: Int)
+
+    func channel(_ offset: Int) -> GrayPlane {
+        GrayPlane(base: base + offset, width: width, height: height, stride: stride, pixelStride: bytesPerPixel)
     }
 }
 
@@ -72,20 +90,69 @@ enum PagePreprocess {
         return Output(crop: crop, cropped: !full, resized: resized, preprocessed: pre, width: tw, height: th)
     }
 
-    // MARK: - autocrop
-
-    /// homr `autocrop`: returns the crop rect (the whole image when homr returns `img` unchanged).
-    static func autocropRect(_ src: GrayPlane) -> Rect {
+    /// homr on a color page (`cv2.imread` BGR): autocrop thresholds BGR2GRAY and histograms the blue
+    /// channel; `resize_image` resizes all three channels (Pillow, per channel exactly like L); then
+    /// `apply_clahe` converts the resized page with BGR2GRAY. For a gray image (R = G = B) this equals
+    /// `run(_:)` byte for byte.
+    static func run(color src: ColorPlane) -> Output {
         let w = src.width, h = src.height
-        let full = Rect(x: 0, y: 0, width: w, height: h)
-        // cv2.calcHist([img], [0], None, [256], [0, 256]); np.argmax -> first maximum
+        var crop = Rect(x: 0, y: 0, width: w, height: h)
+        do {
+            var gray = [UInt8](repeating: 0, count: w * h)
+            gray.withUnsafeMutableBufferPointer { g in
+                for y in 0..<h {
+                    let row = src.base + y * src.stride
+                    let o = g.baseAddress! + y * w
+                    for x in 0..<w {
+                        let p = row + x * src.bytesPerPixel
+                        o[x] = bgr2gray(r: p[src.offsets.r], g: p[src.offsets.g], b: p[src.offsets.b])
+                    }
+                }
+            }
+            gray.withUnsafeBufferPointer { g in
+                crop = autocropRect(GrayPlane(base: g.baseAddress!, width: w, height: h, stride: w),
+                                    histogram: src.channel(src.offsets.b))
+            }
+        }
+        let (tw, th) = targetSize(width: crop.width, height: crop.height)
+        func resized(_ off: Int) -> [UInt8] {
+            PILResize.bicubic(src.channel(off).cropped(x: crop.x, y: crop.y, width: crop.width, height: crop.height),
+                              outWidth: tw, outHeight: th)
+        }
+        let rr = resized(src.offsets.r), gg = resized(src.offsets.g), bb = resized(src.offsets.b)
+        var page = [UInt8](repeating: 0, count: tw * th)
+        for i in 0..<page.count { page[i] = bgr2gray(r: rr[i], g: gg[i], b: bb[i]) }
+        let pre = CLAHE.apply(page, width: tw, height: th, clipLimit: 1.0, tilesX: 8, tilesY: 8)
+        let full = crop == Rect(x: 0, y: 0, width: w, height: h)
+        return Output(crop: crop, cropped: !full, resized: page, preprocessed: pre, width: tw, height: th)
+    }
+
+    /// OpenCV `cvtColor(COLOR_BGR2GRAY)` for 8U (fixed point, as `PNGImage.grayscale()`).
+    @inline(__always) static func bgr2gray(r: UInt8, g: UInt8, b: UInt8) -> UInt8 {
+        UInt8((Int(r) * 9798 + Int(g) * 19235 + Int(b) * 3735 + 16384) >> 15)
+    }
+
+    /// `np.argmax(cv2.calcHist([plane], [0], None, [256], [0, 256]))` (first maximum).
+    static func dominantValue(_ src: GrayPlane) -> Int {
         var hist = [Int](repeating: 0, count: 256)
-        for y in 0..<h {
+        for y in 0..<src.height {
             let r = src.row(y)
-            for x in 0..<w { hist[Int(r[x])] += 1 }
+            for x in 0..<src.width { hist[Int(src.at(r, x))] += 1 }
         }
         var dominant = 0
         for v in 1..<256 where hist[v] > hist[dominant] { dominant = v }
+        return dominant
+    }
+
+    // MARK: - autocrop
+
+    /// homr `autocrop`: returns the crop rect (the whole image when homr returns `img` unchanged).
+    /// `histogram`: the plane homr's `calcHist([img], [0])` reads (channel 0 = blue of a BGR image);
+    /// default `src` (gray input).
+    static func autocropRect(_ src: GrayPlane, histogram: GrayPlane? = nil) -> Rect {
+        let w = src.width, h = src.height
+        let full = Rect(x: 0, y: 0, width: w, height: h)
+        let dominant = dominantValue(histogram ?? src)
         // cv2.threshold(gray, dominant - 30, 255, THRESH_BINARY): v > floor(thresh)
         let thresh = dominant - 30
         let pw = w + 2
@@ -94,7 +161,7 @@ enum PagePreprocess {
             for y in 0..<h {
                 let r = src.row(y)
                 let o = (y + 1) * pw + 1
-                for x in 0..<w where Int(r[x]) > thresh { m[o + x] = 1 }
+                for x in 0..<w where Int(src.at(r, x)) > thresh { m[o + x] = 1 }
             }
             let interior = m.baseAddress! + pw + 1
             // morphologyEx(MORPH_CLOSE, ones 7x7) = dilate then erode; then MORPH_ERODE ones 9x9.
@@ -272,7 +339,7 @@ enum PILResize {
         let needV = outHeight != src.height
         if !needH && !needV {
             var out = [UInt8](repeating: 0, count: outWidth * outHeight)
-            for y in 0..<outHeight { for x in 0..<outWidth { out[y * outWidth + x] = src.row(y)[x] } }
+            for y in 0..<outHeight { for x in 0..<outWidth { out[y * outWidth + x] = src.at(src.row(y), x) } }
             return out
         }
         let cv = coeffs(inSize: src.height, outSize: outHeight)
@@ -296,7 +363,8 @@ enum PILResize {
                             let xmin = ch.bounds[xx * 2], xmax = ch.bounds[xx * 2 + 1]
                             let kb = xx * ch.ksize
                             var ss = half
-                            for x in 0..<xmax { ss += Int(lineIn[x + xmin]) * Int(kk[kb + x]) }
+                            let ps = src.pixelStride
+                            for x in 0..<xmax { ss += Int(lineIn[(x + xmin) * ps]) * Int(kk[kb + x]) }
                             lineOut[xx] = clip8(ss)
                         }
                     }
@@ -308,6 +376,7 @@ enum PILResize {
         var out = [UInt8](repeating: 0, count: outWidth * outHeight)
         let half = 1 << (precisionBits - 1)
         let readRow: (Int) -> UnsafePointer<UInt8>
+        let colStride = needH ? 1 : src.pixelStride
         if needH {
             tempStride = outWidth
             let tp = temp.withUnsafeBufferPointer { $0.baseAddress! }
@@ -326,7 +395,8 @@ enum PILResize {
                         let lineOut = o.baseAddress! + yy * outWidth
                         for xx in 0..<outWidth {
                             var ss = half
-                            for y in 0..<ymax { ss += Int(rowPtrs[y][xx]) * Int(kk[kb + y]) }
+                            let px = xx * colStride
+                            for y in 0..<ymax { ss += Int(rowPtrs[y][px]) * Int(kk[kb + y]) }
                             lineOut[xx] = clip8(ss)
                         }
                     }

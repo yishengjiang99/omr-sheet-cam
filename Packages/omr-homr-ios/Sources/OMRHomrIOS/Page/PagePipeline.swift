@@ -65,6 +65,25 @@ public enum PagePipeline {
             resized: out.resized, preprocessed: out.preprocessed)
     }
 
+    /// Interleaved 8-bit color page, 4 bytes per pixel in R, G, B, X order (alpha / padding ignored),
+    /// `bytesPerRow >= 4 * width`, upright -> homr's color preprocessing (autocrop on BGR, resize in
+    /// color, then BGR2GRAY + CLAHE). Equals `preprocess(gray8:)` for gray content.
+    public static func preprocess(rgbx: Data, width: Int, height: Int, bytesPerRow: Int) throws -> PreprocessedPage {
+        try validate(byteCount: width * height, width: width, height: height)
+        guard bytesPerRow >= 4 * width, rgbx.count >= bytesPerRow * (height - 1) + 4 * width else {
+            throw OMRError.invalidPixelBuffer("rgbx.count \(rgbx.count) too small for \(width)x\(height), \(bytesPerRow) bytes per row")
+        }
+        let out = rgbx.withUnsafeBytes { raw -> PagePreprocess.Output in
+            let p = raw.bindMemory(to: UInt8.self)
+            return PagePreprocess.run(color: ColorPlane(base: p.baseAddress!, width: width, height: height, stride: bytesPerRow,
+                                                        bytesPerPixel: 4, offsets: (0, 1, 2)))
+        }
+        return PreprocessedPage(
+            crop: Rect(x: out.crop.x, y: out.crop.y, width: out.crop.width, height: out.crop.height),
+            cropped: out.cropped, width: out.width, height: out.height,
+            resized: out.resized, preprocessed: out.preprocessed)
+    }
+
     /// PNG page (decoded like homr's `cv2.imread` + BGR2GRAY) -> `preprocess(gray8:width:height:)`.
     public static func preprocess(pngURL: URL) throws -> PreprocessedPage {
         let g = try StaffTensor.decodeGrayPNG(StaffTensor.readPNG(pngURL))

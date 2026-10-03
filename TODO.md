@@ -12,12 +12,11 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 ## Now (in progress)
 - [ ] v1.0 build 15 in App Review (WAITING_FOR_REVIEW, submitted 2026-09-28 ~8:30 PM PT / 03:30 UTC; listing = captioned peach screenshots + rewritten copy, no Sweden). Check with read-only **ASC status** only; do NOT re-run cancel/submit while waiting — Chief of Staff — submit run 36373908988, status run 36374044212
 - [ ] Real-device page parse verdict: 3–5 real sheet photos → parse time + peak `phys_footprint` from Copy as prompt; pass/fail per photo — OMR iOS + User
-- [ ] Real-photo accuracy spot check (2–3 photos); if systematically off, file against color-preprocessing gap — OMR Core
+- [ ] Real-photo accuracy spot check (2–3 photos, now through the color preprocessing path; diagnostics `preprocess_mode`) — OMR Core + User
 - [ ] Regression fixtures (2026-09-27 audit): tuplet rounding, key signatures + accidentals, multi-row/grand-staff timing — OMR Core
 - [ ] Memory warning re-warm (~10 s); revisit after device numbers — OMR iOS
 
 ## Next
-- [ ] Color-photo preprocessing gap (app grays before `PagePipeline`; upstream homr autocrops on BGR) — OMR Core
 - [ ] Swap in post-ship ASO copy (`docs/asc/COPY.md` → PENDING) as features ship; rerun `docs/asc/check_copy.py` — OMR iOS
 - [ ] SF2Player gaps (pitch bend, drum ch 10, CC7/10/11, modulators, filter Q) — OMR iOS
 - [ ] Real-device CoreML cache numbers (encoder/SegNet cold vs warm) — OMR iOS + User
@@ -30,6 +29,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] Color preprocessing like homr: color photos decode to RGBX (`RGBXImage`, no color management) → `parsePage(rgbx:)`: autocrop on BGR (blue-channel histogram), Pillow resize in color, then BGR2GRAY + CLAHE; gray scans keep the gray path. Byte-identical to the gray path on gray pages and to homr's color path on tinted fixtures (sha256 in `PagePipelineInputTests`); tokens unchanged (edit 0) on fixtures — 2026-10-03
 - [x] A–B loop (Set A / Set B in the Player, or "Tap A–B" on notes in Sheet mode; loop wraps with a soft release) and per-hand mute / solo ("Hands" chip: both / right only / left only / mute each staff track); notes held across a seek, a pause or a loop wrap now re-sound (`SF2CompiledSequence.noteEnds`) — 2026-10-03
 - [x] Note highlighting: port of homr dda4d2f image positions (`Page/PointMapping.swift`: inverse piecewise affine + `to_page` chain + undo autocrop/resize), snapped to SegNet notehead boxes → `noteLayout.pageRect` (layout `attention`); scans save `<stem>.layout.json`; Player **Sheet** mode highlights sounding notes (output-latency compensated), follows playback, tap a note to play from there. Matches homr within 1.7 px on 5 oracle pages (`tools/oracle/export_image_positions.py` + `compare_image_positions.py`) — 2026-10-03
 - [x] Share MIDI from Library (⋯ / long-press, scans + samples) and Player toolbar (`MIDIExport`, `<title>.mid`); transpose ±12 semitones in the Player ("Key" chip, per song; `SF2SequenceBuilder.plan(transpose:)`, drums untouched) — 2026-10-03

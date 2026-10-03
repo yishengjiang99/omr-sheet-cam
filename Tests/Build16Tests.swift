@@ -215,6 +215,32 @@ final class Build16Tests: XCTestCase {
         XCTAssertEqual(player.mutedTracks, [])
     }
 
+    // MARK: - Color preprocessing input
+
+    func testColorPhotosDecodeAsRGBXAndGrayScansStayGray() throws {
+        let fmt = UIGraphicsImageRendererFormat.default()
+        fmt.scale = 1
+        fmt.opaque = true
+        let img = UIGraphicsImageRenderer(size: CGSize(width: 40, height: 30), format: fmt).image { ctx in
+            UIColor(red: 1, green: 0.95, blue: 0.85, alpha: 1).setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: 40, height: 30))
+            UIColor.black.setFill()
+            ctx.fill(CGRect(x: 10, y: 10, width: 5, height: 5))
+        }
+        let png = try XCTUnwrap(img.pngData())
+        guard case let .color(c) = try RGBXImage.decodePage(imageData: png) else { return XCTFail("color photo decoded as gray") }
+        XCTAssertEqual([c.width, c.height], [40, 30])
+        XCTAssertEqual(c.pixels.count, 40 * 30 * 4)
+        let paper = c[x: 2, y: 2], ink = c[x: 12, y: 12]
+        XCTAssertGreaterThan(paper.0, paper.2, "warm paper keeps R > B")
+        XCTAssertLessThan(Int(ink.0) + Int(ink.1) + Int(ink.2), 30)
+        XCTAssertEqual(c.gray8().count, 40 * 30)
+
+        let gray = try Data(contentsOf: Gate1StaffTokenMatchTests.repoRoot.appendingPathComponent("fixtures/mono.c_major_scale/input.png"))
+        guard case let .gray(g) = try RGBXImage.decodePage(imageData: gray) else { return XCTFail("gray fixture decoded as color") }
+        XCTAssertEqual(g, try Gray8Image.decode(imageData: gray), "gray scans keep the byte-exact gray path")
+    }
+
     static func luminance(_ c: UIColor) -> Double {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         c.getRed(&r, green: &g, blue: &b, alpha: &a)

@@ -7,12 +7,19 @@ protocol PageParser: AnyObject, Sendable {
     func parse(gray8: Data, width: Int, height: Int) throws -> PageParseOutput
     /// Same, reporting pipeline progress (`PageParseProgress`, on the parsing thread).
     func parse(gray8: Data, width: Int, height: Int, progress: PageParseProgressHandler?) throws -> PageParseOutput
+    /// Color page (R, G, B, X) preprocessed in color like homr.
+    func parse(color: RGBXImage, progress: PageParseProgressHandler?) throws -> PageParseOutput
 }
 
 extension PageParser {
     /// Parsers without stage reporting: no intermediate progress (the service still reports 1.0 on success).
     func parse(gray8: Data, width: Int, height: Int, progress: PageParseProgressHandler?) throws -> PageParseOutput {
         try parse(gray8: gray8, width: width, height: height)
+    }
+
+    /// Gray-only parsers (test fakes): BGR2GRAY first.
+    func parse(color: RGBXImage, progress: PageParseProgressHandler?) throws -> PageParseOutput {
+        try parse(gray8: color.gray8(), width: color.width, height: color.height, progress: progress)
     }
 }
 
@@ -45,6 +52,12 @@ extension PageInferenceSession: PageParser {
 
     func parse(gray8: Data, width: Int, height: Int, progress: PageParseProgressHandler?) throws -> PageParseOutput {
         let r = try parsePage(gray8: gray8, width: width, height: height, progress: progress)
+        return PageParseOutput(result: r.result, stages: r.timings.map { .init(name: $0.stage, ms: $0.ms) })
+    }
+
+    func parse(color: RGBXImage, progress: PageParseProgressHandler?) throws -> PageParseOutput {
+        let r = try parsePage(rgbx: color.pixels, width: color.width, height: color.height, bytesPerRow: color.bytesPerRow,
+                              progress: progress)
         return PageParseOutput(result: r.result, stages: r.timings.map { .init(name: $0.stage, ms: $0.ms) })
     }
 }
@@ -188,16 +201,17 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
             var staffs = "-", warnings = 0, image = "?"
             do {
                 let decoded = try await Task.detached(priority: .userInitiated) {
-                    try Timed.run { try Gray8Image.decode(imageData: imageData) }
+                    try Timed.run { try RGBXImage.decodePage(imageData: imageData) }
                 }.value
-                let gray = decoded.value
-                image = "\(gray.width)x\(gray.height)"
+                let page = decoded.value
+                image = "\(page.width)x\(page.height)"
                 p["image"] = image
-                p["image_w"] = "\(gray.width)"
-                p["image_h"] = "\(gray.height)"
+                p["image_w"] = "\(page.width)"
+                p["image_h"] = "\(page.height)"
                 p["decode_ms"] = fmt(decoded.ms)
-                p["exif_orientation"] = "\(gray.orientation)"
-                p["source_format"] = gray.source
+                p["exif_orientation"] = "\(page.orientation)"
+                p["source_format"] = page.source
+                p["preprocess_mode"] = page.mode
 
                 let s: any PageParser
                 if let session {
@@ -226,8 +240,13 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
                     { p in gate.report(ScanProgress(warmingUp: false, fraction: p.fraction)) }
                 }
                 let parsed = try await Task.detached(priority: .userInitiated) {
-                    try Timed.run {
-                        try s.parse(gray8: gray.pixels, width: gray.width, height: gray.height, progress: onStage)
+                    try Timed.run { () throws -> PageParseOutput in
+                        switch page {
+                        case let .gray(gray):
+                            return try s.parse(gray8: gray.pixels, width: gray.width, height: gray.height, progress: onStage)
+                        case let .color(color):
+                            return try s.parse(color: color, progress: onStage)
+                        }
                     }
                 }.value
                 let out = parsed.value, parseMs = parsed.ms

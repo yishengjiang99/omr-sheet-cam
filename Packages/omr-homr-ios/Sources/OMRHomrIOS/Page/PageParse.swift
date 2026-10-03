@@ -7,6 +7,7 @@
 // (parse_staffs, parse_staff_image) + homr/staff_parsing_tromr.py (predict_best position filter).
 
 import Foundation
+import OMRPNG
 
 /// Everything the page path produced, for diagnostics / oracle comparisons. `result` is what
 /// `OMRHomrIOS.parseSheetMusicWithLayout(gray8:width:height:)` returns.
@@ -62,6 +63,22 @@ public final class PageInferenceSession: @unchecked Sendable {
     public func parsePage(
         gray8: Data, width: Int, height: Int, progress: PageParseProgressHandler? = nil
     ) throws -> PageParseResult {
+        try parsePage(progress: progress) { try PagePipeline.preprocess(gray8: gray8, width: width, height: height) }
+    }
+
+    /// Color page (R, G, B, X bytes per pixel; see `PagePipeline.preprocess(rgbx:width:height:bytesPerRow:)`),
+    /// preprocessed in color like homr, then the same parse as `parsePage(gray8:)`.
+    public func parsePage(
+        rgbx: Data, width: Int, height: Int, bytesPerRow: Int, progress: PageParseProgressHandler? = nil
+    ) throws -> PageParseResult {
+        try parsePage(progress: progress) {
+            try PagePipeline.preprocess(rgbx: rgbx, width: width, height: height, bytesPerRow: bytesPerRow)
+        }
+    }
+
+    private func parsePage(
+        progress: PageParseProgressHandler?, preprocess: () throws -> PagePipeline.PreprocessedPage
+    ) throws -> PageParseResult {
         lock.lock()
         defer { lock.unlock() }
         var timings: [PageParseResult.StageTiming] = []
@@ -73,7 +90,7 @@ public final class PageInferenceSession: @unchecked Sendable {
             t = now
         }
 
-        let page = try PagePipeline.preprocess(gray8: gray8, width: width, height: height)
+        let page = try preprocess()
         mark("preprocess")
         progress?(PageParseProgress(stage: .preprocess, completed: 1, total: 1))
         let onTile: ((Int, Int) -> Void)? = progress.map { report -> (Int, Int) -> Void in
@@ -233,6 +250,28 @@ extension PagePipeline {
         do { return try StaffTensor.decodeGrayPNG(data) } catch {
             throw OMRError.unsupportedImageFormat("PNG decode failed: \(error)")
         }
+    }
+
+    /// PNG bytes -> R, G, B, X (4 bytes per pixel, no row padding) for `parsePage(rgbx:...)`; gray PNGs
+    /// expand to R = G = B (alpha dropped, like `cv2.imread(IMREAD_COLOR)`).
+    public static func decodeRGBXPNG(_ data: Data) throws -> (pixels: Data, width: Int, height: Int) {
+        let img = try PNGDecoder.decode([UInt8](data))
+        let n = img.width * img.height
+        var out = Data(count: n * 4)
+        out.withUnsafeMutableBytes { raw in
+            let o = raw.bindMemory(to: UInt8.self)
+            for i in 0..<n {
+                let s = i * img.channels
+                if img.channels >= 3 {
+                    o[i * 4] = img.pixels[s]; o[i * 4 + 1] = img.pixels[s + 1]; o[i * 4 + 2] = img.pixels[s + 2]
+                } else {
+                    let v = img.pixels[s]
+                    o[i * 4] = v; o[i * 4 + 1] = v; o[i * 4 + 2] = v
+                }
+                o[i * 4 + 3] = 255
+            }
+        }
+        return (out, img.width, img.height)
     }
 
     /// homr `filter_predictions`: `cv2.bitwise_and(preprocessed, preprocessed, mask=mask)`.

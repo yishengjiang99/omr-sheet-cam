@@ -31,7 +31,7 @@ final class PagePreprocessTests: XCTestCase {
     func checkFixture(_ fid: String) throws {
         let dir = try Self.pagesDir().appendingPathComponent(fid)
         let st = try Self.stages(fid)
-        let input = try Self.gray(Self.inputURL(fid))
+        let input = try PagePreprocessTests.gray(PagePreprocessTests.inputURL(fid))
         let out = input.pixels.withUnsafeBufferPointer { p in
             PagePreprocess.run(GrayPlane(base: p.baseAddress!, width: input.width, height: input.height, stride: input.width))
         }
@@ -65,6 +65,67 @@ final class PagePreprocessTests: XCTestCase {
 
 /// Raw gray8 entry validation (`PagePipeline.validate` / `preprocess(gray8:width:height:)`).
 final class PagePipelineInputTests: XCTestCase {
+    // MARK: - Color path (homr reads BGR)
+
+    /// Fixture gray as interleaved R, G, B, X; `tint` makes warm "paper" (R = v, G = v*243/255, B = v*217/255).
+    static func rgbx(_ g: (pixels: [UInt8], width: Int, height: Int), tint: Bool) -> [UInt8] {
+        var out = [UInt8](repeating: 255, count: g.width * g.height * 4)
+        for (i, v) in g.pixels.enumerated() {
+            let x = Int(v)
+            out[i * 4] = v
+            out[i * 4 + 1] = tint ? UInt8(x * 243 / 255) : v
+            out[i * 4 + 2] = tint ? UInt8(x * 217 / 255) : v
+        }
+        return out
+    }
+
+    static func runColor(_ px: [UInt8], _ w: Int, _ h: Int) -> PagePreprocess.Output {
+        px.withUnsafeBufferPointer { p in
+            PagePreprocess.run(color: ColorPlane(base: p.baseAddress!, width: w, height: h, stride: w * 4, bytesPerPixel: 4,
+                                                 offsets: (0, 1, 2)))
+        }
+    }
+
+    /// Gray content through the color path is byte-identical to the gray path (all fixtures are gray).
+    func testColorPathEqualsGrayPathForGrayPages() throws {
+        for fid in ["mono.c_major_scale", "camera.deskew", "synthetic.page_on_table"] {
+            let g = try PagePreprocessTests.gray(PagePreprocessTests.inputURL(fid))
+            let gray = g.pixels.withUnsafeBufferPointer { p in
+                PagePreprocess.run(GrayPlane(base: p.baseAddress!, width: g.width, height: g.height, stride: g.width))
+            }
+            let color = Self.runColor(Self.rgbx(g, tint: false), g.width, g.height)
+            XCTAssertEqual(color.crop, gray.crop, fid)
+            XCTAssertEqual(color.resized, gray.resized, fid)
+            XCTAssertEqual(color.preprocessed, gray.preprocessed, fid)
+        }
+    }
+
+    /// Tinted pages vs homr's own color path (autocrop on BGR -> resize_image in color -> apply_clahe),
+    /// sha256 of `preprocessed` from homr 7d97c3c + cv2 + Pillow on the same tint.
+    func testTintedPagesMatchHomrColorPath() throws {
+        let expected = [
+            "mono.c_major_scale": "7fa79784fa49727243695c05c5c4d08052de1e1ed3b1063438c3c89366a3ea9b",
+            "camera.deskew": "7a7c0ef040e4cada31cd73dfd1d6b1afd0a3aa4dca5835fb869afd5c3e9d0e6a",
+            "piano.grand": "8af3e273690ed626a9afea8e46831bd263dc61dac068d0db8f5d0fd21ef44bec",
+        ]
+        // Gray-first (the old app path) differs from homr on these pages.
+        let grayFirst = ["mono.c_major_scale": "3bd8332a9bc3d2ad47571aaf59e4cbf59829a2b0a39a520565000383bd173901"]
+        for (fid, sha) in expected.sorted(by: { $0.key < $1.key }) {
+            let g = try PagePreprocessTests.gray(PagePreprocessTests.inputURL(fid))
+            let px = Self.rgbx(g, tint: true)
+            let out = Self.runColor(px, g.width, g.height)
+            XCTAssertEqual(CoreMLModelCache.sha256Hex(of: Data(out.preprocessed)), sha, fid)
+            if let old = grayFirst[fid] {
+                var luma = [UInt8](repeating: 0, count: g.width * g.height)
+                for i in 0..<luma.count { luma[i] = PagePreprocess.bgr2gray(r: px[i * 4], g: px[i * 4 + 1], b: px[i * 4 + 2]) }
+                let o = luma.withUnsafeBufferPointer { p in
+                    PagePreprocess.run(GrayPlane(base: p.baseAddress!, width: g.width, height: g.height, stride: g.width))
+                }
+                XCTAssertEqual(CoreMLModelCache.sha256Hex(of: Data(o.preprocessed)), old, "\(fid) gray-first reference")
+            }
+        }
+    }
+
     func testRejectsSizeMismatch() {
         XCTAssertThrowsError(try PagePipeline.preprocess(gray8: Data(count: 99), width: 10, height: 10)) { e in
             guard case OMRError.invalidPixelBuffer(let m) = e else { return XCTFail("\(e)") }

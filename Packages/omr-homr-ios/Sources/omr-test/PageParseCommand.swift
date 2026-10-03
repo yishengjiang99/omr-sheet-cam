@@ -36,7 +36,17 @@ enum PageParseCommand {
         let gray = Data(g.pixels)
         let t0 = Date()
         let r: PageParseResult
-        do { r = try session.parsePage(gray8: gray, width: g.width, height: g.height) } catch {
+        // OMR_COLOR=1: homr's color preprocessing path (parsePage(rgbx:)) instead of gray first.
+        let color = ProcessInfo.processInfo.environment["OMR_COLOR"] == "1"
+        do {
+            if color {
+                let c = try PagePipeline.decodeRGBXPNG(png)
+                out("input: color (rgbx)")
+                r = try session.parsePage(rgbx: c.pixels, width: c.width, height: c.height, bytesPerRow: c.width * 4)
+            } else {
+                r = try session.parsePage(gray8: gray, width: g.width, height: g.height)
+            }
+        } catch {
             err("omr-test: parse-page failed: \(error)"); return 1
         }
         let totalMs = Date().timeIntervalSince(t0) * 1000
