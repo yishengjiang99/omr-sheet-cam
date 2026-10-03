@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import Foundation
+import SF2Engine
 
 // Song -> synth render plan, mirroring gbk src/midireader.tsx onExportWav with UI state at its
 // defaults (no per-track preset overrides, no mute/solo, track CC 100/64/127), plus
@@ -86,53 +87,11 @@ public enum SF2SequenceBuilder {
         return max(0, min(127, note + semitones))
     }
 
-    /// renderOfflineSequenceToAudioBuffer's event order: (frame ?? 0, seq ?? 0, trackIndex ?? 0), stable.
-    public static func sortedEvents(_ events: [SF2SynthEvent]) -> [SF2SynthEvent] {
-        events.enumerated().sorted { x, y in
-            let a = x.element, b = y.element
-            let fa = a.frame ?? 0, fb = b.frame ?? 0
-            if fa != fb { return fa < fb }
-            if a.seq != b.seq { return a.seq < b.seq }
-            let ta = a.trackIndex ?? 0, tb = b.trackIndex ?? 0
-            if ta != tb { return ta < tb }
-            return x.offset < y.offset
-        }.map(\.element)
-    }
+    /// renderOfflineSequenceToAudioBuffer's event order (SF2Engine `SF2EventOrder`).
+    public static func sortedEvents(_ events: [SF2SynthEvent]) -> [SF2SynthEvent] { SF2EventOrder.sorted(events) }
 }
 
-public struct SF2StereoBuffer: Sendable {
-    public var sampleRate: Double
-    public var left: [Float]
-    public var right: [Float]
-    public var length: Int { left.count }
-}
-
-public enum SF2OfflineRenderer {
-    /// Port of gbk `renderOfflineSequenceToAudioBuffer`.
-    public static func renderOfflineSequence(sampleRate: Double, length: Int, tracks: [SF2TrackState], events: [SF2SynthEvent],
-                                             maxVoices: Int = 64) -> SF2StereoBuffer {
-        var left = [Float](repeating: 0, count: length)
-        var right = [Float](repeating: 0, count: length)
-        let engine = Sf2SynthEngine(outSr: sampleRate, maxVoices: maxVoices)
-        engine.setTrackStates(tracks)
-        let sorted = SF2SequenceBuilder.sortedEvents(events)
-        left.withUnsafeMutableBufferPointer { l in
-            right.withUnsafeMutableBufferPointer { r in
-                var cursor = 0
-                for e in sorted {
-                    let frame = max(0, min(length, Int(Int32(truncatingIfNeeded: e.frame ?? 0))))
-                    if frame > cursor {
-                        engine.renderRange(l.baseAddress! + cursor, r.baseAddress! + cursor, frame - cursor)
-                        cursor = frame
-                    }
-                    engine.dispatchEvent(e)
-                }
-                if cursor < length { engine.renderRange(l.baseAddress! + cursor, r.baseAddress! + cursor, length - cursor) }
-            }
-        }
-        return SF2StereoBuffer(sampleRate: sampleRate, left: left, right: right)
-    }
-
+extension SF2OfflineRenderer {
     public static func render(_ plan: SF2RenderPlan) -> SF2StereoBuffer {
         renderOfflineSequence(sampleRate: plan.sampleRate, length: plan.lengthFrames, tracks: plan.tracks, events: plan.events,
                               maxVoices: plan.maxVoices)

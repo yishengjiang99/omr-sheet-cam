@@ -319,8 +319,7 @@ public final class SF2RealtimeCore: @unchecked Sendable {
                 r.pointee.token = c.token
                 r.pointee.seq = c.view
                 if let v = c.view {
-                    engine.st.pointee.store = v.store
-                    engine.st.pointee.globalList = -1
+                    engine.setStoreRT(v.store)
                     engine.setMaxVoicesRT(v.maxVoices)
                 }
                 r.pointee.playing = false
