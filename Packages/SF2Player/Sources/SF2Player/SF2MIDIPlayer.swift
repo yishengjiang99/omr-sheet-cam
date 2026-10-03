@@ -78,6 +78,12 @@ public final class SF2MIDIPlayer: ObservableObject {
             if transpose != oldValue { recompileKeepingPosition() }
         }
     }
+    /// Engine rendering rules. `.spec` (default): SoundFont 2.04 modulators, the file's CC1/7/10/11 and
+    /// pitch bend, filter Q, GM drums on channel 10. `.gbk`: gbk's bit-exact export render.
+    /// Changing it recompiles the schedule and keeps the position / play state.
+    @Published public var fidelity: SF2Fidelity = .spec {
+        didSet { if fidelity != oldValue { recompileKeepingPosition() } }
+    }
     /// SMF track indices whose notes are silent (per song; cleared when another MIDI loads).
     @Published public private(set) var mutedTracks: Set<Int> = []
     /// Active A–B loop (per song).
@@ -148,7 +154,7 @@ public final class SF2MIDIPlayer: ObservableObject {
         guard let sf = soundFont, let song else { return }
         let c = try prepareCore()
         let plan = try SF2SequenceBuilder.plan(song: song, soundFont: sf, sampleRate: c.sampleRate, programOverride: program,
-                                               transpose: transpose)
+                                               transpose: transpose, fidelity: fidelity)
         let seq = SF2CompiledSequence(plan: plan)
         sequence = seq
         c.setSequence(seq)

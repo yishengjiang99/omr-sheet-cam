@@ -18,7 +18,6 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 
 ## Next
 - [ ] Swap in post-ship ASO copy (`docs/asc/COPY.md` → PENDING) as features ship; rerun `docs/asc/check_copy.py` — OMR iOS
-- [ ] SF2Player gaps (pitch bend, drum ch 10, CC7/10/11, modulators, filter Q) — OMR iOS
 - [ ] Real-device CoreML cache numbers (encoder/SegNet cold vs warm) — OMR iOS + User
 - [ ] Bump Apple ORT to `exact: "1.30.0"` once upstream tags it — OMR Core — blocked upstream
 
@@ -30,6 +29,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 
 ## Done (recent)
 - [x] Color preprocessing like homr: color photos decode to RGBX (`RGBXImage`, no color management) → `parsePage(rgbx:)`: autocrop on BGR (blue-channel histogram), Pillow resize in color, then BGR2GRAY + CLAHE; gray scans keep the gray path. Byte-identical to the gray path on gray pages and to homr's color path on tinted fixtures (sha256 in `PagePipelineInputTests`); tokens unchanged (edit 0) on fixtures — 2026-10-03
+- [x] SF2 player fidelity (GeneralUser GS): shared SF2Engine package ([sf2player-swift](https://github.com/yishengjiang99/sf2player-swift), pinned revision; same module in earsheet). The player renders `.spec` (SoundFont 2.04): default + file modulators, zone override rules and preset key/vel range intersection (gbk layered every split), filter cutoff modulation + Q, the file's CC1/7/10/11 and pitch bend (RPN 0 range), GM drums on channel 10 from bank 128, per-channel presets, triangle LFOs, key-number envelope scaling, +6 dB makeup. `.gbk` stays bit-exact for ParityTests. Not yet: sustain pedal CC64, reverb/chorus sends, aftertouch, NRPN, modulator links — 2026-10-03
 - [x] A–B loop (Set A / Set B in the Player, or "Tap A–B" on notes in Sheet mode; loop wraps with a soft release) and per-hand mute / solo ("Hands" chip: both / right only / left only / mute each staff track); notes held across a seek, a pause or a loop wrap now re-sound (`SF2CompiledSequence.noteEnds`) — 2026-10-03
 - [x] Note highlighting: port of homr dda4d2f image positions (`Page/PointMapping.swift`: inverse piecewise affine + `to_page` chain + undo autocrop/resize), snapped to SegNet notehead boxes → `noteLayout.pageRect` (layout `attention`); scans save `<stem>.layout.json`; Player **Sheet** mode highlights sounding notes (output-latency compensated), follows playback, tap a note to play from there. Matches homr within 1.7 px on 5 oracle pages (`tools/oracle/export_image_positions.py` + `compare_image_positions.py`) — 2026-10-03
 - [x] Share MIDI from Library (⋯ / long-press, scans + samples) and Player toolbar (`MIDIExport`, `<title>.mid`); transpose ±12 semitones in the Player ("Key" chip, per song; `SF2SequenceBuilder.plan(transpose:)`, drums untouched) — 2026-10-03

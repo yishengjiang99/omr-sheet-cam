@@ -14,6 +14,7 @@ public final class SF2CompiledSequence: @unchecked Sendable {
     public let lengthFrames: Int
     public let maxVoices: Int
     public let song: SMFSong?
+    public let fidelity: SF2Fidelity
     let store: SF2RegionStore
     let events: UnsafeMutablePointer<EngineEvent>
     let eventCount: Int
@@ -28,6 +29,7 @@ public final class SF2CompiledSequence: @unchecked Sendable {
         lengthFrames = plan.lengthFrames
         maxVoices = plan.maxVoices
         song = plan.song
+        fidelity = plan.fidelity
         let store = SF2RegionStore()
         self.store = store
         let sorted = SF2SequenceBuilder.sortedEvents(plan.events)
@@ -78,7 +80,8 @@ public final class SF2CompiledSequence: @unchecked Sendable {
 
     var view: SequenceView {
         SequenceView(events: UnsafePointer(events), eventCount: eventCount, tracks: UnsafePointer(tracks), trackCount: trackCount,
-                     store: store.hdr, maxVoices: maxVoices, lengthFrames: lengthFrames, noteEnds: UnsafePointer(noteEnds))
+                     store: store.hdr, maxVoices: maxVoices, lengthFrames: lengthFrames, noteEnds: UnsafePointer(noteEnds),
+                     spec: fidelity == .spec)
     }
 }
 
@@ -91,6 +94,7 @@ struct SequenceView {
     var maxVoices: Int
     var lengthFrames: Int
     var noteEnds: UnsafePointer<Int>
+    var spec: Bool
 }
 
 struct RTCommand {
@@ -299,7 +303,8 @@ public final class SF2RealtimeCore: @unchecked Sendable {
         // Replay program/controller state before the target; skip notes.
         while idx < seq.eventCount && Double(seq.events[idx].frame) < r.pointee.songPos {
             let k = seq.events[idx].kind
-            if k == SF2SynthEvent.Kind.setPreset.rawValue || k == SF2SynthEvent.Kind.setControllers.rawValue {
+            if k == SF2SynthEvent.Kind.setPreset.rawValue || k == SF2SynthEvent.Kind.setControllers.rawValue
+                || k == SF2SynthEvent.Kind.controlChange.rawValue || k == SF2SynthEvent.Kind.pitchBend.rawValue {
                 engine.dispatch(seq.events[idx])
             }
             idx += 1
@@ -320,6 +325,7 @@ public final class SF2RealtimeCore: @unchecked Sendable {
                 r.pointee.seq = c.view
                 if let v = c.view {
                     engine.setStoreRT(v.store)
+                    engine.fidelity = v.spec ? .spec : .gbk
                     engine.setMaxVoicesRT(v.maxVoices)
                 }
                 r.pointee.playing = false

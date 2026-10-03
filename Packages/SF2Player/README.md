@@ -38,12 +38,19 @@ Offline render (the gbk export path): `SF2OfflineRenderer.render(midi:soundFont:
 | `SF2LevelMeter.swift` | (new) lock-free output level meter + ballistics |
 | `SF2MIDIPlayer.swift` | AVAudioEngine + AVAudioSourceNode, session/interruption/route handling |
 
-## Faithful to gbk, including its gaps
+## Fidelity
 
-No pitch bend, no drum-channel special-casing (channel 10 uses CC0/CC32 bank like any other), the
-file's CC7/10/11 are not applied (track defaults 100/64/127), SF2 modulators parsed but not applied,
-no filter Q, LFO frequency `2^(cents/1200)` Hz, per-region peak-normalized samples. Not ported:
-gbk export's master dynamics stage. Seeking does not retrigger notes held across the seek point.
+`SF2MIDIPlayer.fidelity` (default `.spec`) picks the engine rules; plans carry it (`plan(fidelity:)`).
+
+- `.spec`: SoundFont 2.04. Default + file modulators (instrument replaces identical, preset adds), zone
+  override rules with preset key/velocity range intersection, filter cutoff modulation and Q, the file's
+  CC1/7/10/11 and pitch bend (RPN 0 range, CC121) as live engine events, per-MIDI-channel presets with
+  channel 10 on the bank-128 kit, triangle LFOs at 8.176 Hz x 2^(cents/1200), key-number envelope
+  scaling, +6 dB makeup (`specMakeupGain`). Not handled: sustain pedal, reverb/chorus, aftertouch, NRPN,
+  modulator links.
+- `.gbk`: yishengjiang99/gbk's export, gaps included (no pitch bend, CC or modulators, no filter Q, no drum
+  channel handling, preset ranges ignored so multi-split presets layer, sine LFOs at 2^(cents/1200) Hz).
+  ParityTests use it and stay bit-identical.
 
 ## Tests
 
