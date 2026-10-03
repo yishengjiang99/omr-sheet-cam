@@ -231,7 +231,7 @@ final class Build16Tests: XCTestCase {
         guard case let .color(c) = try RGBXImage.decodePage(imageData: png) else { return XCTFail("color photo decoded as gray") }
         XCTAssertEqual([c.width, c.height], [40, 30])
         XCTAssertEqual(c.pixels.count, 40 * 30 * 4)
-        let paper = c[x: 2, y: 2], ink = c[x: 12, y: 12]
+        let paper = c[2, 2], ink = c[12, 12]
         XCTAssertGreaterThan(paper.0, paper.2, "warm paper keeps R > B")
         let inkSum: Int = Int(ink.0) + Int(ink.1) + Int(ink.2)
         XCTAssertLessThan(inkSum, 30)
