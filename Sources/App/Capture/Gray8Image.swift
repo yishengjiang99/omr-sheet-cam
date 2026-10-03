@@ -212,7 +212,8 @@ struct RGBXImage: Equatable, Sendable {
                 let s = src.bindMemory(to: UInt8.self), d = dst.bindMemory(to: UInt8.self)
                 for i in 0 ..< width * height {
                     let r = Int(s[i * 4]), g = Int(s[i * 4 + 1]), b = Int(s[i * 4 + 2])
-                    d[i] = UInt8((r * 9798 + g * 19235 + b * 3735 + 16384) >> 15)
+                    let sum: Int = r * 9798 + g * 19235 + b * 3735 + 16384
+                    d[i] = UInt8(sum >> 15)
                 }
             }
         }

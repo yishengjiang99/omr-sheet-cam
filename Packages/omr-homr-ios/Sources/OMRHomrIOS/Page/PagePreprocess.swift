@@ -129,7 +129,11 @@ enum PagePreprocess {
 
     /// OpenCV `cvtColor(COLOR_BGR2GRAY)` for 8U (fixed point, as `PNGImage.grayscale()`).
     @inline(__always) static func bgr2gray(r: UInt8, g: UInt8, b: UInt8) -> UInt8 {
-        UInt8((Int(r) * 9798 + Int(g) * 19235 + Int(b) * 3735 + 16384) >> 15)
+        let rv: Int = Int(r) * 9798
+        let gv: Int = Int(g) * 19235
+        let bv: Int = Int(b) * 3735
+        let sum: Int = rv + gv + bv + 16384
+        return UInt8(sum >> 15)
     }
 
     /// `np.argmax(cv2.calcHist([plane], [0], None, [256], [0, 256]))` (first maximum).

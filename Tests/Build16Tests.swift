@@ -233,7 +233,8 @@ final class Build16Tests: XCTestCase {
         XCTAssertEqual(c.pixels.count, 40 * 30 * 4)
         let paper = c[x: 2, y: 2], ink = c[x: 12, y: 12]
         XCTAssertGreaterThan(paper.0, paper.2, "warm paper keeps R > B")
-        XCTAssertLessThan(Int(ink.0) + Int(ink.1) + Int(ink.2), 30)
+        let inkSum: Int = Int(ink.0) + Int(ink.1) + Int(ink.2)
+        XCTAssertLessThan(inkSum, 30)
         XCTAssertEqual(c.gray8().count, 40 * 30)
 
         let gray = try Data(contentsOf: Gate1StaffTokenMatchTests.repoRoot.appendingPathComponent("fixtures/mono.c_major_scale/input.png"))
