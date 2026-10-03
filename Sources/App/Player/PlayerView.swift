@@ -61,6 +61,11 @@ struct PlayerScreen: View {
     private let route: PlayerRoute
     @State private var scrub: Double?
     @State private var showLibrary = false
+    /// Sheet (scan photo with the playing notes highlighted) vs. Cover artwork.
+    @State private var showSheet = true
+    @State private var followPlayback = true
+
+    private var sheetAvailable: Bool { controller.layout != nil && controller.sheetImage != nil }
 
     init(route: PlayerRoute, controller: PlaybackController) {
         self.route = route
@@ -74,11 +79,24 @@ struct PlayerScreen: View {
             VStack(spacing: 20) {
                 Text(controller.isFromLibrary ? "PLAYING FROM LIBRARY" : "NOW PLAYING")
                     .font(.caption.weight(.semibold)).tracking(1.2).foregroundStyle(.secondary)
-                ArtworkView(image: controller.artwork, cornerRadius: 24, glyphSize: 72)
-                    .aspectRatio(1, contentMode: .fit)
-                    .frame(maxWidth: 340)
-                    .shadow(color: Theme.coral.opacity(0.25), radius: 20, y: 10)
-                    .accessibilityHidden(true)
+                if sheetAvailable {
+                    Picker("View", selection: $showSheet) {
+                        Text("Sheet").tag(true)
+                        Text("Cover").tag(false)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 240)
+                    .accessibilityIdentifier("player.viewMode")
+                }
+                if sheetAvailable, showSheet, let layout = controller.layout, let image = controller.sheetImage {
+                    sheet(layout: layout, image: image)
+                } else {
+                    ArtworkView(image: controller.artwork, cornerRadius: 24, glyphSize: 72)
+                        .aspectRatio(1, contentMode: .fit)
+                        .frame(maxWidth: 340)
+                        .shadow(color: Theme.coral.opacity(0.25), radius: 20, y: 10)
+                        .accessibilityHidden(true)
+                }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(controller.title).font(.title2.weight(.bold)).lineLimit(2)
                         .accessibilityIdentifier("player.title")
@@ -127,6 +145,23 @@ struct PlayerScreen: View {
             .environmentObject(controller)
         }
         .onAppear { controller.open(route) }
+    }
+
+    private func sheet(layout: ScanLayout, image: UIImage) -> some View {
+        VStack(spacing: 6) {
+            SheetFollowView(image: image, layout: layout, activeIDs: player.activeNoteIDs, follow: followPlayback) { note in
+                controller.seek(toNote: note)
+            }
+            .frame(height: 380)
+            HStack {
+                Toggle(isOn: $followPlayback) { Label("Follow", systemImage: "scope") }
+                    .toggleStyle(.button)
+                    .accessibilityIdentifier("player.sheet.follow")
+                Spacer()
+                Text("Tap a note to play from there").font(.caption).foregroundStyle(.secondary)
+            }
+            .font(.caption.weight(.semibold))
+        }
     }
 
     private var seekBar: some View {

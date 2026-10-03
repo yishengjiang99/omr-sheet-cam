@@ -8,8 +8,20 @@ public struct EncodedSymbol: Equatable, Sendable, CustomStringConvertible {
     public var articulation: String
     public var slur: String
     public var position: String
-    /// Attention-derived coordinates; imprecise. Shape deferred until ORT binding lands.
+    /// Raw decoder `attention` output for this step: 2 x float32 `(x, y)` on the staff canvas
+    /// (`attentionCenter`); imprecise.
     public var attentionPayload: Data?
+    /// Page path only: `attentionCenter` mapped to the preprocessed page (homr `staff_to_page`). Not
+    /// part of `==` (derived data).
+    public var pagePoint: PagePoint?
+    /// Page path only: the same point in the caller's input image pixels (homr `image_coordinates`).
+    /// Not part of `==`.
+    public var imageCoordinates: PagePoint?
+
+    public static func == (a: EncodedSymbol, b: EncodedSymbol) -> Bool {
+        a.rhythm == b.rhythm && a.pitch == b.pitch && a.lift == b.lift && a.articulation == b.articulation
+            && a.slur == b.slur && a.position == b.position && a.attentionPayload == b.attentionPayload
+    }
 
     public init(
         rhythm: String,

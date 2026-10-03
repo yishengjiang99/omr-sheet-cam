@@ -67,6 +67,26 @@ enum PageParseCommand {
             out("smf: INVALID (\(error))"); failed = true
         }
         for w in res.warnings { out("warning: \(w)") }
+        out("layout: \(res.layoutSource.rawValue), \(res.noteLayout.filter(\.hasBox).count)/\(res.noteLayout.count) boxed")
+        // OMR_POSITIONS_OUT=<file.json>: per staff raw symbols with homr dda4d2f image coordinates + boxes.
+        if let path = ProcessInfo.processInfo.environment["OMR_POSITIONS_OUT"], !path.isEmpty {
+            struct Sym: Encodable { var symbol: String; var image: [Double]?; var page: [Double]?; var canvas: [Double]? }
+            struct Note: Encodable { var noteIndex: Int; var symbolIndex: Int; var staffIndex: Int; var midiNote: Int; var rect: [Double] }
+            struct Dump: Encodable { var staffs: [[Sym]]; var notes: [Note]; var layoutSource: String }
+            func pt(_ p: PagePoint?) -> [Double]? { p.map { [$0.x, $0.y] } }
+            let dump = Dump(
+                staffs: r.staffSymbols.map { $0.map { Sym(symbol: $0.description, image: pt($0.imageCoordinates),
+                                                         page: pt($0.pagePoint), canvas: pt($0.attentionCenter)) } },
+                notes: res.noteLayout.map { n in
+                    Note(noteIndex: n.noteIndex, symbolIndex: n.symbolIndex, staffIndex: n.staffIndex, midiNote: n.midiNote ?? -1,
+                         rect: n.hasBox ? [Double(n.pageRect.origin.x), Double(n.pageRect.origin.y),
+                                           Double(n.pageRect.width), Double(n.pageRect.height)] : [])
+                },
+                layoutSource: res.layoutSource.rawValue)
+            do {
+                try JSONEncoder().encode(dump).write(to: URL(fileURLWithPath: path)); out("wrote positions \(path)")
+            } catch { err("omr-test: positions: \(error)") }
+        }
         if let m = midiOut {
             do { try res.midi.write(to: m); out("wrote \(m.path)") } catch { err("cannot write \(m.path): \(error)") }
         }

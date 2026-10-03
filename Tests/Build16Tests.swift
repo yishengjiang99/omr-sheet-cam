@@ -1,3 +1,4 @@
+import SF2Player
 import SwiftUI
 import UIKit
 import XCTest
@@ -100,6 +101,79 @@ final class Build16Tests: XCTestCase {
         XCTAssertEqual(PlaybackController.transposeName(-2), "-2 semitones")
         XCTAssertEqual(PlaybackController.transposeChoices.first, -12)
         XCTAssertEqual(PlaybackController.transposeChoices.last, 12)
+    }
+
+    // MARK: - Note highlighting
+
+    static func sampleLayout() -> ScanLayout {
+        let notes = (0 ..< 4).map { i in
+            RecognizedNote(noteIndex: i, symbolIndex: i + 2, staffIndex: 0, midiNote: 60 + i, onsetTicks: i * 480, durationTicks: 480,
+                           rect: i == 3 ? nil : CGRect(x: 100 + i * 50, y: 200, width: 12, height: 12))
+        }
+        return ScanLayout(imageWidth: 800, imageHeight: 1100, captureName: "20261003-120000-000.jpg", staffCount: 1,
+                          layoutSource: "attention", notes: notes)
+    }
+
+    func testScanLayoutRoundTripAndLookups() throws {
+        let l = Self.sampleLayout()
+        XCTAssertEqual(try ScanLayout.decode(l.encoded()), l)
+        XCTAssertEqual(ScanLayout.sidecarName(forMIDI: "20261003-120000-000.mid"), "20261003-120000-000.layout.json")
+        XCTAssertEqual(l.boxedNotes.count, 3)
+        XCTAssertEqual(l.notePositions.map(\.startTick), [0, 480, 960, 1440])
+        XCTAssertEqual(l.notePositions.map(\.endTick), [480, 960, 1440, 1920])
+        XCTAssertEqual(l.note(near: CGPoint(x: 155, y: 205), maxDistance: 20)?.noteIndex, 1)
+        XCTAssertEqual(l.note(near: CGPoint(x: 170, y: 206), maxDistance: 20)?.noteIndex, 1) // 8 px right of the box
+        XCTAssertNil(l.note(near: CGPoint(x: 600, y: 900), maxDistance: 20))
+        XCTAssertEqual(l.scrollTarget(for: [2, 3])?.noteIndex, 2)
+        XCTAssertNil(l.scrollTarget(for: [3]), "box-less notes can't be scrolled to")
+    }
+
+    func testScanLayoutNeedsBoxes() {
+        let boxless = RecognitionDetails(midi: Data(), notes: [RecognizedNote(noteIndex: 0, symbolIndex: 0, staffIndex: 0, midiNote: 60,
+                                                                               onsetTicks: 0, durationTicks: 480)],
+                                         staffCount: 1, warnings: [], layoutSource: "midi-fallback", ms: 1)
+        XCTAssertNil(ScanLayout(boxless, imageWidth: 100, imageHeight: 100, captureName: nil))
+        var boxed = boxless
+        boxed.notes = Self.sampleLayout().notes
+        XCTAssertEqual(ScanLayout(boxed, imageWidth: 800, imageHeight: 1100, captureName: "x.jpg")?.notes.count, 4)
+    }
+
+    @MainActor
+    func testScanLayoutSidecarIsSavedLoadedAndDeleted() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("b16-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = PlaylistStore(directory: dir, log: DiagnosticsLog(directory: nil, mirrorToOSLog: false))
+        let midi = try SampleMIDI.cMajorScale()
+        let plain = try store.addScan(midi: midi, title: "No layout")
+        XCTAssertNil(store.layout(for: plain))
+        let scan = try store.addScan(midi: midi, title: "With layout", layout: Self.sampleLayout())
+        let sidecar = dir.appendingPathComponent(ScanLayout.sidecarName(forMIDI: try XCTUnwrap(scan.fileName)))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: sidecar.path))
+        XCTAssertEqual(store.layout(for: scan), Self.sampleLayout())
+        // Reloaded store (app relaunch) still finds it; the index ignores sidecars.
+        let reloaded = PlaylistStore(directory: dir, log: DiagnosticsLog(directory: nil, mirrorToOSLog: false))
+        XCTAssertEqual(reloaded.entries.filter { $0.source == .scan }.count, 2)
+        XCTAssertEqual(reloaded.layout(for: try XCTUnwrap(reloaded.entry(id: scan.id))), Self.sampleLayout())
+        try store.delete(scan)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: sidecar.path))
+        let sample = try XCTUnwrap(store.entry(id: "sample:\(SampleMIDI.odeToJoyKey)"))
+        XCTAssertNil(store.layout(for: sample))
+    }
+
+    func testActiveNoteIDsAreHalfOpen() {
+        let p = Self.sampleLayout().notePositions
+        XCTAssertEqual(SF2MIDIPlayer.activeIDs(p, at: 0), [0])
+        XCTAssertEqual(SF2MIDIPlayer.activeIDs(p, at: 479.9), [0])
+        XCTAssertEqual(SF2MIDIPlayer.activeIDs(p, at: 480), [1])
+        XCTAssertEqual(SF2MIDIPlayer.activeIDs(p, at: 5000), [])
+    }
+
+    @MainActor
+    func testAudibleTickLagsWhilePlayingOnly() throws {
+        let player = SF2MIDIPlayer()
+        player.outputLatencyOverride = 0.25
+        XCTAssertEqual(player.outputLatency, 0.25)
+        XCTAssertEqual(player.audibleTick, 0) // not playing: no lag applied
     }
 
     static func luminance(_ c: UIColor) -> Double {

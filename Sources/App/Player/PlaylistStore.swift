@@ -124,7 +124,8 @@ final class PlaylistStore: ObservableObject {
 
     /// Saves a scan's MIDI and appends it. `captureName` (`<stem>.jpg`) names the file, else the date.
     @discardableResult
-    func addScan(midi: Data, title: String? = nil, captureName: String? = nil, date: Date = Date()) throws -> PlaylistEntry {
+    func addScan(midi: Data, title: String? = nil, captureName: String? = nil, date: Date = Date(),
+                 layout: ScanLayout? = nil) throws -> PlaylistEntry {
         let duration: Double
         do { duration = try SMFSong(data: midi).durationSec } catch { throw StoreError.invalidMIDI("\(error)") }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -146,6 +147,7 @@ final class PlaylistStore: ObservableObject {
             try? FileManager.default.removeItem(at: directory.appendingPathComponent(fileName))
             throw error
         }
+        if let layout { saveLayout(layout, forMIDI: fileName) }
         log.record(.info, .playback, "playlist: saved \(fileName) (\(midi.count) B, \(String(format: "%.1f", duration)) s)",
                    payload: ["kind": "playlist_add", "file": fileName, "bytes": "\(midi.count)", "duration": String(format: "%.2f", duration),
                              "capture": captureName ?? ""])
@@ -158,7 +160,10 @@ final class PlaylistStore: ObservableObject {
         guard let i = scans.firstIndex(where: { $0.id == entry.id }) else { throw StoreError.notFound(entry.id) }
         let removed = scans.remove(at: i)
         try saveIndex()
-        if let f = removed.fileName { try? FileManager.default.removeItem(at: directory.appendingPathComponent(f)) }
+        if let f = removed.fileName {
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent(f))
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent(ScanLayout.sidecarName(forMIDI: f)))
+        }
         log.record(.info, .playback, "playlist: deleted \(removed.id)", payload: ["kind": "playlist_delete", "file": removed.id])
     }
 
@@ -180,6 +185,26 @@ final class PlaylistStore: ObservableObject {
     func search(_ query: String) -> [PlaylistEntry] {
         let q = query.trimmingCharacters(in: .whitespaces)
         return q.isEmpty ? entries : entries.filter { $0.title.localizedCaseInsensitiveContains(q) }
+    }
+
+    // MARK: Note layout sidecar (`<stem>.layout.json`)
+
+    /// Best effort: a scan without a sidecar still plays, just without Sheet mode.
+    private func saveLayout(_ layout: ScanLayout, forMIDI fileName: String) {
+        let name = ScanLayout.sidecarName(forMIDI: fileName)
+        do {
+            try layout.encoded().write(to: directory.appendingPathComponent(name), options: .atomic)
+        } catch {
+            log.record(error: error, category: .playback, context: "playlist layout save", payload: ["file": name])
+        }
+    }
+
+    /// The scan's note layout, if it was saved with one (samples have none).
+    func layout(for entry: PlaylistEntry) -> ScanLayout? {
+        guard entry.source == .scan, let f = entry.fileName else { return nil }
+        let url = directory.appendingPathComponent(ScanLayout.sidecarName(forMIDI: f))
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return try? ScanLayout.decode(data)
     }
 
     func midiData(for entry: PlaylistEntry) throws -> Data {

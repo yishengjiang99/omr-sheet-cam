@@ -61,7 +61,13 @@ public final class SF2MIDIPlayer: ObservableObject {
             if transpose != oldValue { recompileKeepingPosition() }
         }
     }
-    public var notePositions: [SF2NotePosition] = []
+    public var notePositions: [SF2NotePosition] = [] {
+        didSet { updateActiveNotes() }
+    }
+    /// Seconds the speaker lags the render clock while playing; `activeNoteIDs` use the audible
+    /// position (render position minus this, in song time). nil = the audio session's
+    /// `outputLatency + ioBufferDuration` (iOS), 0 elsewhere.
+    public var outputLatencyOverride: Double?
     /// Live output level (lock-free, drained by the UI at ~30 Hz via `meter.update(now:)`).
     public let meter = SF2LevelMeter()
     /// Called on the main actor when playback reaches the end of the song (not on stop/pause).
@@ -307,10 +313,41 @@ public final class SF2MIDIPlayer: ObservableObject {
         }
     }
 
+    /// Wall-clock seconds between rendering a frame and hearing it.
+    public var outputLatency: Double {
+        if let o = outputLatencyOverride { return max(0, o) }
+        #if os(iOS) || os(tvOS) || os(visionOS)
+        let s = AVAudioSession.sharedInstance()
+        let l = s.outputLatency + s.ioBufferDuration
+        return l.isFinite ? max(0, min(l, 1)) : 0
+        #else
+        return 0
+        #endif
+    }
+
+    /// Tick being heard now: `position.tick` when paused, earlier by `outputLatency` (scaled by
+    /// tempo) while playing.
+    public var audibleTick: Double {
+        guard isPlaying, let song else { return position.tick }
+        let lag = outputLatency * tempoScale
+        return lag > 0 ? song.secToTick(max(0, position.seconds - lag)) : position.tick
+    }
+
+    /// Seek to a MIDI tick of the loaded song (e.g. a tapped note's onset).
+    public func seek(toTick tick: Int) {
+        guard let song else { return }
+        seek(to: song.tickToSec(max(0, tick)))
+    }
+
+    /// Ids in `notePositions` sounding at `tick` (half-open [start, end)).
+    public nonisolated static func activeIDs(_ positions: [SF2NotePosition], at tick: Double) -> Set<Int> {
+        Set(positions.filter { Double($0.startTick) <= tick && tick < Double($0.endTick) }.map(\.id))
+    }
+
     private func updateActiveNotes() {
         guard !notePositions.isEmpty else { if !activeNoteIDs.isEmpty { activeNoteIDs = [] }; return }
-        let t = position.tick
-        let ids = Set(notePositions.filter { Double($0.startTick) <= t && t < Double($0.endTick) }.map(\.id))
+        let t = audibleTick
+        let ids = Self.activeIDs(notePositions, at: t)
         if ids != activeNoteIDs { activeNoteIDs = ids }
     }
 

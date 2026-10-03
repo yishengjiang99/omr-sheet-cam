@@ -90,15 +90,20 @@ public final class PageInferenceSession: @unchecked Sendable {
         mark("staffs")
         progress?(PageParseProgress(stage: .staffs, completed: 1, total: 1))
         let image = PagePipeline.maskedPage(page.preprocessed, noiseMask: layout.noiseMask)
+        let toInput = PageToInputMapping(crop: page.crop, pageWidth: page.width, pageHeight: page.height)
 
         var raw: [[EncodedSymbol]] = []
         var filtered: [[EncodedSymbol]] = []
         var canvasMs = 0.0
         for (i, s) in layout.staffs.enumerated() {
             let tc = ProcessInfo.processInfo.systemUptime
-            let canvas = try PagePipeline.staffCanvas(page: image, width: page.width, height: page.height, staff: s)
+            let prepared = try StaffPrepare.prepareStaffImage(page: image, width: page.width, height: page.height,
+                                                              geometry: s.geometry)
+            let canvas = try StaffPrepare.canvas(prepared)
             canvasMs += (ProcessInfo.processInfo.systemUptime - tc) * 1000
-            let symbols = try staff.decodeStaff(tensor: StaffTensor.fromCanvas(canvas))
+            var symbols = try staff.decodeStaff(tensor: StaffTensor.fromCanvas(canvas))
+            // homr dda4d2f parse_staff_image: image_coordinates = page_to_input(staff_to_page(center)).
+            PagePipeline.attachPositions(&symbols, toPage: prepared.toPage, toInput: toInput)
             timings.append(.init(stage: "decode_s\(i)_enc", ms: staff.lastEncoderMs))
             timings.append(.init(stage: "decode_s\(i)_dec", ms: staff.lastDecoderMs))
             raw.append(symbols)
@@ -109,7 +114,10 @@ public final class PageInferenceSession: @unchecked Sendable {
         timings.append(.init(stage: "decode_canvas", ms: canvasMs))
 
         let voices = PagePipeline.voices(layout: layout, staffSymbols: filtered)
-        let result = PagePipeline.render(voices: voices, grandstaffVoices: PagePipeline.grandstaffVoices(layout))
+        let boxes = AttentionNoteBoxProvider(noteheads: layout.symbols["noteheads"] ?? [],
+                                             noteheadHeight: layout.averageNoteHeadHeight, toInput: toInput)
+        let result = PagePipeline.render(voices: voices, grandstaffVoices: PagePipeline.grandstaffVoices(layout),
+                                         boxProvider: boxes)
         mark("render")
         progress?(PageParseProgress(stage: .render, completed: 1, total: 1))
         return PageParseResult(
@@ -263,7 +271,8 @@ extension PagePipeline {
 
     /// Voices -> one SMF (format 1, 480 TPQ; track 0 conductor, then one track per staff: a voice is one staff,
     /// a grand-staff voice two, top to bottom) + `noteLayout` from the same sorted note list.
-    static func render(voices: [[EncodedSymbol]], grandstaffVoices: Set<Int>, writer: SMFWriter = SMFWriter()) -> ParseSheetMusicResult {
+    static func render(voices: [[EncodedSymbol]], grandstaffVoices: Set<Int>, boxProvider: (any NoteBoxProvider)? = nil,
+                       writer: SMFWriter = SMFWriter()) -> ParseSheetMusicResult {
         let tpq = Int(SMFWriter.ticksPerQuarter)
         var events: [SymbolMIDIMapping.SourcedNoteEvent] = []
         var base = 0
@@ -281,11 +290,40 @@ extension PagePipeline {
         events.sort(by: SymbolMIDIMapping.canonicalOrder)
         let staffCount = max(1, staffOffset)
         let midi = writer.write(notes: events.map(\.event), staffCount: staffCount)
-        var warnings = ["layout: midi-fallback (no attention boxes; pageRect is .null)"]
+        var layout = NoteLayout.midiFallback(from: events)
+        var source = LayoutSource.midiFallback
+        var warnings: [String] = []
+        if let provider = boxProvider, !layout.isEmpty {
+            let all = voices.flatMap { $0 }
+            var boxed = 0
+            for i in layout.indices {
+                let si = layout[i].symbolIndex
+                guard all.indices.contains(si), let r = provider.pageRect(forSymbolAt: si, symbol: all[si]), !r.isNull else { continue }
+                layout[i].pageRect = r
+                boxed += 1
+            }
+            if boxed == layout.count {
+                source = .attention
+            } else {
+                warnings.append("layout: midi-fallback (boxes for \(boxed)/\(layout.count) notes)")
+            }
+        } else {
+            warnings.append("layout: midi-fallback (no attention boxes; pageRect is .null)")
+        }
         if events.isEmpty { warnings.append("no sounding notes decoded") }
         return ParseSheetMusicResult(
-            midi: midi, noteLayout: NoteLayout.midiFallback(from: events), layoutSource: .midiFallback,
-            staffCount: staffCount, warnings: warnings)
+            midi: midi, noteLayout: layout, layoutSource: source, staffCount: staffCount, warnings: warnings)
+    }
+
+    /// Fills `pagePoint` / `imageCoordinates` of every decoded symbol that has an attention center.
+    static func attachPositions(_ symbols: inout [EncodedSymbol], toPage: StaffToPageMapping, toInput: PageToInputMapping) {
+        for i in symbols.indices {
+            guard let c = symbols[i].attentionCenter else { continue }
+            let p = toPage.toPage(c)
+            guard p.x.isFinite, p.y.isFinite else { continue }
+            symbols[i].pagePoint = p
+            symbols[i].imageCoordinates = toInput.toInput(p)
+        }
     }
 }
 

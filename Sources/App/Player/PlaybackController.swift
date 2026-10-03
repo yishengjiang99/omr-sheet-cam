@@ -16,6 +16,11 @@ final class PlaybackController: ObservableObject {
     @Published private(set) var current: PlayerRoute?
     @Published private(set) var ready = false
     @Published private(set) var status = ""
+    /// Note boxes of the loaded scan (`<stem>.layout.json`), nil for samples / ad-hoc MIDI /
+    /// scans saved before Sheet mode. Drives `player.notePositions`.
+    @Published private(set) var layout: ScanLayout?
+    /// The scan photo `layout` refers to (loaded once per song).
+    @Published private(set) var sheetImage: UIImage?
     private var loadTask: Task<Void, Never>?
     private var bag: Set<AnyCancellable> = []
 
@@ -144,6 +149,20 @@ final class PlaybackController: ObservableObject {
         log("seek", ["to": String(format: "%.2f", s)])
     }
 
+    /// Sheet mode tap: jump to a note's onset (keeps playing / paused state).
+    func seek(toNote note: RecognizedNote) {
+        player.seek(toTick: note.onsetTicks)
+        log("seek_note", ["note": "\(note.noteIndex)", "tick": "\(note.onsetTicks)"])
+    }
+
+    /// Capture named by the layout (else the entry's artwork); nil without a layout.
+    static func sheetImage(for layout: ScanLayout?, entry: PlaylistEntry?) -> UIImage? {
+        guard let layout else { return nil }
+        if let name = layout.captureName, let dir = try? CaptureStore.defaultDirectory(),
+           let img = UIImage(contentsOfFile: dir.appendingPathComponent(name).path) { return img }
+        return entry.flatMap(artwork(for:))
+    }
+
     func stop() {
         if player.isPlaying { log("stop", [:]) }
         player.stop()
@@ -156,6 +175,9 @@ final class PlaybackController: ObservableObject {
 
     private func load(_ route: PlayerRoute) async {
         ready = false
+        layout = nil
+        sheetImage = nil
+        player.notePositions = []
         status = "Loading…"
         do {
             let sf = try await BundledSoundFont.load()
@@ -170,6 +192,14 @@ final class PlaybackController: ObservableObject {
             try player.load(soundFont: sf)
             if player.transpose != 0 { player.transpose = 0 } // per song
             try player.load(midi: midi)
+            var lay: ScanLayout?
+            var entry: PlaylistEntry?
+            if case let .playlist(id) = route.item, let e = store.entry(id: id) { entry = e; lay = store.layout(for: e) }
+            let img = Self.sheetImage(for: lay, entry: entry)
+            if img == nil { lay = nil } // nothing to draw on
+            layout = lay
+            sheetImage = img
+            player.notePositions = lay?.notePositions ?? []
             ready = true
             status = ""
             log("load", ["bytes": "\(midi.count)", "duration": String(format: "%.2f", player.duration)])

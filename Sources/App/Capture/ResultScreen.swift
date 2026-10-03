@@ -266,7 +266,10 @@ struct ResultScreen: View {
     private func saveToPlaylist(_ d: RecognitionDetails) -> PlaylistEntry? {
         if let playlistEntry { return playlistEntry }
         do {
-            let e = try PlaylistStore.shared.addScan(midi: d.midi, captureName: savedURL?.lastPathComponent)
+            let name = savedURL?.lastPathComponent
+            let px = Self.pixelDimensions(photo.image)
+            let layout = ScanLayout(d, imageWidth: px.width, imageHeight: px.height, captureName: name)
+            let e = try PlaylistStore.shared.addScan(midi: d.midi, captureName: name, layout: layout)
             playlistEntry = e
             if titleText.isEmpty { titleText = e.title }
             playlistError = nil
@@ -276,6 +279,12 @@ struct ResultScreen: View {
             DiagnosticsLog.shared.record(error: error, category: .playback, context: "playlist save", payload: ["capture": captureName])
             return nil
         }
+    }
+
+    /// Upright pixel size of the recognized photo (the note boxes' coordinate space).
+    nonisolated static func pixelDimensions(_ image: UIImage) -> (width: Int, height: Int) {
+        if let cg = image.cgImage, image.imageOrientation == .up { return (cg.width, cg.height) }
+        return (Int((image.size.width * image.scale).rounded()), Int((image.size.height * image.scale).rounded()))
     }
 
     /// Title field edits apply to the Library entry.

@@ -59,6 +59,8 @@ public enum StaffPrepare {
         public var height: Int
         public var canvasWidth: Int
         public var canvasHeight: Int
+        /// homr `to_page`: canvas point -> page point (dda4d2f point mapping).
+        public var toPage: StaffToPageMapping
     }
 
     /// `prepare_staff_image(debug, index, staff, staff_image, regions)` for an 8-bit grayscale page:
@@ -100,8 +102,10 @@ public enum StaffPrepare {
         let local = try staff.transformed { x, y in ((x - topLeft.0) * scaling, (y - topLeft.1) * scaling) }
 
         var img = crop1
+        var dewarp: PiecewiseAffine?
         if cw > 0, ch > 0, let tform = dewarpTransform(width: cw, height: ch, staff: local) {
             img = tform.warp(img, width: cw, height: ch, fill: 1)
+            dewarp = tform
         }
         let c2 = cropBounds(width: cw, height: ch, step2)
         let ow = c2.x1 - c2.x0, oh = c2.y1 - c2.y0
@@ -112,8 +116,11 @@ public enum StaffPrepare {
             }
             removeBlackContoursAtEdges(&out, width: ow, height: oh, unitSize: local.averageUnitSize)
         }
+        let toPage = StaffToPageMapping(
+            pageSize: (width, height), scaledSize: (scaledW, scaledH), crop1: (c1.x0, c1.y0), crop2: (c2.x0, c2.y0),
+            dewarp: dewarp, beforeCanvas: (max(0, ow), max(0, oh)), canvasContent: (dims.width, dims.height))
         return Result(pixels: out, width: max(0, ow), height: max(0, oh),
-                      canvasWidth: dims.width, canvasHeight: dims.height)
+                      canvasWidth: dims.width, canvasHeight: dims.height, toPage: toPage)
     }
 
     // MARK: - staff_parsing helpers
@@ -230,7 +237,7 @@ public enum StaffPrepare {
     }
 
     /// `PiecewiseAffineTransform` (estimate + warp_image) over `DelaunayTriangulation` (cv2.Subdiv2D).
-    struct PiecewiseAffine {
+    public struct PiecewiseAffine: Sendable {
         let src: [CVGeometry.Point2f]
         let dst: [CVGeometry.Point2f]
         let simplices: [[Int]]
