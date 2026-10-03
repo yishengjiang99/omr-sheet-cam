@@ -350,7 +350,12 @@ final class PageRecognitionServiceTests: XCTestCase {
         XCTAssertFalse(d.midi.isEmpty)
         XCTAssertEqual(Array(d.midi.prefix(4)), Array("MThd".utf8))
         XCTAssertEqual(d.notes.compactMap(\.midiNote), [60, 62, 64, 65, 67, 69, 71, 72], "homr C-scale pitches")
-        XCTAssertFalse(d.hasBoxes, "noteLayout has no page positions yet")
+        // Note highlighting: every note has a box from the decoder's attention (homr dda4d2f), left to right.
+        XCTAssertTrue(d.hasBoxes, "noteLayout has page positions")
+        XCTAssertEqual(d.layoutSource, "attention")
+        let xs = d.notes.compactMap { $0.rect?.midX }
+        XCTAssertEqual(xs.count, 8)
+        XCTAssertEqual(xs, xs.sorted(), "C-scale boxes run left to right")
         XCTAssertEqual(e?.payload?["staff_count"], "1")
         XCTAssertEqual(e?.payload?["source_format"]?.hasPrefix("gray 8bpc 1654x2339"), true, e?.payload?["source_format"] ?? "")
 
