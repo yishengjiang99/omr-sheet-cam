@@ -27,9 +27,9 @@ struct PlaylistSample {
     var title: String
     var load: () throws -> Data
 
-    /// gbk's sweden.midi and the Gate-1 C-major scale written by our own `SMFWriter`.
+    /// Public-domain Ode to Joy and the Gate-1 C-major scale written by our own `SMFWriter`.
     static var bundled: [PlaylistSample] { [
-        PlaylistSample(key: "sweden", title: "Sweden (sample)") { try SampleMIDI.sweden() },
+        PlaylistSample(key: SampleMIDI.odeToJoyKey, title: "Ode to Joy (sample)") { try SampleMIDI.odeToJoy() },
         PlaylistSample(key: "c-major-scale", title: "C major scale (sample)") { try SampleMIDI.cMajorScale() },
     ] }
 }

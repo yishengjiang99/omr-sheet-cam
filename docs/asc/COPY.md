@@ -13,7 +13,7 @@ lives in **PENDING until shipped** below and stays out of the upload-ready files
 
 ## Shipped in build 5 (what the copy may claim)
 - Camera capture (tap to focus/expose, torch) + photo import (PhotosPicker); page saved on device
-- SF2 player (`Sources/App/Player/PlayerView.swift`, `f38272a`): bundled `sweden.midi` via
+- SF2 player (`Sources/App/Player/PlayerView.swift`, `f38272a`): bundled sample MIDI (public-domain `ode-to-joy.mid` since build 16) via
   GeneralUser GS; play / pause / stop, seek slider, tempo 0.5×–2×; reached from Result → "Play sample"
 - On-device homr model self-test of one staff (Diagnostics → Run Gate-1)
 - No network code, no account

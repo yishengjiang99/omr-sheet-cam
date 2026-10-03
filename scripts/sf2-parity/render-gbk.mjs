@@ -14,7 +14,7 @@
 // Metrics written to <out>/<name>.gbk.json are recomputed by the Swift tests with the same code
 // (Packages/SF2Player/Tests/SF2PlayerTests/ParityMetrics.swift); keep both in sync.
 import { register } from "tsx/esm/api";
-import { readFileSync, writeFileSync, copyFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import path from "node:path";
@@ -195,12 +195,13 @@ function metrics(L, R, plan) {
 mkdirSync(OUT, { recursive: true });
 const cScalePath = path.join(OUT, "c_scale.mid");
 writeFileSync(cScalePath, cScaleMidi());
-copyFileSync(path.join(GBK, "sweden.midi"), path.join(OUT, "sweden.midi"));
+// Public-domain multi-track sample (scripts/samples/make-ode-to-joy-midi.py), the app's "Play a sample".
+const SAMPLES = path.resolve(here, "../../fixtures/samples");
 
 const sf2Bytes = readFileSync(SF2);
 const sf2 = parseSF2(new Uint8Array(sf2Bytes));
-for (const name of ["c_scale.mid", "sweden.midi"]) {
-  const midi = readFileSync(path.join(OUT, name));
+for (const [name, src] of [["c_scale.mid", path.join(OUT, "c_scale.mid")], ["ode-to-joy.mid", path.join(SAMPLES, "ode-to-joy.mid")]]) {
+  const midi = readFileSync(src);
   const song = parseMidiBuffer(midi.buffer.slice(midi.byteOffset, midi.byteOffset + midi.byteLength));
   const plan = buildPlan(sf2, song);
   const buf = new TestAudioBuffer(2, plan.length, SAMPLE_RATE);

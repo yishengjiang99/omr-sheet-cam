@@ -12,9 +12,10 @@
 		5F0000000000000000000007 /* LibraryScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000006 /* LibraryScreen.swift */; };
 		5F0000000000000000000008 /* LevelMeterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000007 /* LevelMeterView.swift */; };
 		5F0000000000000000000009 /* PlaylistStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000008 /* PlaylistStoreTests.swift */; };
+		7F0000000000000000000002 /* Build16Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E0000000000000000000001 /* Build16Tests.swift */; };
 		5F0000000000000000000001 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000001 /* PlayerView.swift */; };
 		5F0000000000000000000002 /* Acknowledgements.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000002 /* Acknowledgements.swift */; };
-		5F0000000000000000000003 /* sweden.midi in Resources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000003 /* sweden.midi */; };
+		5F0000000000000000000003 /* ode-to-joy.mid in Resources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000003 /* ode-to-joy.mid */; };
 		5F000000000000000000000B /* ode-to-joy.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 5E000000000000000000000A /* ode-to-joy.jpg */; };
 		5F0000000000000000000004 /* SF2PlayerAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000004 /* SF2PlayerAppTests.swift */; };
 		5F0000000000000000000005 /* SF2Player in Frameworks */ = {isa = PBXBuildFile; productRef = 5D0000000000000000000002 /* SF2Player */; };
@@ -84,9 +85,10 @@
 		5E0000000000000000000006 /* LibraryScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryScreen.swift; sourceTree = "<group>"; };
 		5E0000000000000000000007 /* LevelMeterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelMeterView.swift; sourceTree = "<group>"; };
 		5E0000000000000000000008 /* PlaylistStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistStoreTests.swift; sourceTree = "<group>"; };
+		7E0000000000000000000001 /* Build16Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Build16Tests.swift; sourceTree = "<group>"; };
 		5E0000000000000000000001 /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
 		5E0000000000000000000002 /* Acknowledgements.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Acknowledgements.swift; sourceTree = "<group>"; };
-		5E0000000000000000000003 /* sweden.midi */ = {isa = PBXFileReference; lastKnownFileType = audio.midi; name = sweden.midi; path = fixtures/sf2/sweden.midi; sourceTree = SOURCE_ROOT; };
+		5E0000000000000000000003 /* ode-to-joy.mid */ = {isa = PBXFileReference; lastKnownFileType = audio.midi; name = "ode-to-joy.mid"; path = "fixtures/samples/ode-to-joy.mid"; sourceTree = SOURCE_ROOT; };
 		5E000000000000000000000A /* ode-to-joy.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = "ode-to-joy.jpg"; path = "fixtures/samples/ode-to-joy.jpg"; sourceTree = SOURCE_ROOT; };
 		5E0000000000000000000004 /* SF2PlayerAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SF2PlayerAppTests.swift; sourceTree = "<group>"; };
 		CB0000000000000000000001 /* CaptureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStore.swift; sourceTree = "<group>"; };
@@ -200,7 +202,7 @@
 				5E0000000000000000000005 /* PlaylistStore.swift */,
 				5E0000000000000000000006 /* LibraryScreen.swift */,
 				5E0000000000000000000007 /* LevelMeterView.swift */,
-				5E0000000000000000000003 /* sweden.midi */,
+				5E0000000000000000000003 /* ode-to-joy.mid */,
 				5E000000000000000000000A /* ode-to-joy.jpg */,
 				6E0000000000000000000001 /* PlaybackController.swift */,
 			);
@@ -279,6 +281,7 @@
 				C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */,
 				5E0000000000000000000004 /* SF2PlayerAppTests.swift */,
 				5E0000000000000000000008 /* PlaylistStoreTests.swift */,
+				7E0000000000000000000001 /* Build16Tests.swift */,
 				7B0000000000000000000005 /* PageRecognitionServiceTests.swift */,
 				7B0000000000000000000004 /* Gray8ImageTests.swift */,
 				B10000000000000000000008 /* Fixtures */,
@@ -408,7 +411,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000005 /* Assets.xcassets in Resources */,
-				5F0000000000000000000003 /* sweden.midi in Resources */,
+				5F0000000000000000000003 /* ode-to-joy.mid in Resources */,
 				5F000000000000000000000B /* ode-to-joy.jpg in Resources */,
 				6F0000000000000000000006 /* LICENSE in Resources */,
 				6F0000000000000000000007 /* NOTICE in Resources */,
@@ -528,6 +531,7 @@
 				21EBA7280EC15355707ED56C /* PlaybackSmokeFixtureTests.swift in Sources */,
 				5F0000000000000000000004 /* SF2PlayerAppTests.swift in Sources */,
 				5F0000000000000000000009 /* PlaylistStoreTests.swift in Sources */,
+				7F0000000000000000000002 /* Build16Tests.swift in Sources */,
 				7A0000000000000000000005 /* PageRecognitionServiceTests.swift in Sources */,
 				7A0000000000000000000004 /* Gray8ImageTests.swift in Sources */,
 				6F000000000000000000000A /* RedesignTests.swift in Sources */,

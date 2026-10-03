@@ -54,4 +54,4 @@ Parity fixtures in `fixtures/sf2/` come from gbk's own TypeScript renderer:
 cd scripts/sf2-parity && npm ci && node render-gbk.mjs --gbk /path/to/gbk --sf2 ../../models/GeneralUser-GS.sf2
 ```
 
-Current result: `c_scale.mid` and `sweden.midi` render bit-identical PCM to gbk (SHA-256 match).
+Current result: `c_scale.mid` and `fixtures/samples/ode-to-joy.mid` render bit-identical PCM to gbk (SHA-256 match).

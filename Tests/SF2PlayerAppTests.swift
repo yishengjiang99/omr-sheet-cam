@@ -2,23 +2,23 @@ import SF2Player
 import XCTest
 @testable import OMRSheetCam
 
-/// App-side SF2 checks: bundled sweden.midi + GeneralUser GS, offline render, real-time player smoke.
+/// App-side SF2 checks: bundled ode-to-joy.mid + GeneralUser GS, offline render, real-time player smoke.
 final class SF2PlayerAppTests: XCTestCase {
-    func testSwedenSampleIsBundledAndParses() throws {
-        let midi = try SampleMIDI.sweden()
+    func testOdeToJoySampleIsBundledAndParses() throws {
+        let midi = try SampleMIDI.odeToJoy()
         let song = try SMFSong(data: midi)
-        XCTAssertEqual(song.tracks.count, 2)
-        XCTAssertEqual(song.tracks[1].notes.count, 195)
+        XCTAssertEqual(song.tracks.count, 3) // conductor, right hand, left hand
+        XCTAssertEqual(song.tracks[1].notes.count, 59)
     }
 
     @MainActor
-    func testBundledSoundFontRendersSweden() async throws {
+    func testBundledSoundFontRendersOdeToJoy() async throws {
         guard BundledSoundFont.url() != nil else { throw XCTSkip("GeneralUser-GS.sf2 not bundled") }
         let t0 = Date()
         let sf = try await BundledSoundFont.load()
         let parseMs = Int(Date().timeIntervalSince(t0) * 1000)
         XCTAssertEqual(sf.info["INAM"], "GeneralUser GS 2.0.2")
-        var plan = try SF2SequenceBuilder.plan(song: SMFSong(data: SampleMIDI.sweden()), soundFont: sf, sampleRate: 44100)
+        var plan = try SF2SequenceBuilder.plan(song: SMFSong(data: SampleMIDI.odeToJoy()), soundFont: sf, sampleRate: 44100)
         plan.lengthFrames = 44100 * 3
         let t1 = Date()
         let out = SF2OfflineRenderer.render(plan)
@@ -35,8 +35,8 @@ final class SF2PlayerAppTests: XCTestCase {
         guard BundledSoundFont.url() != nil else { throw XCTSkip("GeneralUser-GS.sf2 not bundled") }
         let player = SF2MIDIPlayer()
         try player.load(soundFont: try await BundledSoundFont.load())
-        try player.load(midi: try SampleMIDI.sweden())
-        XCTAssertEqual(player.duration, 83.478272, accuracy: 1e-6)
+        try player.load(midi: try SampleMIDI.odeToJoy())
+        XCTAssertEqual(player.duration, 38.4, accuracy: 1e-6)
         player.tempoScale = 2
         player.play()
         guard player.isPlaying else { throw XCTSkip("audio engine did not start on this simulator") }

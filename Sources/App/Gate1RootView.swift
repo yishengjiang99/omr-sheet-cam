@@ -104,8 +104,8 @@ struct Gate1RootView: View {
                 }
 
                 Section("SF2 player") {
-                    NavigationLink("Play sample (sweden.midi, GeneralUser GS)") {
-                        PlayerView(route: .sample("sweden", title: "Sweden (sample)", autoplay: false))
+                    NavigationLink("Play sample (ode-to-joy.mid, GeneralUser GS)") {
+                        PlayerView(route: .sample(SampleMIDI.odeToJoyKey, title: "Ode to Joy (sample)", autoplay: false))
                     }
                     Text(BundledSoundFont.url() == nil ? "GeneralUser-GS.sf2 missing" : "GeneralUser-GS.sf2 bundled")
                         .font(.footnote.monospaced())

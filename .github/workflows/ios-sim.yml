@@ -87,6 +87,9 @@ jobs:
             -only-testing:OMRSheetCamTests/ModelWarmupTests \
             -only-testing:OMRSheetCamTests/PageRecognitionServiceTests \
             -only-testing:OMRSheetCamTests/Gray8ImageTests \
+            -only-testing:OMRSheetCamTests/PlaylistStoreTests \
+            -only-testing:OMRSheetCamTests/SF2PlayerAppTests \
+            -only-testing:OMRSheetCamTests/Build16Tests \
             -resultBundlePath "$RUNNER_TEMP/OMRSheetCam.xcresult" \
             CODE_SIGNING_ALLOWED=NO \
             | tee "$RUNNER_TEMP/xcodebuild.log"
@@ -113,7 +116,7 @@ jobs:
       - name: Gate-1 + warmup + page parse summary
         if: always()
         run: |
-          grep -E "Gate1StaffTokenMatchTests|Gate-1|ModelWarmupTests|Warmup:|PageRecognitionServiceTests|Gray8ImageTests|PageParse|OraclePages:|Gray8 parity|SegNetDiag|\[warmup\]|\[sf2\]|SF2PlayerAppTests|Build6PrepTests|SegNetSelfTest|coreml cache|Bundled ONNX|models not bundled" "$RUNNER_TEMP/xcodebuild.log" || echo "no Gate-1 / warmup lines"
+          grep -E "Build16Tests|PlaylistStoreTests|Gate1StaffTokenMatchTests|Gate-1|ModelWarmupTests|Warmup:|PageRecognitionServiceTests|Gray8ImageTests|PageParse|OraclePages:|Gray8 parity|SegNetDiag|\[warmup\]|\[sf2\]|SF2PlayerAppTests|Build6PrepTests|SegNetSelfTest|coreml cache|Bundled ONNX|models not bundled" "$RUNNER_TEMP/xcodebuild.log" || echo "no Gate-1 / warmup lines"
           if grep -F "should not be called on the main thread" "$RUNNER_TEMP/xcodebuild.log"; then
             echo "::warning::CoreML main-thread warning present"
           else

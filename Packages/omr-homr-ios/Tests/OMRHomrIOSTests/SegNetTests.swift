@@ -55,7 +55,8 @@ final class SegNetTests: XCTestCase {
         for y in 0..<h { for x in 0..<w { page[y * w + x] = UInt8((x * 7 + y * 3) % 256) } }
         let fake = FakeSegNetBackend()
         let merged = try SegNetSession(backend: fake).segment(preprocessed: page, width: w, height: h)
-        XCTAssertEqual(fake.calls.map { $0[0] }, [6])  // 3 x 2 tiles, one batch
+        // 3 x 2 tiles, one batch padded to the fixed batch size (stable CoreML/ANE input shape)
+        XCTAssertEqual(fake.calls.map { $0[0] }, [SegNetSession.batchSize])
         // every tile sees the same pixel values at the same page position, so the mean equals the class
         for i in 0..<(w * h) { XCTAssertEqual(Int(merged[i]), min(Int(page[i]) / 43, 5)) }
         // padding: a page narrower than a window is padded with 255 -> class 5, not merged back

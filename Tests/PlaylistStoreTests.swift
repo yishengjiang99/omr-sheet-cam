@@ -20,7 +20,7 @@ final class PlaylistStoreTests: XCTestCase {
     @MainActor
     func testBundledSamplesAlwaysPresentAndPlayable() throws {
         let store = makeStore()
-        XCTAssertEqual(store.samples.map(\.id), ["sample:sweden", "sample:c-major-scale"])
+        XCTAssertEqual(store.samples.map(\.id), ["sample:ode-to-joy", "sample:c-major-scale"])
         XCTAssertTrue(store.scans.isEmpty)
         for s in store.samples {
             XCTAssertEqual(s.source, .sample)
@@ -45,7 +45,7 @@ final class PlaylistStoreTests: XCTestCase {
         XCTAssertEqual(e.duration, try SMFSong(data: midi).durationSec, accuracy: 1e-9)
         XCTAssertEqual(try Data(contentsOf: dir.appendingPathComponent("20260926-134501-123.mid")), midi)
         XCTAssertEqual(try store.midiData(for: e), midi)
-        XCTAssertEqual(store.entries.map(\.id), ["20260926-134501-123.mid", "sample:sweden", "sample:c-major-scale"])
+        XCTAssertEqual(store.entries.map(\.id), ["20260926-134501-123.mid", "sample:ode-to-joy", "sample:c-major-scale"])
 
         // Same capture name again → unique file; appended after the first.
         let e2 = try store.addScan(midi: midi, captureName: "20260926-134501-123.jpg", date: date.addingTimeInterval(60))
@@ -132,10 +132,10 @@ final class PlaylistStoreTests: XCTestCase {
         let store = makeStore()
         let a = try store.addScan(midi: try scanMIDI(), captureName: "a.jpg")
         let b = try store.addScan(midi: try scanMIDI(), captureName: "b.jpg")
-        XCTAssertEqual(store.entries.map(\.id), [b.id, a.id, "sample:sweden", "sample:c-major-scale"])
+        XCTAssertEqual(store.entries.map(\.id), [b.id, a.id, "sample:ode-to-joy", "sample:c-major-scale"])
         XCTAssertNil(store.neighbor(of: b.id, offset: -1))
         XCTAssertEqual(store.neighbor(of: b.id, offset: 1)?.id, a.id)
-        XCTAssertEqual(store.neighbor(of: a.id, offset: 1)?.id, "sample:sweden")
+        XCTAssertEqual(store.neighbor(of: a.id, offset: 1)?.id, "sample:ode-to-joy")
         XCTAssertNil(store.neighbor(of: "sample:c-major-scale", offset: 1))
         XCTAssertNil(store.neighbor(of: "missing", offset: 1))
         let old = try store.addScan(midi: try scanMIDI(), captureName: "old.jpg", date: Date(timeIntervalSinceNow: -86400))
@@ -151,9 +151,9 @@ final class PlaylistStoreTests: XCTestCase {
         XCTAssertEqual(renamed.title, "Minuet in G")
         XCTAssertEqual(renamed.fileName, a.fileName, "rename edits index.json only; the file keeps its name")
         XCTAssertEqual(makeStore().scans.first?.title, "Minuet in G", "rename persisted")
-        XCTAssertEqual(try store.rename(store.samples[0], to: "x").title, "Sweden (sample)", "samples keep their title")
+        XCTAssertEqual(try store.rename(store.samples[0], to: "x").title, "Ode to Joy (sample)", "samples keep their title")
         XCTAssertEqual(store.search("minuet").map(\.id), [a.id])
-        XCTAssertEqual(store.search("SWEDEN").map(\.id), ["sample:sweden"])
+        XCTAssertEqual(store.search("ODE TO").map(\.id), ["sample:ode-to-joy"])
         XCTAssertEqual(store.search(" ").count, 3)
     }
 

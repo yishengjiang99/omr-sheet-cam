@@ -27,7 +27,7 @@ struct PlayerRoute: Hashable {
         item = .playlist(entry.id); title = entry.title; self.autoplay = autoplay
     }
 
-    /// Bundled sample by key (`PlaylistSample.key`, e.g. "sweden").
+    /// Bundled sample by key (`PlaylistSample.key`, e.g. "ode-to-joy").
     static func sample(_ key: String, title: String, autoplay: Bool = true) -> PlayerRoute {
         var r = PlayerRoute(midi: Data(), title: title, autoplay: autoplay)
         r.item = .playlist("sample:\(key)")
@@ -42,13 +42,19 @@ enum PlayerDestination {
     }
 }
 
-/// Bundled samples: gbk `sweden.midi`, and the Gate-1 C-major scale (`gate1/expected.tokens.json`) written by `SMFWriter`.
+/// Bundled samples: public-domain Ode to Joy (`fixtures/samples/ode-to-joy.mid`), and the Gate-1
+/// C-major scale (`gate1/expected.tokens.json`) written by `SMFWriter`.
 enum SampleMIDI {
     enum SampleError: Error { case missing(String) }
 
-    /// gbk's `sweden.midi` (fixtures/sf2/sweden.midi), bundled at the app root for "Play sample".
-    static func sweden(bundle: Bundle = .main) throws -> Data {
-        guard let url = bundle.url(forResource: "sweden", withExtension: "midi") else { throw SampleError.missing("sweden.midi") }
+    /// Library key of the "Play a sample" song.
+    static let odeToJoyKey = "ode-to-joy"
+
+    /// Beethoven's Ode to Joy (public domain): right-hand melody of `fixtures/samples/ode-to-joy.ly`
+    /// (the "Try sample picture" page) + a simple left hand; written by
+    /// `scripts/samples/make-ode-to-joy-midi.py`, bundled at the app root.
+    static func odeToJoy(bundle: Bundle = .main) throws -> Data {
+        guard let url = bundle.url(forResource: "ode-to-joy", withExtension: "mid") else { throw SampleError.missing("ode-to-joy.mid") }
         return try Data(contentsOf: url)
     }
 

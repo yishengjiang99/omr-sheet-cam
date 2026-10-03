@@ -15,7 +15,7 @@ enum ScreenshotDemo {
         case "library", "playlist":
             seedLibrary()
             return [.library]
-        case "player": return [.player(.sample("sweden", title: "Sweden (sample)"))]
+        case "player": return [.player(.sample(SampleMIDI.odeToJoyKey, title: "Ode to Joy (sample)"))]
         case "result":
             guard let photo = try? gate1Photo() else { return [] }
             return [.result(photo)]

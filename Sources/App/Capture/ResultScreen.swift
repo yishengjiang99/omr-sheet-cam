@@ -317,7 +317,7 @@ struct ResultScreen: View {
 
     private func playSample() {
         do {
-            guard let e = PlaylistStore.shared.entry(id: "sample:sweden") else { throw SampleMIDI.SampleError.missing("sweden.midi") }
+            guard let e = PlaylistStore.shared.entry(id: "sample:\(SampleMIDI.odeToJoyKey)") else { throw SampleMIDI.SampleError.missing("ode-to-joy.mid") }
             openPlayer(PlayerRoute(entry: e))
             sampleError = nil
         } catch {

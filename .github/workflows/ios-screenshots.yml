@@ -1,7 +1,7 @@
 name: iOS simulator screenshots
 
 # Builds the app for the simulator and captures real screenshots at the App Store sizes (iPhone
-# 6.9" 1320x2868, iPad 13" 2064x2752): launch, then Result (demo scan), Player (sweden sample,
+# 6.9" 1320x2868, iPad 13" 2064x2752): launch, then Result (demo scan), Player (Ode to Joy sample,
 # playing), Library and Settings via Debug-only launch args. Artifacts only; copy into docs/asc/screenshots/.
 
 on:

@@ -1,5 +1,5 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-09-28 9:21 AM PT by Chief of Staff_
+_Last updated: 2026-10-03 PT by OMR iOS (build 16 work)_
 
 Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`.
 
@@ -32,6 +32,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] Build 16 quick fixes: "Play a sample" + Library sample = public-domain Ode to Joy (`fixtures/samples/ode-to-joy.mid`, `scripts/samples/make-ode-to-joy-midi.py`; gbk parity ref `fixtures/sf2/ode-to-joy.gbk.json`), old copyrighted MIDI deleted; Theme cream/coralSoft adapt to Dark Mode (Player text readable); SegNetTests expects padded batch 8; ios-sim also runs PlaylistStoreTests, SF2PlayerAppTests, Build16Tests — 2026-10-03
 - [x] v1.0 build 15 resubmitted WAITING_FOR_REVIEW after pull-from-review + captioned listing (hero mockup first, no Sweden) — `7f68a2f`, cancel `50cf2cf`/`258986c`, submit run 36373908988 — 2026-09-28
 - [x] Listing repeatable from repo: `docs/asc/screenshots/en-US/`, `docs/asc/metadata/en-US/`; submit syncs listing; ios-sim skips listing-only pushes — `7f68a2f` — 2026-09-28
 - [x] Playlist: auto-advance only in playlist mode (scan/sample play once) — `dd13ea5` — 2026-09-27
