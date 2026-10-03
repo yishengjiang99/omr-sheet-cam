@@ -47,8 +47,10 @@ final class SF2PlayerAppTests: XCTestCase {
         let levels = player.meter.update(now: 1)
         print("[sf2] meter after 1.5 s: rms \(levels.rmsL)/\(levels.rmsR) dBFS, peak \(levels.peakL)/\(levels.peakR) dBFS")
         XCTAssertGreaterThan(max(levels.peakL, levels.peakR), SF2LevelMath.floorDB, "level meter sees the render output")
-        player.seek(to: 60)
-        XCTAssertEqual(player.position.seconds, 60, accuracy: 1e-9)
+        player.seek(to: 20) // inside the 38.4 s sample
+        XCTAssertEqual(player.position.seconds, 20, accuracy: 1e-9)
+        player.seek(to: 600) // clamps to the end
+        XCTAssertEqual(player.position.seconds, player.duration, accuracy: 1e-9)
         player.stop()
         XCTAssertFalse(player.isPlaying)
     }
