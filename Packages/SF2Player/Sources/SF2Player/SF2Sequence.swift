@@ -43,8 +43,10 @@ public enum SF2SequenceBuilder {
     /// Builds gbk's export plan. `fallbackPreset` = gbk `fallbackPresetIndex` (effective preset, 0).
     /// `programOverride` (not in gbk): play every track with this General MIDI program (bank 0),
     /// ignoring the file's program changes; nil = the file's own instruments (gbk behavior).
+    /// `transpose` (not in gbk): semitones added to every note-on / note-off key (clamped to 0...127)
+    /// except on the GM percussion channel (10, index 9); 0 = gbk behavior.
     public static func plan(song: SMFSong, soundFont: SF2SoundFont, sampleRate: Double, tailSec: Double = 3,
-                            fallbackPreset: Int = 0, programOverride: Int? = nil) throws -> SF2RenderPlan {
+                            fallbackPreset: Int = 0, programOverride: Int? = nil, transpose: Int = 0) throws -> SF2RenderPlan {
         var tracks: [SF2TrackState] = []
         var events: [SF2SynthEvent] = []
         let overrideIndex = programOverride.map { soundFont.resolvePresetIndex(program: $0, bank: 0) ?? fallbackPreset }
@@ -61,9 +63,11 @@ public enum SF2SequenceBuilder {
                 let frame = max(0, jsRound(ev.sec * sampleRate))
                 switch ev.kind {
                 case let .noteOn(n, v):
-                    events.append(.init(kind: .noteOn, frame: frame, seq: ev.seq, trackIndex: track.index, channel: ev.channel, note: n, velocity: v))
+                    events.append(.init(kind: .noteOn, frame: frame, seq: ev.seq, trackIndex: track.index, channel: ev.channel,
+                                        note: transposed(n, by: transpose, channel: ev.channel), velocity: v))
                 case let .noteOff(n):
-                    events.append(.init(kind: .noteOff, frame: frame, seq: ev.seq, trackIndex: track.index, channel: ev.channel, note: n))
+                    events.append(.init(kind: .noteOff, frame: frame, seq: ev.seq, trackIndex: track.index, channel: ev.channel,
+                                        note: transposed(n, by: transpose, channel: ev.channel)))
                 case let .program(p, b):
                     let idx = overrideIndex ?? soundFont.resolvePresetIndex(program: p, bank: b) ?? fallbackPreset
                     events.append(.init(kind: .setPreset, frame: frame, seq: ev.seq, trackIndex: track.index,
@@ -74,6 +78,12 @@ public enum SF2SequenceBuilder {
         return SF2RenderPlan(sampleRate: sampleRate, tracks: tracks, events: events,
                              maxVoices: max(96, song.tracks.count * 24),
                              lengthFrames: Int(((song.durationSec + tailSec) * sampleRate).rounded(.up)), song: song)
+    }
+
+    /// `note + semitones` clamped to the MIDI range; channel index 9 (GM drums) is never transposed.
+    public static func transposed(_ note: Int, by semitones: Int, channel: Int?) -> Int {
+        if semitones == 0 || channel == 9 { return note }
+        return max(0, min(127, note + semitones))
     }
 
     /// renderOfflineSequenceToAudioBuffer's event order: (frame ?? 0, seq ?? 0, trackIndex ?? 0), stable.

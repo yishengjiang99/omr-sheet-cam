@@ -101,6 +101,14 @@ struct PlayerScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
+                if let export = controller.export {
+                    ShareLink(item: export, preview: SharePreview(controller.title)) {
+                        Label("Share MIDI", systemImage: "square.and.arrow.up")
+                    }
+                    .accessibilityIdentifier("player.share")
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Button { showLibrary = true } label: { Label("Library", systemImage: "music.note.list") }
                     .accessibilityIdentifier("player.library")
             }
@@ -173,24 +181,48 @@ struct PlayerScreen: View {
     }
 
     private var chips: some View {
-        HStack(spacing: 12) {
-            Menu {
-                Picker("Tempo", selection: $settings.tempo) {
-                    ForEach(AppSettings.tempoChoices, id: \.self) { Text(AppSettings.tempoLabel($0)).tag($0) }
-                }
-            } label: {
-                chip(icon: "metronome", text: AppSettings.tempoLabel(settings.tempo))
-            }
-            .accessibilityIdentifier("player.tempo")
-            Menu {
-                Picker("Instrument", selection: $settings.instrument) {
-                    ForEach(Instrument.all) { Text($0.name).tag($0) }
-                }
-            } label: {
-                chip(icon: "pianokeys", text: settings.instrument.name)
-            }
-            .accessibilityIdentifier("player.instrument")
+        VStack(spacing: 10) {
+            HStack(spacing: 12) { tempoChip; instrumentChip }
+            HStack(spacing: 12) { keyChip }
         }
+    }
+
+    private var keyChip: some View {
+        Menu {
+            Picker("Transpose", selection: Binding(get: { player.transpose }, set: { controller.setTranspose($0) })) {
+                ForEach(PlaybackController.transposeChoices.reversed(), id: \.self) { t in
+                    Text(PlaybackController.transposeName(t)).tag(t)
+                }
+            }
+        } label: {
+            chip(icon: "arrow.up.arrow.down", text: PlaybackController.keyLabel(player.transpose))
+        }
+        .disabled(!controller.ready)
+        .accessibilityLabel("Transpose")
+        .accessibilityValue(PlaybackController.keyLabel(player.transpose))
+        .accessibilityIdentifier("player.transpose")
+    }
+
+    private var tempoChip: some View {
+        Menu {
+            Picker("Tempo", selection: $settings.tempo) {
+                ForEach(AppSettings.tempoChoices, id: \.self) { Text(AppSettings.tempoLabel($0)).tag($0) }
+            }
+        } label: {
+            chip(icon: "metronome", text: AppSettings.tempoLabel(settings.tempo))
+        }
+        .accessibilityIdentifier("player.tempo")
+    }
+
+    private var instrumentChip: some View {
+        Menu {
+            Picker("Instrument", selection: $settings.instrument) {
+                ForEach(Instrument.all) { Text($0.name).tag($0) }
+            }
+        } label: {
+            chip(icon: "pianokeys", text: settings.instrument.name)
+        }
+        .accessibilityIdentifier("player.instrument")
     }
 
     private func chip(icon: String, text: String) -> some View {

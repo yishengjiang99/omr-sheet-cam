@@ -67,6 +67,41 @@ final class Build16Tests: XCTestCase {
         XCTAssertEqual(q.pixelWidth, 200)
     }
 
+    // MARK: - Share MIDI + transpose
+
+    func testMIDIExportFileNamesAndBytes() throws {
+        XCTAssertEqual(MIDIExport.fileName(for: "Ode to Joy (sample)"), "Ode to Joy (sample).mid")
+        XCTAssertEqual(MIDIExport.fileName(for: "a/b:c"), "a-b-c.mid")
+        XCTAssertEqual(MIDIExport.fileName(for: "   "), "Music.mid")
+        let midi = try SampleMIDI.cMajorScale()
+        let url = try MIDIExport(title: "Scale", source: .data(midi)).writeTemporaryFile()
+        XCTAssertEqual(url.lastPathComponent, "Scale.mid")
+        XCTAssertEqual(try Data(contentsOf: url), midi)
+    }
+
+    @MainActor
+    func testLibraryEntriesExportTheirMIDI() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("b16-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = PlaylistStore(directory: dir, log: DiagnosticsLog(directory: nil, mirrorToOSLog: false))
+        let midi = try SampleMIDI.cMajorScale()
+        let scan = try store.addScan(midi: midi, title: "My scan")
+        XCTAssertEqual(try store.export(for: scan)?.midiData(), midi)
+        let sample = try XCTUnwrap(store.entry(id: "sample:\(SampleMIDI.odeToJoyKey)"))
+        XCTAssertEqual(try store.export(for: sample)?.midiData(), try SampleMIDI.odeToJoy())
+    }
+
+    @MainActor
+    func testTransposeLabels() {
+        XCTAssertEqual(PlaybackController.keyLabel(0), "Key 0")
+        XCTAssertEqual(PlaybackController.keyLabel(3), "Key +3")
+        XCTAssertEqual(PlaybackController.keyLabel(-12), "Key -12")
+        XCTAssertEqual(PlaybackController.transposeName(1), "+1 semitone")
+        XCTAssertEqual(PlaybackController.transposeName(-2), "-2 semitones")
+        XCTAssertEqual(PlaybackController.transposeChoices.first, -12)
+        XCTAssertEqual(PlaybackController.transposeChoices.last, 12)
+    }
+
     static func luminance(_ c: UIColor) -> Double {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         c.getRed(&r, green: &g, blue: &b, alpha: &a)

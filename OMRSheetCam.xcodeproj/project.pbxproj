@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		5F000000000000000000000A /* ScreenshotDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000009 /* ScreenshotDemo.swift */; };
 		5F0000000000000000000006 /* PlaylistStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000005 /* PlaylistStore.swift */; };
+		7F0000000000000000000004 /* MIDIExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E0000000000000000000003 /* MIDIExport.swift */; };
 		5F0000000000000000000007 /* LibraryScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000006 /* LibraryScreen.swift */; };
 		5F0000000000000000000008 /* LevelMeterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000007 /* LevelMeterView.swift */; };
 		5F0000000000000000000009 /* PlaylistStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000008 /* PlaylistStoreTests.swift */; };
@@ -83,6 +84,7 @@
 /* Begin PBXFileReference section */
 		5E0000000000000000000009 /* ScreenshotDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotDemo.swift; sourceTree = "<group>"; };
 		5E0000000000000000000005 /* PlaylistStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistStore.swift; sourceTree = "<group>"; };
+		7E0000000000000000000003 /* MIDIExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDIExport.swift; sourceTree = "<group>"; };
 		5E0000000000000000000006 /* LibraryScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryScreen.swift; sourceTree = "<group>"; };
 		5E0000000000000000000007 /* LevelMeterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelMeterView.swift; sourceTree = "<group>"; };
 		5E0000000000000000000008 /* PlaylistStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistStoreTests.swift; sourceTree = "<group>"; };
@@ -203,6 +205,7 @@
 				5E0000000000000000000001 /* PlayerView.swift */,
 				5E0000000000000000000002 /* Acknowledgements.swift */,
 				5E0000000000000000000005 /* PlaylistStore.swift */,
+				7E0000000000000000000003 /* MIDIExport.swift */,
 				5E0000000000000000000006 /* LibraryScreen.swift */,
 				5E0000000000000000000007 /* LevelMeterView.swift */,
 				5E0000000000000000000003 /* ode-to-joy.mid */,
@@ -487,6 +490,7 @@
 				5F0000000000000000000001 /* PlayerView.swift in Sources */,
 				5F0000000000000000000002 /* Acknowledgements.swift in Sources */,
 				5F0000000000000000000006 /* PlaylistStore.swift in Sources */,
+				7F0000000000000000000004 /* MIDIExport.swift in Sources */,
 				5F0000000000000000000007 /* LibraryScreen.swift in Sources */,
 				5F0000000000000000000008 /* LevelMeterView.swift in Sources */,
 				A10000000000000000000004 /* ModelWarmup.swift in Sources */,

@@ -70,6 +70,31 @@ final class PlaybackController: ObservableObject {
         return UIImage(contentsOfFile: dir.appendingPathComponent(name).path)
     }
 
+    /// Share item for what is loaded: the Library entry, or the ad-hoc MIDI bytes.
+    var export: MIDIExport? {
+        if let e = entry { return store.export(for: e) }
+        if case let .midi(d)? = current?.item, !d.isEmpty { return MIDIExport(title: title, source: .data(d)) }
+        return nil
+    }
+
+    /// Transpose in semitones for the loaded song (reset to 0 when another song loads).
+    func setTranspose(_ semitones: Int) {
+        guard semitones != player.transpose else { return }
+        player.transpose = semitones
+        log("transpose", ["to": "\(player.transpose)"])
+    }
+
+    nonisolated static func keyLabel(_ semitones: Int) -> String {
+        semitones == 0 ? "Key 0" : String(format: "Key %+d", semitones)
+    }
+
+    nonisolated static let transposeChoices = Array(-12 ... 12)
+
+    /// Menu row: "Original key", "+1 semitone", "-12 semitones".
+    nonisolated static func transposeName(_ t: Int) -> String {
+        t == 0 ? "Original key" : "\(t > 0 ? "+" : "")\(t) semitone\(abs(t) == 1 ? "" : "s")"
+    }
+
     var previousRoute: PlayerRoute? { entryID.flatMap { store.neighbor(of: $0, offset: -1) }.map { PlayerRoute(entry: $0) } }
     var nextRoute: PlayerRoute? { entryID.flatMap { store.neighbor(of: $0, offset: 1) }.map { PlayerRoute(entry: $0) } }
 
@@ -143,6 +168,7 @@ final class PlaybackController: ObservableObject {
                 midi = try store.midiData(for: e)
             }
             try player.load(soundFont: sf)
+            if player.transpose != 0 { player.transpose = 0 } // per song
             try player.load(midi: midi)
             ready = true
             status = ""

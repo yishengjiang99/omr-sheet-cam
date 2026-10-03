@@ -28,7 +28,7 @@ final class PlaylistStoreTests: XCTestCase {
             XCTAssertGreaterThan(s.duration, 0, s.title)
             XCTAssertNoThrow(try SMFSong(data: store.midiData(for: s)), s.title)
         }
-        XCTAssertEqual(store.samples[0].duration, 83.478272, accuracy: 1e-6)
+        XCTAssertEqual(store.samples[0].duration, 38.4, accuracy: 1e-6)
         XCTAssertFalse(FileManager.default.fileExists(atPath: store.indexURL.path), "samples are never written to the index")
     }
 

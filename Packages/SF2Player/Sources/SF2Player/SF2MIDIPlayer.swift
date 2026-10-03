@@ -49,7 +49,16 @@ public final class SF2MIDIPlayer: ObservableObject {
     @Published public var program: Int? {
         didSet {
             if let p = program, !(0 ... 127).contains(p) { program = min(127, max(0, p)); return }
-            if program != oldValue { applyProgramChange() }
+            if program != oldValue { recompileKeepingPosition() }
+        }
+    }
+    /// Semitones added to every note (GM drum channel excluded), clamped to -24...24. Changing it
+    /// recompiles the schedule and keeps the position / play state.
+    @Published public var transpose: Int = 0 {
+        didSet {
+            let c = min(24, max(-24, transpose))
+            if c != transpose { transpose = c; return }
+            if transpose != oldValue { recompileKeepingPosition() }
         }
     }
     public var notePositions: [SF2NotePosition] = []
@@ -105,7 +114,8 @@ public final class SF2MIDIPlayer: ObservableObject {
     private func compile() throws {
         guard let sf = soundFont, let song else { return }
         let c = try prepareCore()
-        let plan = try SF2SequenceBuilder.plan(song: song, soundFont: sf, sampleRate: c.sampleRate, programOverride: program)
+        let plan = try SF2SequenceBuilder.plan(song: song, soundFont: sf, sampleRate: c.sampleRate, programOverride: program,
+                                               transpose: transpose)
         let seq = SF2CompiledSequence(plan: plan)
         sequence = seq
         c.setSequence(seq)
@@ -116,7 +126,7 @@ public final class SF2MIDIPlayer: ObservableObject {
         activeNoteIDs = []
     }
 
-    private func applyProgramChange() {
+    private func recompileKeepingPosition() {
         guard song != nil, soundFont != nil else { return }
         let wasPlaying = isPlaying
         let at = position.seconds

@@ -2,7 +2,8 @@ import SF2Player
 import SwiftUI
 
 /// Library / playlist (redesign 05-library): search, "Your scans" (newest first; swipe, long-press
-/// or ⋯ to rename / delete) then "Samples" (always there, not editable). Tap a row to play it.
+/// or ⋯ to rename / delete / share MIDI) then "Samples" (always there, not editable; ⋯ shares MIDI).
+/// Tap a row to play it.
 /// A mini-player sits at the bottom while something is loaded.
 struct LibraryScreen: View {
     @ObservedObject private var store: PlaylistStore
@@ -64,7 +65,9 @@ struct LibraryScreen: View {
                 if let deleteError { Text(deleteError).foregroundStyle(.red) }
             }
             Section {
-                ForEach(samples) { row($0) }
+                ForEach(samples) { e in
+                    row(e).contextMenu { editMenu(e) }
+                }
             } header: {
                 header("Samples", count: store.samples.count)
             }
@@ -92,6 +95,12 @@ struct LibraryScreen: View {
     @ViewBuilder
     private func editMenu(_ e: PlaylistEntry) -> some View {
         Button { onSelect(e) } label: { Label("Play", systemImage: "play.fill") }
+        if let export = store.export(for: e) {
+            ShareLink(item: export, preview: SharePreview(e.title)) {
+                Label("Share MIDI", systemImage: "square.and.arrow.up")
+            }
+            .accessibilityIdentifier("library.share.\(e.id)")
+        }
         if e.isDeletable {
             Button { beginRename(e) } label: { Label("Rename", systemImage: "pencil") }
             Button(role: .destructive) { delete([e]) } label: { Label("Delete", systemImage: "trash") }
@@ -145,7 +154,7 @@ struct LibraryScreen: View {
                 if playing {
                     Image(systemName: "waveform").foregroundStyle(Theme.coral).symbolEffect(.variableColor.iterative, isActive: controller.player.isPlaying)
                         .accessibilityLabel("Now playing")
-                } else if e.isDeletable {
+                } else {
                     Menu {
                         editMenu(e)
                     } label: {
