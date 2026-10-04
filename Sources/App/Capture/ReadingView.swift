@@ -11,6 +11,8 @@ struct ReadingView: View {
     var warmingUp: Bool = false
     /// Seconds of warmup remaining (ticking estimate); shown under the title while warming up.
     var etaSeconds: Double? = nil
+    /// `true` when the warmup is reloading the models after a memory-warning release.
+    var isRewarm: Bool = false
     var onCancel: () -> Void
 
     /// "Reading music… 42%" / "Warming up… 42%".
@@ -19,8 +21,14 @@ struct ReadingView: View {
     }
 
     /// Subtitle under the bar; while warming up shows the ticking ETA when known.
-    static func subtitle(warmingUp: Bool, etaSeconds: Double?) -> String {
+    static func subtitle(warmingUp: Bool, etaSeconds: Double?, isRewarm: Bool = false) -> String {
         guard warmingUp else { return "This usually takes a few seconds" }
+        if isRewarm {
+            if let eta = etaSeconds, eta > 1 {
+                return "About \(Int(eta.rounded())) seconds left · reloading the music models"
+            }
+            return "Reloading the music models on your iPhone"
+        }
         if let eta = etaSeconds, eta > 1 {
             return "About \(Int(eta.rounded())) seconds left · one-time setup"
         }
@@ -86,7 +94,7 @@ struct ReadingView: View {
                     .progressViewStyle(.linear)
                     .tint(Theme.coral)
                     .animation(.easeOut(duration: 0.25), value: fraction)
-                Text(Self.subtitle(warmingUp: warmingUp, etaSeconds: etaSeconds))
+                Text(Self.subtitle(warmingUp: warmingUp, etaSeconds: etaSeconds, isRewarm: isRewarm))
                     .font(.subheadline).foregroundStyle(.white.opacity(0.7))
             }
             Label("Read on your iPhone. No internet needed.", systemImage: "lock.fill")

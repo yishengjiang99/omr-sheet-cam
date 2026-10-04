@@ -162,15 +162,24 @@ public enum SymbolMIDIMapping: Sendable {
     /// `resetCursorOnClef`: a lower-staff clef after the first note restarts time at 0 (staff-only
     /// grand-staff dumps, whose second staff follows the first in the token stream). A mid-piece clef
     /// change on the same staff must not rewind time.
-    /// The page path passes false: its voice streams run continuously across rows (homr joins them with
-    /// `newline` and drops repeated clefs), and a mid-piece clef change must not rewind time.
     static func sourcedNoteEvents(
         from symbols: [EncodedSymbol],
         tpq: Int = Int(SMFWriter.ticksPerQuarter),
         resetCursorOnClef: Bool = true
     ) -> [SourcedNoteEvent] {
-        var onset = 0
-        var chordAnchor = 0
+        walkEvents(from: symbols, tpq: tpq, startTick: 0, resetCursorOnClef: resetCursorOnClef).events
+    }
+
+    /// Walk symbols with a time cursor starting at `startTick`. Returns the events plus the tick
+    /// just past the last one, so callers can chain segments (rows, hands) back to back.
+    static func walkEvents(
+        from symbols: [EncodedSymbol],
+        tpq: Int = Int(SMFWriter.ticksPerQuarter),
+        startTick: Int = 0,
+        resetCursorOnClef: Bool = true
+    ) -> (events: [SourcedNoteEvent], endTick: Int) {
+        var onset = startTick
+        var chordAnchor = startTick
         var shareNextOnset = false
         var events: [SourcedNoteEvent] = []
         for (symbolIndex, sym) in symbols.enumerated() {
@@ -189,8 +198,8 @@ public enum SymbolMIDIMapping: Sendable {
                 // staves of a grand-staff dump sound simultaneously. A same-staff clef change
                 // (upper position) mid-piece must not rewind time.
                 if resetCursorOnClef && !events.isEmpty && SymbolCleanup.isLower(sym.position) {
-                    onset = 0
-                    chordAnchor = 0
+                    onset = startTick
+                    chordAnchor = startTick
                 }
                 shareNextOnset = false
                 continue
@@ -231,6 +240,60 @@ public enum SymbolMIDIMapping: Sendable {
                 )
             )
         }
+        return (events, onset)
+    }
+
+    /// Page-path voice stream → note events. Rows (split on `newline`) run sequentially; within a
+    /// grand-staff row, the lower staff restarts at the row's start tick so the two hands sound
+    /// simultaneously instead of one after the other. The next row starts after the longer hand,
+    /// so a short-decoded hand can't drag later systems out of alignment.
+    ///
+    /// The hand split is by position tag (first upper → lower transition), not by clef token: the
+    /// page cleanup drops repeated clefs, and a mid-piece clef change inside one hand must not
+    /// move time.
+    static func pageVoiceEvents(
+        from symbols: [EncodedSymbol],
+        tpq: Int = Int(SMFWriter.ticksPerQuarter),
+        grandstaff: Bool
+    ) -> [SourcedNoteEvent] {
+        var events: [SourcedNoteEvent] = []
+        var rowTick = 0
+        var row: [EncodedSymbol] = []
+
+        /// - Parameter base: voice-stream index of `row[0]` (newlines included, matching the
+        ///   pre-split stream that `render` and the box provider index into).
+        func flushRow(base: Int) {
+            let count = row.count
+            guard count > 0 else { return }
+            let before = events.count
+            if grandstaff, let split = row.firstIndex(where: { SymbolCleanup.isLower($0.position) }) {
+                let upper = walkEvents(from: Array(row[..<split]), tpq: tpq, startTick: rowTick,
+                                       resetCursorOnClef: false)
+                var lower = walkEvents(from: Array(row[split...]), tpq: tpq, startTick: rowTick,
+                                       resetCursorOnClef: false)
+                for i in lower.events.indices { lower.events[i].symbolIndex += split }
+                events.append(contentsOf: upper.events)
+                events.append(contentsOf: lower.events)
+                rowTick = max(upper.endTick, lower.endTick)
+            } else {
+                let walked = walkEvents(from: row, tpq: tpq, startTick: rowTick, resetCursorOnClef: false)
+                events.append(contentsOf: walked.events)
+                rowTick = walked.endTick
+            }
+            for i in before..<events.count { events[i].symbolIndex += base }
+        }
+
+        var base = 0
+        for sym in symbols {
+            if sym.rhythm == "newline" {
+                flushRow(base: base)
+                base += row.count + 1
+                row.removeAll(keepingCapacity: true)
+                continue
+            }
+            row.append(sym)
+        }
+        flushRow(base: base)
         return events
     }
 

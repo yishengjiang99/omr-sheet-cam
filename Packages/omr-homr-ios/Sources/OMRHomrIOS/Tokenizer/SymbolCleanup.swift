@@ -184,24 +184,17 @@ enum SymbolCleanup {
         return out
     }
 
+    /// A lower clef anywhere in the stream marks a grand staff: keep lower positions. (The old
+    /// first-5-chords heuristic assumed the interleaved homorhythmic order, where the bass clef
+    /// rides with the treble clef in the first chord group; rhythmically independent hands decode
+    /// hand-after-hand, with the bass clef mid-stream — the old heuristic silently converted the
+    /// whole bass staff to upper, which also broke per-hand track assignment.)
     static func onlyKeepLowerStaffIfThereIsAClef(_ chords: [[EncodedSymbol]]) -> [[EncodedSymbol]] {
-        var hasLowerClef = false
-        var out: [[EncodedSymbol]] = []
-        for (i, chord) in chords.enumerated() {
-            var r: [EncodedSymbol] = []
-            for s in chord {
-                if hasLowerClef {
-                    r.append(s)
-                } else if i < 5 && s.rhythm.hasPrefix("clef") && isLower(s.position) {
-                    hasLowerClef = true
-                    r.append(s)
-                } else {
-                    r.append(toUpper(s))
-                }
-            }
-            out.append(r)
+        let hasLowerClef = chords.contains { chord in
+            chord.contains { $0.rhythm.hasPrefix("clef") && isLower($0.position) }
         }
-        return out
+        guard !hasLowerClef else { return chords }
+        return chords.map { $0.map(toUpper) }
     }
 
     /// `_remove_duplicated_piches`. homr's replacement branch writes `by_pitch[symbol.pitch]`, a key that is

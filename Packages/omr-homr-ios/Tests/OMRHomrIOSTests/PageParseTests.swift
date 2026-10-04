@@ -60,7 +60,7 @@ final class PageParseTests: XCTestCase {
         let input = [clefG, n("note_4", "C4"), chord, n("note_2", "C4"), bar, nl, clefG, n("note_4", "D4"), bar, nl]
         let want = [clefG, n("note_4", "C4"), bar, nl, n("note_4", "D4"), bar, nl]
         XCTAssertEqual(SymbolCleanup.removeDuplicatedSymbols(input), want)
-        // No lower clef in the first 5 chords -> lower symbols move to upper.
+        // No lower clef anywhere -> lower symbols move to upper.
         XCTAssertEqual(SymbolCleanup.removeDuplicatedSymbols([n("note_4", "C3", "lower")]), [n("note_4", "C3", "upper")])
         // Tuplets are removed from measures shorter than the typical measure.
         let triplets = [n("note_4", "C4"), n("note_4", "D4"), bar, n("note_4", "C4"), n("note_4", "D4"), bar,
@@ -71,6 +71,38 @@ final class PageParseTests: XCTestCase {
         XCTAssertEqual(SymbolCleanup.kernFraction("12"), HFraction(1, 12))
         XCTAssertEqual(SymbolCleanup.kernFraction("4."), HFraction(3, 8))
         XCTAssertEqual(SymbolCleanup.kernFraction("8G"), HFraction(0))
+    }
+
+    /// Block-order grand staff (treble block, then bass block — rhythmically independent
+    /// hands): a bass clef mid-stream still marks a grand staff, so lower positions survive
+    /// cleanup instead of being converted to upper…
+    func testBlockOrderGrandStaffKeepsLowerPositions() {
+        let cleaned = SymbolCleanup.removeDuplicatedSymbols(Self.blockOrderVoice())
+        XCTAssertEqual(cleaned.map(\.position), ["upper", "upper", "upper", "lower", "lower", "lower"])
+    }
+
+    /// …and the two hands sound simultaneously (same onsets), on staff tracks 0 and 1.
+    func testBlockOrderGrandStaffSimultaneous() {
+        let r = PagePipeline.render(voices: [SymbolCleanup.removeDuplicatedSymbols(Self.blockOrderVoice())],
+                                    grandstaffVoices: [0])
+        XCTAssertEqual(r.staffCount, 2)
+        XCTAssertEqual(r.noteLayout.filter { $0.staffIndex == 0 }.map(\.onsetTicks), [0, 480])
+        XCTAssertEqual(r.noteLayout.filter { $0.staffIndex == 1 }.map(\.onsetTicks), [0, 480])
+        // symbolIndex still addresses the pre-split voice stream (box-attach seam).
+        XCTAssertEqual(r.noteLayout.map(\.symbolIndex).sorted(), [1, 2, 4, 5])
+    }
+
+    /// Two treble quarters, then bass clef + two bass quarters (no `chord` markers).
+    private static func blockOrderVoice() -> [EncodedSymbol] {
+        func n(_ r: String, _ p: String, _ pos: String = "upper") -> EncodedSymbol {
+            EncodedSymbol(rhythm: r, pitch: p, lift: "_", articulation: "_", slur: "_", position: pos)
+        }
+        return [
+            EncodedSymbol(rhythm: "clef_G2", pitch: "_", lift: "_", articulation: "_", slur: "_", position: "upper"),
+            n("note_4", "C5"), n("note_4", "D5"),
+            EncodedSymbol(rhythm: "clef_F4", pitch: "_", lift: "_", articulation: "_", slur: "_", position: "lower"),
+            n("note_4", "C3", "lower"), n("note_4", "D3", "lower"),
+        ]
     }
 
     /// Grand staff voice -> 2 staff tracks; a second voice goes below it; time runs across rows (no clef reset).
