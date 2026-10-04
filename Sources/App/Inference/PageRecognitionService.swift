@@ -41,8 +41,34 @@ struct PageParseOutput: Sendable {
         var ms: Double
     }
 
+    /// Per staff (in `layout.staffs` order): raw decoder symbol count vs post-filter count,
+    /// grand-staff flag, voice, row. Pinpoints silent per-staff dropouts (detection found the
+    /// staff but the decoder returned nothing, vs the position filter stripped everything).
+    /// Empty for test fakes.
+    struct StaffSymbols: Equatable, Sendable {
+        var raw: Int
+        var filtered: Int
+        var isGrandstaff: Bool
+        var voice: Int
+        var row: Int
+    }
+
     var result: ParseSheetMusicResult
     var stages: [Stage] = []
+    var staffSymbols: [StaffSymbols] = []
+
+    /// Per-staff symbol counts from a full `PageParseResult`.
+    static func staffSymbolCounts(_ r: PageParseResult) -> [StaffSymbols] {
+        let staffs = r.layout.staffs
+        var out: [StaffSymbols] = []
+        for (i, s) in staffs.enumerated()
+            where i < r.staffSymbols.count && i < r.filteredStaffSymbols.count
+        {
+            out.append(StaffSymbols(raw: r.staffSymbols[i].count, filtered: r.filteredStaffSymbols[i].count,
+                                    isGrandstaff: s.isGrandstaff, voice: s.voice, row: s.row))
+        }
+        return out
+    }
 }
 
 extension PageInferenceSession: PageParser {
@@ -52,13 +78,15 @@ extension PageInferenceSession: PageParser {
 
     func parse(gray8: Data, width: Int, height: Int, progress: PageParseProgressHandler?) throws -> PageParseOutput {
         let r = try parsePage(gray8: gray8, width: width, height: height, progress: progress)
-        return PageParseOutput(result: r.result, stages: r.timings.map { .init(name: $0.stage, ms: $0.ms) })
+        return PageParseOutput(result: r.result, stages: r.timings.map { .init(name: $0.stage, ms: $0.ms) },
+                               staffSymbols: PageParseOutput.staffSymbolCounts(r))
     }
 
     func parse(color: RGBXImage, progress: PageParseProgressHandler?) throws -> PageParseOutput {
         let r = try parsePage(rgbx: color.pixels, width: color.width, height: color.height, bytesPerRow: color.bytesPerRow,
                               progress: progress)
-        return PageParseOutput(result: r.result, stages: r.timings.map { .init(name: $0.stage, ms: $0.ms) })
+        return PageParseOutput(result: r.result, stages: r.timings.map { .init(name: $0.stage, ms: $0.ms) },
+                               staffSymbols: PageParseOutput.staffSymbolCounts(r))
     }
 }
 
@@ -222,8 +250,13 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
                     // The parse blocks on the launch warmup here (up to ~30 s) with no pipeline
                     // events; surface it as "Warming up… x%" instead of a stuck 0%.
                     if let gate = progress {
+                        // A completed warmup before this one means the sessions were released
+                        // (memory warning) and this is a re-warm: the UI copy says so instead
+                        // of "one-time setup".
+                        let rewarm = await ModelWarmup.shared.hasWarmedOnce
                         let warmupHandler: WarmupProgressHandler = { p in
-                            gate.report(ScanProgress(warmingUp: true, fraction: p.fraction, etaSeconds: p.etaSeconds))
+                            gate.report(ScanProgress(warmingUp: true, fraction: p.fraction,
+                                                     etaSeconds: p.etaSeconds, isRewarm: rewarm))
                         }
                         _ = await ModelWarmup.shared.attachProgressIfNeeded(warmupHandler)
                     }
@@ -262,6 +295,13 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
                 p["layout_source"] = r.layoutSource.rawValue
                 if !out.stages.isEmpty {
                     p["stages"] = out.stages.map { "\($0.name)=\(String(format: "%.0f", $0.ms))" }.joined(separator: " ")
+                }
+                if !out.staffSymbols.isEmpty {
+                    // Per staff (layout.staffs order): raw decoder symbols vs post-filter, grand-staff
+                    // flag, voice, row. A staff with raw=0 decoded nothing; filtered=0 was stripped.
+                    p["staff_symbols"] = out.staffSymbols.enumerated().map {
+                        "s\($0.offset)(v\($0.element.voice)r\($0.element.row)\($0.element.isGrandstaff ? "g" : ""))=\($0.element.raw)/\($0.element.filtered)"
+                    }.joined(separator: " ")
                 }
                 outcome = PageRecognitionService.outcome(for: r, ms: parseMs)
             } catch {
@@ -330,6 +370,6 @@ final class MonotonicProgress: @unchecked Sendable {
         guard f > last else { lock.unlock(); return }
         last = f
         lock.unlock()
-        handler(ScanProgress(warmingUp: e.warmingUp, fraction: f, etaSeconds: e.etaSeconds))
+        handler(ScanProgress(warmingUp: e.warmingUp, fraction: f, etaSeconds: e.etaSeconds, isRewarm: e.isRewarm))
     }
 }

@@ -26,6 +26,9 @@ struct ScanProgress: Sendable, Equatable {
     var fraction: Double
     /// Seconds of warmup remaining (simple estimate); nil when not warming up or unknown.
     var etaSeconds: Double? = nil
+    /// `true` when this warmup is reloading the models after a memory-warning release (as
+    /// opposed to the first load); the UI copy differs ("reloading", not "one-time setup").
+    var isRewarm: Bool = false
 }
 
 /// Recognition progress (called from background threads).
