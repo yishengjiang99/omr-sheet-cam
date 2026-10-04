@@ -1,7 +1,7 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-10-03 PT by OMR iOS (build 16 work)_
+_Last updated: 2026-10-03 5:10 PM PT by Chief of Staff_
 
-Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`.
+Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip `f0e32a8` (feature tip `66a866d`). App Review still has **build 15**; TestFlight **build 16** is VALID for device testing.
 
 ## Locked constraints
 - Decoder fp32 on ORT CPU EP; encoder + SegNet fp16 on CoreML EP with CPU fallback
@@ -10,9 +10,9 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - Apple ORT SPM pinned `exact: "1.24.2"`
 
 ## Now (in progress)
-- [ ] v1.0 build 15 in App Review (WAITING_FOR_REVIEW, submitted 2026-09-28 ~8:30 PM PT / 03:30 UTC; listing = captioned peach screenshots + rewritten copy, no Sweden). Check with read-only **ASC status** only; do NOT re-run cancel/submit while waiting — Chief of Staff — submit run 36373908988, status run 36374044212
-- [ ] Real-device page parse verdict: 3–5 real sheet photos → parse time + peak `phys_footprint` from Copy as prompt; pass/fail per photo — OMR iOS + User
-- [ ] Real-photo accuracy spot check (2–3 photos, now through the color preprocessing path; diagnostics `preprocess_mode`) — OMR Core + User
+- [ ] v1.0 build 15 in App Review (WAITING_FOR_REVIEW, submitted 2026-09-28 ~8:30 PM PT / 03:30 UTC; listing = captioned peach screenshots + rewritten copy, no Sweden). Check with read-only **ASC status** only; do NOT re-run cancel/submit while waiting — Chief of Staff — submit run 36373908988; status rechecked 2026-10-03 ~9:10 AM PT (run 37135888245)
+- [ ] Real-device page parse verdict on **TestFlight build 16**: 3–5 real sheet photos → parse time + peak `phys_footprint` from Copy as prompt; pass/fail per photo — OMR iOS + User
+- [ ] Real-photo accuracy spot check (2–3 photos, color preprocessing path; diagnostics `preprocess_mode`) — OMR Core + User
 - [ ] Regression fixtures (2026-09-27 audit): tuplet rounding, key signatures + accidentals, multi-row/grand-staff timing — OMR Core
 - [ ] Memory warning re-warm (~10 s); revisit after device numbers — OMR iOS
 
@@ -23,25 +23,18 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 
 ## Blocked / waiting on user
 - [ ] App Review outcome for build 15 — User
-- [ ] SF2 playback on a real device (latency, interruptions, route changes, level meter, playlist; Sheet-mode highlight timing on speaker + Bluetooth) — User
+- [ ] SF2 playback on a real device via TestFlight build 16 (latency, interruptions, route changes, level meter, playlist; Sheet-mode highlight timing on speaker + Bluetooth) — User
 - [ ] Optional: written OK from the homr authors (liebharc) for App Store distribution of the AGPL port + ONNX weights — Yisheng
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
-- [x] Color preprocessing like homr: color photos decode to RGBX (`RGBXImage`, no color management) → `parsePage(rgbx:)`: autocrop on BGR (blue-channel histogram), Pillow resize in color, then BGR2GRAY + CLAHE; gray scans keep the gray path. Byte-identical to the gray path on gray pages and to homr's color path on tinted fixtures (sha256 in `PagePipelineInputTests`); tokens unchanged (edit 0) on fixtures — 2026-10-03
-- [x] SF2 player fidelity (GeneralUser GS): shared SF2Engine package ([sf2player-swift](https://github.com/yishengjiang99/sf2player-swift), pinned revision; same module in earsheet). The player renders `.spec` (SoundFont 2.04): default + file modulators, zone override rules and preset key/vel range intersection (gbk layered every split), filter cutoff modulation + Q, the file's CC1/7/10/11 and pitch bend (RPN 0 range), GM drums on channel 10 from bank 128, per-channel presets, triangle LFOs, key-number envelope scaling, +6 dB makeup. `.gbk` stays bit-exact for ParityTests. Not yet: sustain pedal CC64, reverb/chorus sends, aftertouch, NRPN, modulator links — 2026-10-03
-- [x] A–B loop (Set A / Set B in the Player, or "Tap A–B" on notes in Sheet mode; loop wraps with a soft release) and per-hand mute / solo ("Hands" chip: both / right only / left only / mute each staff track); notes held across a seek, a pause or a loop wrap now re-sound (`SF2CompiledSequence.noteEnds`) — 2026-10-03
-- [x] Note highlighting: port of homr dda4d2f image positions (`Page/PointMapping.swift`: inverse piecewise affine + `to_page` chain + undo autocrop/resize), snapped to SegNet notehead boxes → `noteLayout.pageRect` (layout `attention`); scans save `<stem>.layout.json`; Player **Sheet** mode highlights sounding notes (output-latency compensated), follows playback, tap a note to play from there. Matches homr within 1.7 px on 5 oracle pages (`tools/oracle/export_image_positions.py` + `compare_image_positions.py`) — 2026-10-03
-- [x] Share MIDI from Library (⋯ / long-press, scans + samples) and Player toolbar (`MIDIExport`, `<title>.mid`); transpose ±12 semitones in the Player ("Key" chip, per song; `SF2SequenceBuilder.plan(transpose:)`, drums untouched) — 2026-10-03
-- [x] Failed-scan explanation: `ScanFailure` (no notes found / no staff / staff but no notes / unreadable photo / reader not ready) with framing + lighting tips, photo-specific tips (dark, washed out, small) from a 64×64 luma thumbnail, Retake photo; `failure_reason` in diagnostics — 2026-10-03
-- [x] Build 16 quick fixes: "Play a sample" + Library sample = public-domain Ode to Joy (`fixtures/samples/ode-to-joy.mid`, `scripts/samples/make-ode-to-joy-midi.py`; gbk parity ref `fixtures/sf2/ode-to-joy.gbk.json`), old copyrighted MIDI deleted; Theme cream/coralSoft adapt to Dark Mode (Player text readable); SegNetTests expects padded batch 8; ios-sim also runs PlaylistStoreTests, SF2PlayerAppTests, Build16Tests — 2026-10-03
-- [x] v1.0 build 15 resubmitted WAITING_FOR_REVIEW after pull-from-review + captioned listing (hero mockup first, no Sweden) — `7f68a2f`, cancel `50cf2cf`/`258986c`, submit run 36373908988 — 2026-09-28
-- [x] Listing repeatable from repo: `docs/asc/screenshots/en-US/`, `docs/asc/metadata/en-US/`; submit syncs listing; ios-sim skips listing-only pushes — `7f68a2f` — 2026-09-28
-- [x] Playlist: auto-advance only in playlist mode (scan/sample play once) — `dd13ea5` — 2026-09-27
-- [x] Warmup progress: replay on attach, encoder-step interpolate, ticking ETA ("Warming up… x%") — `bef0fdb`, `b9e4a97`, `1d0e6ea` — 2026-09-27
-- [x] Reading screen real recognition progress ("Reading music… 42%") — `affe62c` — 2026-09-27
-- [x] Try sample picture: public-domain Ode to Joy (LilyPond) replaces copyrighted Sweden sheet — `ba3564c` (supersedes `d1d9d05`) — 2026-09-27
-- [x] Support/Privacy/Terms live at grepawk.com/music-reader/ (pages also in finalcut `public/music-reader/`) — 2026-09-27
-- [x] Manual ASC submit + cancel-review + listing-upload workflows — `bf5bff9`, `1d0a257`, `258986c` — 2026-09-27
-- [x] Recognition on by default (`RecognitionGate.defaultEnabled = true`) after SegNet CoreML NeuralNetwork fix — `36f75c0`, `83c335d` — 2026-09-27
-- [x] Compile fix `lastEncoderMs`/`lastDecoderMs` `public internal(set)` — `4d46162` — 2026-09-27
+- [x] TestFlight build 16 VALID + assigned Internal Testing (tester sync only `yisheng.jiang@gmail.com`) — TF run 37155733709 `66a866d`; assign runs 37156573471 / 37156693129; export-compliance run 37156465510 — 2026-10-03
+- [x] ASC assign Internal Testing: `create_group` / `group_name` / `only_email` (default only that address, never whole team) — `1de253a`, `f0e32a8` — 2026-10-03
+- [x] Color preprocessing like homr: color photos decode to RGBX → `parsePage(rgbx:)` autocrop on BGR, Pillow resize in color, then BGR2GRAY + CLAHE; gray scans keep gray path — `e46eeb0` (+ build fixes `ac595d4`, `bc3c8c7`) — 2026-10-03
+- [x] SF2 player fidelity (GeneralUser GS) via shared SF2Engine ([sf2player-swift](https://github.com/yishengjiang99/sf2player-swift)): modulators, filter Q, pitch bend, CC1/7/10/11, GM drums ch 10 — `8cdc8bc`, `66a866d` — 2026-10-03
+- [x] A–B loop + per-hand mute/solo; held notes re-sound after seek/pause/loop wrap — `fa63bcf` — 2026-10-03
+- [x] Note highlighting (homr image positions + notehead boxes; Player Sheet mode) — `86adbb9` — 2026-10-03
+- [x] Share MIDI + transpose ±12 in Player — `3bc7ce9` — 2026-10-03
+- [x] Failed-scan explanation with framing/lighting tips — `1fdfacb` — 2026-10-03
+- [x] Build 16 quick fixes: public-domain Ode to Joy sample; Dark Mode surfaces; SegNetTests batch 8 — `309c25c` — 2026-10-03
+- [x] v1.0 build 15 resubmitted WAITING_FOR_REVIEW (captioned listing, no Sweden) — `7f68a2f`, submit run 36373908988 — 2026-09-28
