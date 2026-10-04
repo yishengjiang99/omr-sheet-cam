@@ -55,16 +55,19 @@ final class RecognitionProgress: ObservableObject {
     @Published private(set) var warmingUp: Bool = false
     /// Ticking ETA while warming up; nil otherwise.
     @Published private(set) var etaSeconds: Double?
+    /// `true` while the warmup is reloading models after a memory-warning release.
+    @Published private(set) var isRewarm: Bool = false
 
     var percent: Int { Int((fraction * 100).rounded(.down)) }
 
-    func reset() { fraction = 0; warmingUp = false; etaSeconds = nil }
+    func reset() { fraction = 0; warmingUp = false; etaSeconds = nil; isRewarm = false }
 
     func report(_ e: ScanProgress) {
         if e.warmingUp != warmingUp { warmingUp = e.warmingUp; fraction = 0; etaSeconds = nil }
         let v = min(max(e.fraction, 0), 1)
         if v > fraction { fraction = v }
         etaSeconds = e.warmingUp ? e.etaSeconds : nil
+        isRewarm = e.isRewarm
     }
 
     /// Handler for `RecognitionService.recognize(imageData:progress:)`: hops each report to the main actor.
