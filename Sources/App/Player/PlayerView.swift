@@ -63,7 +63,7 @@ struct PlayerScreen: View {
     @State private var showLibrary = false
     /// Sheet (scan photo with the playing notes highlighted) vs. Cover artwork.
     @State private var showSheet = true
-    @State private var followPlayback = true
+    @State private var followPlayback = false
     /// Sheet taps mark the A–B loop instead of seeking.
     @State private var tapSetsLoop = false
 
