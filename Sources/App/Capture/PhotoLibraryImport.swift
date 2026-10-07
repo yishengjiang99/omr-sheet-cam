@@ -1,5 +1,6 @@
 import Photos
 import PhotosUI
+import SwiftUI
 import UIKit
 
 /// Shared photo-library → upright `UIImage` path used by Library (home) and Camera.

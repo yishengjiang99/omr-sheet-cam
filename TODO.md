@@ -1,5 +1,5 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-10-06 6:41 PM PT by OMR iOS_
+_Last updated: 2026-10-06 6:49 PM PT by OMR iOS_
 
 Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). App Review still has **build 15**; recognition always on + Library home (this commit); TF after ios-sim green.
 
