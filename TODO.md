@@ -1,7 +1,7 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-10-04 9:07 AM PT by Chief of Staff_
+_Last updated: 2026-10-06 6:05 PM PT by OMR iOS_
 
-Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip `d2ed1ef`. App Review still has **build 15**; TestFlight **build 17** is VALID for device testing.
+Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). App Review still has **build 15**; TestFlight **build 17** was VALID; IAP merge pending new TF after ios-sim green.
 
 ## Locked constraints
 - Decoder fp32 on ORT CPU EP; encoder + SegNet fp16 on CoreML EP with CPU fallback
@@ -15,6 +15,8 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Real-photo accuracy spot check (2–3 photos, color preprocessing path; diagnostics `preprocess_mode`) — OMR Core + User
 - [ ] Regression fixtures (2026-09-27 audit): tuplet rounding, key signatures + accidentals, multi-row/grand-staff timing — OMR Core
 - [ ] Memory warning re-warm (~10 s); revisit after device numbers — OMR iOS
+- [ ] Confirm ASC subscription products `com.ragnus.vp.pro.monthly` / `com.ragnus.vp.pro.yearly` match StoreKitManager + `OMRSheetCam.storekit` — OMR iOS
+- [ ] Real-device IAP smoke on new TestFlight: free quota 5/day → paywall; Restore Purchases — OMR iOS + User
 
 ## Next
 - [ ] Swap in post-ship ASO copy (`docs/asc/COPY.md` → PENDING) as features ship; rerun `docs/asc/check_copy.py` — OMR iOS
@@ -28,6 +30,8 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] IAP/telemetry on main: Analytics, StoreKitManager, ScanQuota, PaywallView, StoreKit config, `docs/omr-iap-xcode-prompt.md`; pbxproj linked with non-colliding IDs (prior D1…001 collided with PBXTargetDependency) — OMR iOS — 2026-10-06
+- [x] TestFlight build 17 VALID (grand-staff timing / re-warm copy / per-staff diagnostics) — TF run 37172044074 `ca26f6d` — 2026-10-04
 - [x] TestFlight build 17 VALID (grand-staff timing / re-warm copy / per-staff diagnostics) — TF run 37172044074 `ca26f6d` — 2026-10-04
 - [x] Playback: Follow defaults off so the scan photo stays still — `d2ed1ef` — 2026-10-04
 - [x] Grand-staff hand timing + warmup re-warm copy + per-staff recognition diagnostics — `2ae417b` — 2026-10-04
