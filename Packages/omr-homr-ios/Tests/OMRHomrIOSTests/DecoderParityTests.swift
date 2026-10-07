@@ -115,4 +115,10 @@ final class DecoderParityTests: XCTestCase {
         throw XCTSkip("CONNXRuntime not linked")
         #endif
     }
+
+    func testRecommendedConcurrencyAndPoolClamps() {
+        let n = PageInferenceSession.recommendedStaffConcurrency
+        XCTAssertGreaterThanOrEqual(n, 1)
+        XCTAssertLessThanOrEqual(n, 4)
+    }
 }

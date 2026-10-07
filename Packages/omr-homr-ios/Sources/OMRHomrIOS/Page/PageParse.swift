@@ -35,18 +35,46 @@ public struct PageParseResult: Sendable {
 }
 
 /// Loaded page-path models: SegNet (fp16), encoder (fp16), decoder (fp32, CPU). Create once and reuse; a parse
-/// runs sessions sequentially (not reentrant — serialize calls).
+/// is not reentrant across calls (serialize `parsePage`), but **within** one parse staff encode/decode may run
+/// in parallel up to `maxStaffConcurrency` when a staff pool is available.
+///
+/// ## Staff concurrency (measure on device; Copy-as-prompt)
+/// - **1**: lowest RSS; baseline wall time (serial staffs). Default on Linux / when only one warmed session.
+/// - **2**: default on iPhone via `recommendedStaffConcurrency`. Each slot owns its own encoder+decoder ORT
+///   session and IoBinding/KV state (~decoder 47 MB + encoder 26 MB extra per slot). Often best when
+///   decoder-bound after zero-copy KV.
+/// - **4**: only if the device has headroom; diminishing returns under memory pressure / thermal throttle.
+/// Never share one `OrtIoBinding` or KV cache across staffs. Concurrent `RunWithBinding` on one ORT session
+/// is not assumed safe — use the session pool (`staffPool`).
 public final class PageInferenceSession: @unchecked Sendable {
     public let segnet: SegNetSession
+    /// Primary staff session (`staffPool[0]`); API compatibility for single-session callers.
     public let staff: StaffInferenceSession
+    /// One `StaffInferenceSession` per concurrent slot (own encoder/decoder ORT sessions + IoBinding).
+    public let staffPool: [StaffInferenceSession]
+    /// Cap on parallel staff encode+decode. Clamped to `staffPool.count` at parse time.
+    public var maxStaffConcurrency: Int
     private let lock = NSLock()
 
-    public init(segnet: SegNetSession, staff: StaffInferenceSession) {
+    public init(
+        segnet: SegNetSession,
+        staffPool: [StaffInferenceSession],
+        maxStaffConcurrency: Int? = nil
+    ) {
+        precondition(!staffPool.isEmpty, "PageInferenceSession requires at least one StaffInferenceSession")
         self.segnet = segnet
-        self.staff = staff
+        self.staff = staffPool[0]
+        self.staffPool = staffPool
+        let rec = maxStaffConcurrency ?? Self.recommendedStaffConcurrency
+        self.maxStaffConcurrency = max(1, min(rec, staffPool.count))
     }
 
-    /// Reuse already created ORT backends (e.g. the app's warmed sessions). The decoder backend must be CPU.
+    public convenience init(segnet: SegNetSession, staff: StaffInferenceSession) {
+        self.init(segnet: segnet, staffPool: [staff], maxStaffConcurrency: 1)
+    }
+
+    /// Reuse already created ORT backends (e.g. the app's warmed sessions). Single slot → concurrency 1.
+    /// The decoder backend must be CPU. For parallel staffs, use `load(...)` (session pool) instead.
     public convenience init(
         segnet: any ORTSessionBackend,
         encoder: any ORTSessionBackend,
@@ -54,7 +82,19 @@ public final class PageInferenceSession: @unchecked Sendable {
         vocabulary: HomrVocabulary
     ) throws {
         let staff = try StaffInferenceSession(encoder: encoder, decoder: decoder, vocabulary: vocabulary)
-        self.init(segnet: SegNetSession(backend: segnet), staff: staff)
+        self.init(segnet: SegNetSession(backend: segnet), staffPool: [staff], maxStaffConcurrency: 1)
+    }
+
+    /// Recommended parallel staff slots: 2 on iPhone, 1 elsewhere (override with `OMR_STAFF_CONCURRENCY`).
+    public static var recommendedStaffConcurrency: Int {
+        if let e = ProcessInfo.processInfo.environment["OMR_STAFF_CONCURRENCY"], let n = Int(e), n >= 1 {
+            return min(n, 4)
+        }
+        #if canImport(UIKit) && !os(watchOS)
+        return 2
+        #else
+        return 1
+        #endif
     }
 
     /// Raw 8-bit gray page (row-major, no padding, upright; e.g. a camera photo's luma) -> full homr page parse.
@@ -109,24 +149,110 @@ public final class PageInferenceSession: @unchecked Sendable {
         let image = PagePipeline.maskedPage(page.preprocessed, noiseMask: layout.noiseMask)
         let toInput = PageToInputMapping(crop: page.crop, pageWidth: page.width, pageHeight: page.height)
 
-        var raw: [[EncodedSymbol]] = []
-        var filtered: [[EncodedSymbol]] = []
+        let staffCount = layout.staffs.count
+        var raw = [[EncodedSymbol]](repeating: [], count: staffCount)
+        var filtered = [[EncodedSymbol]](repeating: [], count: staffCount)
+        var encMs = [Double](repeating: 0, count: staffCount)
+        var decMs = [Double](repeating: 0, count: staffCount)
         var canvasMs = 0.0
-        for (i, s) in layout.staffs.enumerated() {
-            let tc = ProcessInfo.processInfo.systemUptime
-            let prepared = try StaffPrepare.prepareStaffImage(page: image, width: page.width, height: page.height,
-                                                              geometry: s.geometry)
-            let canvas = try StaffPrepare.canvas(prepared)
-            canvasMs += (ProcessInfo.processInfo.systemUptime - tc) * 1000
-            var symbols = try staff.decodeStaff(tensor: StaffTensor.fromCanvas(canvas))
-            // homr dda4d2f parse_staff_image: image_coordinates = page_to_input(staff_to_page(center)).
-            PagePipeline.attachPositions(&symbols, toPage: prepared.toPage, toInput: toInput)
-            timings.append(.init(stage: "decode_s\(i)_enc", ms: staff.lastEncoderMs))
-            timings.append(.init(stage: "decode_s\(i)_dec", ms: staff.lastDecoderMs))
-            raw.append(symbols)
-            filtered.append(SymbolCleanup.positionFilter(symbols, isGrandstaff: s.isGrandstaff))
-            progress?(PageParseProgress(stage: .decode, completed: raw.count, total: layout.staffs.count))
+        let conc = max(1, min(maxStaffConcurrency, staffPool.count, max(staffCount, 1)))
+
+        if conc <= 1 || staffCount <= 1 {
+            for (i, s) in layout.staffs.enumerated() {
+                let tc = ProcessInfo.processInfo.systemUptime
+                let prepared = try StaffPrepare.prepareStaffImage(
+                    page: image, width: page.width, height: page.height, geometry: s.geometry)
+                let canvas = try StaffPrepare.canvas(prepared)
+                canvasMs += (ProcessInfo.processInfo.systemUptime - tc) * 1000
+                var symbols = try staff.decodeStaff(tensor: StaffTensor.fromCanvas(canvas))
+                PagePipeline.attachPositions(&symbols, toPage: prepared.toPage, toInput: toInput)
+                encMs[i] = staff.lastTiming.encoderMs
+                decMs[i] = staff.lastTiming.decoderMs
+                raw[i] = symbols
+                filtered[i] = SymbolCleanup.positionFilter(symbols, isGrandstaff: s.isGrandstaff)
+                progress?(PageParseProgress(stage: .decode, completed: i + 1, total: staffCount))
+            }
+        } else {
+            // Bounded parallel staffs: each in-flight staff takes a free pool slot (own ORT sessions + IoBinding).
+            final class DecodeShared: @unchecked Sendable {
+                let lock = NSLock()
+                var freeSlots: [Int]
+                var completed = 0
+                var canvasAccum = 0.0
+                var firstError: Error?
+                var encMs: [Double]
+                var decMs: [Double]
+                var raw: [[EncodedSymbol]]
+                var filtered: [[EncodedSymbol]]
+                init(conc: Int, staffCount: Int) {
+                    freeSlots = Array(0..<conc)
+                    encMs = [Double](repeating: 0, count: staffCount)
+                    decMs = [Double](repeating: 0, count: staffCount)
+                    raw = [[EncodedSymbol]](repeating: [], count: staffCount)
+                    filtered = [[EncodedSymbol]](repeating: [], count: staffCount)
+                }
+            }
+            let shared = DecodeShared(conc: conc, staffCount: staffCount)
+            let group = DispatchGroup()
+            let queue = DispatchQueue(label: "omr.page.decode", qos: .userInitiated, attributes: .concurrent)
+            let slotSem = DispatchSemaphore(value: conc)
+
+            for (i, s) in layout.staffs.enumerated() {
+                group.enter()
+                queue.async {
+                    defer { group.leave() }
+                    slotSem.wait()
+                    shared.lock.lock()
+                    let slot = shared.freeSlots.removeLast()
+                    shared.lock.unlock()
+                    defer {
+                        shared.lock.lock()
+                        shared.freeSlots.append(slot)
+                        shared.lock.unlock()
+                        slotSem.signal()
+                    }
+                    do {
+                        let worker = self.staffPool[slot]
+                        let tc = ProcessInfo.processInfo.systemUptime
+                        let prepared = try StaffPrepare.prepareStaffImage(
+                            page: image, width: page.width, height: page.height, geometry: s.geometry)
+                        let canvas = try StaffPrepare.canvas(prepared)
+                        let cMs = (ProcessInfo.processInfo.systemUptime - tc) * 1000
+                        var symbols = try worker.decodeStaff(tensor: StaffTensor.fromCanvas(canvas))
+                        PagePipeline.attachPositions(&symbols, toPage: prepared.toPage, toInput: toInput)
+                        let eMs = worker.lastTiming.encoderMs
+                        let dMs = worker.lastTiming.decoderMs
+                        let filt = SymbolCleanup.positionFilter(symbols, isGrandstaff: s.isGrandstaff)
+                        shared.lock.lock()
+                        shared.canvasAccum += cMs
+                        shared.encMs[i] = eMs
+                        shared.decMs[i] = dMs
+                        shared.raw[i] = symbols
+                        shared.filtered[i] = filt
+                        shared.completed += 1
+                        let done = shared.completed
+                        shared.lock.unlock()
+                        progress?(PageParseProgress(stage: .decode, completed: done, total: staffCount))
+                    } catch {
+                        shared.lock.lock()
+                        if shared.firstError == nil { shared.firstError = error }
+                        shared.lock.unlock()
+                    }
+                }
+            }
+            group.wait()
+            if let err = shared.firstError { throw err }
+            canvasMs = shared.canvasAccum
+            encMs = shared.encMs
+            decMs = shared.decMs
+            raw = shared.raw
+            filtered = shared.filtered
         }
+        for i in 0..<staffCount {
+            timings.append(.init(stage: "decode_s\(i)_enc", ms: encMs[i]))
+            timings.append(.init(stage: "decode_s\(i)_dec", ms: decMs[i]))
+        }
+        timings.append(.init(stage: "decode_concurrency", ms: Double(conc)))
         mark("decode")
         timings.append(.init(stage: "decode_canvas", ms: canvasMs))
 
@@ -176,9 +302,20 @@ extension PageInferenceSession {
         let vocab = try TokenizerLoader.loadVocabulary(bundle: nil)
         _ = segnetCacheDirectory // intentionally unused: SegNet (NeuralNetwork) has no CoreML cache
         let seg = try PageModels.acceleratedSegNet(files.segnet)
-        let enc = try PageModels.accelerated(files.encoder, cacheDirectory: encoderCacheDirectory)
-        let dec = try ORTCSession(modelURL: files.decoder, provider: .cpu)
-        return try PageInferenceSession(segnet: seg, encoder: enc, decoder: dec, vocabulary: vocab)
+        let slots = Self.recommendedStaffConcurrency
+        // Serialize session creation (CoreML cache is not safe for concurrent creators of the same key).
+        var pool: [StaffInferenceSession] = []
+        pool.reserveCapacity(slots)
+        for _ in 0..<slots {
+            let enc = try PageModels.accelerated(files.encoder, cacheDirectory: encoderCacheDirectory)
+            let dec = try ORTCSession(modelURL: files.decoder, provider: .cpu)
+            pool.append(try StaffInferenceSession(encoder: enc, decoder: dec, vocabulary: vocab))
+        }
+        return PageInferenceSession(
+            segnet: SegNetSession(backend: seg),
+            staffPool: pool,
+            maxStaffConcurrency: slots
+        )
     }
 }
 #endif

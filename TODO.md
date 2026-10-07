@@ -1,5 +1,5 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-10-06 7:50 PM PT by OMR iOS_
+_Last updated: 2026-10-06 7:52 PM PT by OMR iOS_
 
 Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). App Review still has **build 15** (do not cancel). Listing/privacy optimized for tip (IAP+telemetry); do not sync listing to ASC until a matching binary is submitted. Redeploy live privacy/support HTML.
 
@@ -10,7 +10,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - Apple ORT SPM pinned `exact: "1.24.2"`
 
 ## Now (in progress)
-- [ ] Full-page OMR perf: commit 4 (parallel staffs); later Core ML encoder/SegNet experiments — OMR iOS
+- [ ] Full-page OMR perf later: Core ML encoder offline experiment + fixed-batch-8 SegNet (commits 5–6); optional page locator / stateful decoder (7–8) — OMR iOS
 - [ ] v1.0 build 15 in App Review (WAITING_FOR_REVIEW, submitted 2026-09-28 ~8:30 PM PT / 03:30 UTC; listing = captioned peach screenshots + rewritten copy, no Sweden). Check with read-only **ASC status** only; do NOT re-run cancel/submit while waiting — Chief of Staff — submit run 36373908988; status rechecked 2026-10-04 ~9:10 AM PT (run 37215746872)
 - [ ] Real-device page parse verdict on latest TestFlight (after recognition-always-on / Library-home fix): 3–5 real sheet photos → parse time + peak `phys_footprint` from Copy as prompt; pass/fail per photo — OMR iOS + User
 - [ ] Real-photo accuracy spot check (2–3 photos, color preprocessing path; diagnostics `preprocess_mode`) — OMR Core + User
@@ -32,6 +32,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] Parallel staff decode: staffPool + maxStaffConcurrency (iPhone default 2); StaffDecodeTiming; docs/plans/staff-decode-concurrency.md — OMR iOS — 2026-10-06 7:52 PM PT
 - [x] Fixture `camera.die_letzte_kompanie` (real photo Die Letzte Kompanie, snapshot tier) — OMR iOS — 2026-10-06 7:50 PM PT
 - [x] EncoderContext.castToFP32ForDecoder: single preallocated fp32 buffer (no intermediate [Float]) — OMR iOS — 2026-10-06 7:46 PM PT
 - [x] Decoder parity tests (generic vs zero-copy exact match) + StaffDecodeTiming / bound metrics; cacheSwiftBytes=0 — OMR iOS — 2026-10-06 7:45 PM PT
