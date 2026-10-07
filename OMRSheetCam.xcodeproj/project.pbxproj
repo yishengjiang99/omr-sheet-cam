@@ -23,10 +23,6 @@
 		5F0000000000000000000004 /* SF2PlayerAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000004 /* SF2PlayerAppTests.swift */; };
 		5F0000000000000000000005 /* SF2Player in Frameworks */ = {isa = PBXBuildFile; productRef = 5D0000000000000000000002 /* SF2Player */; };
 		CA0000000000000000000001 /* CaptureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000001 /* CaptureStore.swift */; };
-		D20000000000000000000001 /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000001 /* Analytics.swift */; };
-		D20000000000000000000002 /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000002 /* StoreKitManager.swift */; };
-		D20000000000000000000003 /* ScanQuota.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000003 /* ScanQuota.swift */; };
-		D20000000000000000000004 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000004 /* PaywallView.swift */; };
 		CA0000000000000000000002 /* RecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000002 /* RecognitionService.swift */; };
 		7F0000000000000000000003 /* ScanFailure.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E0000000000000000000002 /* ScanFailure.swift */; };
 		CA0000000000000000000003 /* CameraController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000003 /* CameraController.swift */; };
@@ -111,10 +107,6 @@
 		CB0000000000000000000006 /* ResultScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultScreen.swift; sourceTree = "<group>"; };
 		CB0000000000000000000007 /* PlayerRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerRoute.swift; sourceTree = "<group>"; };
 		CB0000000000000000000008 /* RootFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootFlowView.swift; sourceTree = "<group>"; };
-		D10000000000000000000001 /* Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/Analytics.swift"; sourceTree = "<group>"; };
-		D10000000000000000000002 /* StoreKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/StoreKitManager.swift"; sourceTree = "<group>"; };
-		D10000000000000000000003 /* ScanQuota.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/ScanQuota.swift"; sourceTree = "<group>"; };
-		D10000000000000000000004 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Paywall/PaywallView.swift"; sourceTree = "<group>"; };
 		CB0000000000000000000009 /* CaptureHelpersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureHelpersTests.swift; sourceTree = "<group>"; };
 		CB000000000000000000000A /* DiagnosticsLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLog.swift; sourceTree = "<group>"; };
 		CB000000000000000000000B /* PromptBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptBuilder.swift; sourceTree = "<group>"; };
@@ -264,10 +256,6 @@
 				6E0000000000000000000007 /* NOTICE */,
 				6D0000000000000000000001 /* Settings */,
 				6D0000000000000000000002 /* Licenses */,
-				D10000000000000000000001 /* Analytics.swift */,
-				D10000000000000000000002 /* StoreKitManager.swift */,
-				D10000000000000000000003 /* ScanQuota.swift */,
-				D10000000000000000000004 /* PaywallView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -516,10 +504,6 @@
 				A10000000000000000000004 /* ModelWarmup.swift in Sources */,
 				A1000000000000000000000B /* Gate1Runner.swift in Sources */,
 				CA0000000000000000000001 /* CaptureStore.swift in Sources */,
-				D20000000000000000000001 /* Analytics.swift in Sources */,
-				D20000000000000000000002 /* StoreKitManager.swift in Sources */,
-				D20000000000000000000003 /* ScanQuota.swift in Sources */,
-				D20000000000000000000004 /* PaywallView.swift in Sources */,
 				CA0000000000000000000002 /* RecognitionService.swift in Sources */,
 				7F0000000000000000000003 /* ScanFailure.swift in Sources */,
 				CA0000000000000000000003 /* CameraController.swift in Sources */,
