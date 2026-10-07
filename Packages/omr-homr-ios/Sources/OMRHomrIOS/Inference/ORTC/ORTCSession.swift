@@ -55,7 +55,7 @@ import Foundation
 //   fp16 -> fp32 cast lives in `EncoderContext.castToFP32ForDecoder()`.
 
 /// Process-wide ORT API table + `OrtEnv` (ORT recommends one env per process).
-private final class ORTCRuntime: @unchecked Sendable {
+final class ORTCRuntime: @unchecked Sendable {
     let api: OrtApi
     let env: OpaquePointer
 
@@ -131,9 +131,9 @@ public final class ORTCSession: ORTSessionBackend, ORTCoreMLCacheableBackend, OR
     public let inputInfo: [IOInfo]
     public let outputInfo: [IOInfo]
 
-    private let runtime: ORTCRuntime
-    private let session: OpaquePointer
-    private let memoryInfo: OpaquePointer
+    let runtime: ORTCRuntime
+    let session: OpaquePointer
+    let memoryInfo: OpaquePointer
 
     /// `libonnxruntime` version string, e.g. "1.24.2".
     public static var runtimeVersion: String {

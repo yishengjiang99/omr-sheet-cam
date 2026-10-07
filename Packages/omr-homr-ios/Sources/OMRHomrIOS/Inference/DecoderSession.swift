@@ -134,7 +134,55 @@ public final class DecoderSession: @unchecked Sendable {
     }
 }
 
+/// Decoder zero-copy / step timing (filled by `ORTBoundDecoderRunner` when ORT is linked).
+public struct DecoderBoundMetrics: Sendable, Equatable {
+    public var totalDecoderMs: Double = 0
+    public var ortInferenceMs: Double = 0
+    public var bindingSetupMs: Double = 0
+    public var argmaxMs: Double = 0
+    public var tokenCount: Int = 0
+    public var cacheBytesCopiedThroughSwift: Int = 0
+    public var nativeCacheRebinds: Int = 0
+    public var perTokenMs: [Double] = []
+
+    public init(
+        totalDecoderMs: Double = 0, ortInferenceMs: Double = 0, bindingSetupMs: Double = 0,
+        argmaxMs: Double = 0, tokenCount: Int = 0, cacheBytesCopiedThroughSwift: Int = 0,
+        nativeCacheRebinds: Int = 0, perTokenMs: [Double] = []
+    ) {
+        self.totalDecoderMs = totalDecoderMs
+        self.ortInferenceMs = ortInferenceMs
+        self.bindingSetupMs = bindingSetupMs
+        self.argmaxMs = argmaxMs
+        self.tokenCount = tokenCount
+        self.cacheBytesCopiedThroughSwift = cacheBytesCopiedThroughSwift
+        self.nativeCacheRebinds = nativeCacheRebinds
+        self.perTokenMs = perTokenMs
+    }
+
+    public var avgTokenMs: Double {
+        guard !perTokenMs.isEmpty else { return 0 }
+        return perTokenMs.reduce(0, +) / Double(perTokenMs.count)
+    }
+    public var p50TokenMs: Double { Self.percentile(perTokenMs, 0.50) }
+    public var p95TokenMs: Double { Self.percentile(perTokenMs, 0.95) }
+    static func percentile(_ xs: [Double], _ p: Double) -> Double {
+        guard !xs.isEmpty else { return 0 }
+        let s = xs.sorted()
+        let i = min(s.count - 1, max(0, Int((Double(s.count - 1) * p).rounded())))
+        return s[i]
+    }
+}
+
 /// `DecoderStepRunning` over a real ORT decoder session (CPU fp32).
+///
+/// Default path (when the backend is `ORTCSession` and `OMR_DECODER_GENERIC` is unset/`0`):
+/// zero-copy KV-cache via ORT I/O Binding (`ORTBoundDecoderRunner`) — caches stay as native
+/// `OrtValue`s and are rebound as `cache_in*` without Swift `Data` materialization.
+///
+/// Generic path (`backend.run` + `Data` copy of every cache every step): kept for parity tests
+/// and non-`ORTCSession` backends. Force with env `OMR_DECODER_GENERIC=1` or
+/// `ORTDecoderStepRunner.forceGenericPath = true`.
 ///
 /// Per step, exactly as upstream `ScoreDecoder.generate`:
 /// - binds the five token ids as int64 `[1,1]`, `context` (full on step 0, else `context[:, :1]`),
@@ -145,6 +193,16 @@ public final class DecoderSession: @unchecked Sendable {
 ///
 /// Not thread-safe: one runner per decode. `cacheLen == 0` resets the KV cache.
 public final class ORTDecoderStepRunner: DecoderStepRunning, @unchecked Sendable {
+    /// When true, always use the generic `ORTSessionBackend.run` path (alloc+copy caches).
+    /// Also enabled when env `OMR_DECODER_GENERIC=1`.
+    public static var forceGenericPath: Bool = false
+
+    public static var preferZeroCopy: Bool {
+        if forceGenericPath { return false }
+        if ProcessInfo.processInfo.environment["OMR_DECODER_GENERIC"] == "1" { return false }
+        return true
+    }
+
     private let backend: any ORTSessionBackend
     private let fullContext: ORTTensor
     private let reducedContext: ORTTensor
@@ -153,6 +211,24 @@ public final class ORTDecoderStepRunner: DecoderStepRunning, @unchecked Sendable
     private let stepOutputNames: [String]
     private let emptyCache: [ORTTensor]
     private var cache: [ORTTensor]
+    #if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
+    private let bound: ORTBoundDecoderRunner?
+    #endif
+
+    /// Metrics from the zero-copy path (nil when using the generic path).
+    public var boundMetrics: DecoderBoundMetrics? {
+        #if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
+        guard let m = bound?.metrics else { return nil }
+        return DecoderBoundMetrics(
+            totalDecoderMs: m.totalDecoderMs, ortInferenceMs: m.ortInferenceMs,
+            bindingSetupMs: m.bindingSetupMs, argmaxMs: m.argmaxMs, tokenCount: m.tokenCount,
+            cacheBytesCopiedThroughSwift: m.cacheBytesCopiedThroughSwift,
+            nativeCacheRebinds: m.nativeCacheRebinds, perTokenMs: m.perTokenMs
+        )
+        #else
+        return nil
+        #endif
+    }
 
     init(session: DecoderSession, backend: any ORTSessionBackend, context: EncoderContext) throws {
         guard context.dtype == .float32 else {
@@ -180,9 +256,27 @@ public final class ORTDecoderStepRunner: DecoderStepRunning, @unchecked Sendable
             ORTTensor(type: .float32, shape: $0, data: Data())
         }
         self.cache = emptyCache
+
+        #if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
+        if Self.preferZeroCopy, let ort = backend as? ORTCSession {
+            self.bound = try ORTBoundDecoderRunner(ort: ort, context: context, session: session)
+        } else {
+            self.bound = nil
+        }
+        #endif
     }
 
     public func runStep(_ input: DecoderStepInput) throws -> DecoderStepOutput {
+        #if canImport(CONNXRuntime) || canImport(CONNXRuntimeApple)
+        if let bound {
+            return try bound.runStep(input)
+        }
+        #endif
+        return try runStepGeneric(input)
+    }
+
+    /// Old path: every cache tensor is copied through Swift `Data` via `ORTCSession.run`.
+    func runStepGeneric(_ input: DecoderStepInput) throws -> DecoderStepOutput {
         if input.cacheLen == 0 { cache = emptyCache }
         func ids(_ v: Int) -> ORTTensor {
             ORTTensor(type: .int64, shape: [1, 1], data: Self.int64Data([Int64(v)]))
