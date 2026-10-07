@@ -1,7 +1,7 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-10-06 8:11 PM PT by OMR iOS_
+_Last updated: 2026-10-06 8:15 PM PT by OMR iOS_
 
-Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). ASO: GPU/on-device Neural Engine emphasis in listing + screenshots; submit v1.0 with **build 24** (replaces App Review build 15).
+Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). v1.0 **build 24** WAITING_FOR_REVIEW with GPU/on-device listing + screenshots.
 
 ## Locked constraints
 - Decoder fp32 on ORT CPU EP; encoder + SegNet fp16 on CoreML EP with CPU fallback
@@ -11,7 +11,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 
 ## Now (in progress)
 - [ ] Full-page OMR perf later: Core ML encoder offline experiment + fixed-batch-8 SegNet (commits 5–6); optional page locator / stateful decoder (7–8) — OMR iOS
-- [ ] Submit v1.0 with build **24** (VALID) + GPU/on-device listing + screenshots via `asc-submit-app-store.yml` (cancels build-15 review, attaches 24) — OMR iOS
+- [ ] v1.0 build **24** in App Review (WAITING_FOR_REVIEW). Check with read-only **ASC status** only; do not cancel/resubmit while waiting — OMR iOS — submit run 37565863422; listing upload 37565737062
 - [ ] Real-device page parse verdict on latest TestFlight (after recognition-always-on / Library-home fix): 3–5 real sheet photos → parse time + peak `phys_footprint` from Copy as prompt; pass/fail per photo — OMR iOS + User
 - [ ] Real-photo accuracy spot check (2–3 photos, color preprocessing path; diagnostics `preprocess_mode`) — OMR Core + User
 - [ ] Regression fixtures (2026-09-27 audit): tuplet rounding, key signatures + accidentals, multi-row/grand-staff timing — OMR Core
@@ -32,6 +32,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] Submitted v1.0 build 24 WAITING_FOR_REVIEW (GPU listing+screenshots synced; canceled build-15 review) — submit run 37565863422; upload 37565737062; cancel 37565696291 — OMR iOS — 2026-10-06 8:15 PM PT
 - [x] ASO: screenshot 03 + listing promo/description/whatsnew emphasize iPhone GPU / on-device Neural Engine OMR (honest: CoreML GPU/ANE for encoder+SegNet; decoder ORT CPU) — OMR iOS — 2026-10-06 8:11 PM PT
 - [x] README + GitHub description: zero-copy ORT I/O Binding decoder, StaffDecodeTiming, parallel staffs, fixture camera.die_letzte_kompanie — OMR iOS — 2026-10-06 7:53 PM PT
 - [x] Parallel staff decode: staffPool + maxStaffConcurrency (iPhone default 2); StaffDecodeTiming; docs/plans/staff-decode-concurrency.md — OMR iOS — 2026-10-06 7:52 PM PT
