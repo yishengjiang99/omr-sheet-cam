@@ -18,24 +18,24 @@ ProTune reference implementation:
 OMR app repo: `~/workspace/omr-sheet-cam` (yishengjiang99/omr-sheet-cam)
 OMR app structure: SwiftUI, Sources/App/, no server component.
 
-## TestFlight Copy (use verbatim for the build's "What to Test")
+## TestFlight Copy (prefer LISTING.md; kept here for the IAP prompt)
+
+Canonical "What to Test" lives in `docs/asc/LISTING.md`. Verbatim snapshot:
 
 ```
-What's new in this build:
-• Usage analytics: the app now reports anonymous usage events
-  (screen views, scan actions) to help improve the app. No personal
-  data, photos, or audio is collected.
-• Pro subscription: unlock unlimited scans and premium voices via
-  a monthly or yearly subscription. Free tier includes 5 scans/day.
+Tip-of-main (IAP + telemetry + Library home). Please verify:
 
-Please test:
-1. Scan a page of sheet music — confirm the reading progress bar
-   appears and playback works.
-2. Open the paywall (tap the Pro badge) — confirm monthly/yearly
-   prices load correctly.
-3. Complete a sandbox purchase — confirm Pro features unlock.
-4. Force-quit and relaunch — confirm Pro status persists.
+1. Library is home — how-it-works art, Camera and Photos CTAs, Try sample picture.
+2. Capture or import a printed page — progress bar while reading; Play opens the SF2 player.
+3. Player: tempo 0.5×–2×, instrument chips, level meter, Sheet highlight, A–B loop, hand mute/solo.
+4. Free quota: after 5 scans the same day, paywall appears (Music Reader Pro monthly/yearly). Restore Purchases.
+5. Optional: Settings → confirm no account; Developer section still hidden behind version taps.
+
+Report crashes, wrong MIDI, quota/paywall bugs, and slow recognition.
+Photos must never leave the device; only anonymous usage events go to telemetry.
 ```
+
+Pro unlocks **unlimited scans** only (instruments are not Pro-gated in code).
 
 ## Task 1: Telemetry Client (iOS)
 

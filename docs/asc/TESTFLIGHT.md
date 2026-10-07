@@ -31,3 +31,9 @@ Listing copy and screenshots: `LISTING.md`, `push_listing.py`, `screenshots/`. N
 
 ## Internal testing assignment
 The **Internal Testers** group has access to all builds, so new VALID builds reach it automatically. The manual **ASC assign Internal Testing** workflow exists as a fallback; its only run (36270215129, 2026-09-26) failed — re-run it with the build number if a build ever does not appear in TestFlight.
+
+## What to Test (tip-of-main)
+
+Use the fenced block in `LISTING.md` → **TestFlight: What to Test** (IAP, telemetry, Library home,
+recognition, player practice tools). Paste into the TestFlight build notes / workflow `notes` input.
+Only internal tester: `yisheng.jiang@gmail.com` (ASC assign workflow `only_email` default).

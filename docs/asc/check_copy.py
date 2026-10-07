@@ -14,9 +14,9 @@ HERE = Path(__file__).resolve().parent
 META = HERE / "metadata" / "en-US"
 FIELDS = [("name", "Name", 30), ("subtitle", "Subtitle", 30), ("keywords", "Keywords", 100),
           ("promotional_text", "Promotional text", 170), ("description", "Description", 4000)]
-# Phrases that describe unshipped features; must never reach the upload-ready files.
-# Page recognition, the Library/playlist and the instrument picker shipped (build 15), so they are allowed now.
-PENDING = [r"highlight", r"level meter", r"reads clefs", r"coming soon"]
+# Phrases that must never reach the upload-ready files (overclaims or unshipped guarantees).
+# Tip-of-main allows highlighting, level meter, library, instruments, IAP/quota, telemetry disclosures.
+PENDING = [r"reads clefs", r"coming soon", r"collects no data", r"data not collected", r"priority processing"]
 errors: list[str] = []
 
 

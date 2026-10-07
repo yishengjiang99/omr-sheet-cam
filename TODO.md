@@ -1,7 +1,7 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-10-06 6:49 PM PT by OMR iOS_
+_Last updated: 2026-10-06 7:15 PM PT by ASC listing agent_
 
-Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). App Review still has **build 15**; recognition always on + Library home (this commit); TF after ios-sim green.
+Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). App Review still has **build 15** (do not cancel). Listing/privacy optimized for tip (IAP+telemetry); do not sync listing to ASC until a matching binary is submitted. Redeploy live privacy/support HTML.
 
 ## Locked constraints
 - Decoder fp32 on ORT CPU EP; encoder + SegNet fp16 on CoreML EP with CPU fallback
@@ -19,7 +19,8 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Real-device IAP smoke on new TestFlight: free quota 5/day → paywall; Restore Purchases — OMR iOS + User
 
 ## Next
-- [ ] Swap in post-ship ASO copy (`docs/asc/COPY.md` → PENDING) as features ship; rerun `docs/asc/check_copy.py` — OMR iOS
+- [ ] ASC console App Privacy: publish answers in `docs/asc/app-privacy.md` (not "Data Not Collected") before next IAP binary submit — User
+- [ ] Redeploy `docs/asc/web/privacy.html` + `support.html` to grepawk.com/music-reader/ (live pages still claim no analytics/no IAP) — User / web
 - [ ] Real-device CoreML cache numbers (encoder/SegNet cold vs warm) — OMR iOS + User
 - [ ] Bump Apple ORT to `exact: "1.30.0"` once upstream tags it — OMR Core — blocked upstream
 
@@ -30,6 +31,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] ASO listing + privacy honesty: metadata/LISTING/COPY, PrivacyInfo.xcprivacy, app-privacy.md, paywall copy, AGENTS App Store rules; check_copy OK — ASC listing agent — 2026-10-06 7:15 PM PT
 - [x] Recognition always on (removed Experimental toggle + cleared legacy UserDefaults key); Library home with how-it-works art + Camera/Photos CTAs (camera no longer first screen) — OMR iOS — 2026-10-06 6:38 PM PT
 - [x] IAP/telemetry on main: Analytics, StoreKitManager, ScanQuota, PaywallView, StoreKit config, `docs/omr-iap-xcode-prompt.md`; pbxproj linked with non-colliding IDs (prior D1…001 collided with PBXTargetDependency) — OMR iOS — 2026-10-06
 - [x] TestFlight build 17 VALID (grand-staff timing / re-warm copy / per-staff diagnostics) — TF run 37172044074 `ca26f6d` — 2026-10-04

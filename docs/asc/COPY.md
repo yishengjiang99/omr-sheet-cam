@@ -1,58 +1,65 @@
 # ASO copy — AI Camera - Music Reader (`com.ragnus.vp`, ASC version 1.0, en-US)
 
-Rule: the listing only claims what a shipped build does. Anything that needs an unshipped feature
-lives in **PENDING until shipped** below and stays out of the upload-ready files.
+Rule: the listing only claims what tip-of-main ships. Anything that needs a binary newer than
+the build currently in App Review is called out under **Binary gates** (do not cancel that review).
 
-- Upload-ready (shipped now, TestFlight build 5): `metadata/en-US/*.txt` (fastlane deliver layout),
-  mirrored into the fenced blocks of `LISTING.md` (read by `push_listing.py`).
-- Post-ship final version: the `Post-ship …` blocks below. Swap them in field by field as each gate
-  ships; move lines out of PENDING in the same commit.
-- Check: `python3 docs/asc/check_copy.py` (limits, keyword hygiene, LISTING.md == metadata,
-  no pending phrases in upload-ready files, caption word counts). Output pasted at the bottom.
+- Upload-ready: `metadata/en-US/*.txt` (fastlane deliver layout), mirrored in `LISTING.md`
+  (read by `push_listing.py`).
+- Check: `python3 docs/asc/check_copy.py`
 - Never use "Grok". No competitor or brand names in keywords.
+- Privacy nutrition label: `docs/asc/app-privacy.md` (ASC console is manual).
 
-## Shipped in build 5 (what the copy may claim)
-- Camera capture (tap to focus/expose, torch) + photo import (PhotosPicker); page saved on device
-- SF2 player (`Sources/App/Player/PlayerView.swift`, `f38272a`): bundled sample MIDI (public-domain `ode-to-joy.mid` since build 16) via
-  GeneralUser GS; play / pause / stop, seek slider, tempo 0.5×–2×; reached from Result → "Play sample"
-- On-device homr model self-test of one staff (Diagnostics → Run Gate-1)
-- No network code, no account
+## Shipped on tip-of-main (2026-10-06) — what upload-ready may claim
 
-Not shipped: full-page recognition of the user's photo (Result shows "Recognition coming soon"),
-note highlighting, library / playlists, more sample songs, live level meter, instrument choice.
+- Camera capture (focus/expose, torch) + PhotosPicker import; pages saved on device
+- Full-page on-device recognition (`PageRecognitionService` / homr); live progress / warmup UI
+- Library home (how-it-works art, Camera/Photos CTAs, Your scans + Samples, search, rename/delete)
+- SF2 player (GeneralUser GS): play/pause/seek, tempo 0.5×–2×, instrument picker (Original + 11 GM programs), level meter, mini-player
+- Sheet mode note highlighting, Follow toggle, A–B loop, per-hand mute/solo, Share MIDI, transpose
+- Bundled sample: public-domain Ode to Joy (photo + MIDI)
+- Free quota: 5 scans/day (`ScanQuota`); Music Reader Pro IAP `com.ragnus.vp.pro.monthly` / `.yearly`
+- First-party anonymous telemetry → `https://photo.grepawk.com/api/telemetry` (`Analytics`)
+- No account / sign-in; photos never uploaded
 
-## Upload-ready (shipped now)
-Source of truth: `metadata/en-US/`. Values:
+Honest Pro scope in listing: **unlimited scans**. Instruments and recognition are not Pro-gated
+in code (paywall UI matches that). Do not claim "priority processing".
+
+## Binary gates (vs App Review build 15)
+
+| Claim | In build 15? | In tip-of-main? |
+|---|---|---|
+| Full-page recognition + progress + Play | Yes | Yes |
+| Library + instruments + tempo | Yes (Camera was home) | Yes (Library home) |
+| Note highlighting / A–B / hand mute | No (post–build 15) | Yes |
+| Free 5/day + Pro IAP + telemetry | No | Yes |
+| PrivacyInfo.xcprivacy | No | Yes (this change) |
+
+**Do not** sync this listing to ASC while build 15 is the binary under review if the sync would
+advertise IAP/telemetry/highlighting that build 15 lacks. Prefer sync when submitting a newer build.
+
+## Upload-ready (mirrors metadata/en-US)
+
 - Name: `AI Camera - Music Reader`
-- Subtitle: `Sheet music capture & playback`
-- Keywords: `scanner,scan,OMR,MIDI,piano,notes,score,notation,sight,reading,practice,tempo,synth,choir,band,learn`
-- Promotional text: `Capture sheet music with your camera or import a photo, then play the included sample song on a built-in synthesizer. Private and offline. No account needed.`
+- Subtitle: `Scan sheet music, hear it play`
+- Keywords: `OMR,piano,score,notation,notes,MIDI,sightreading,practice,tempo,choir,teacher,student,synth,library`
+- Promotional text: `Point your camera at printed sheet music and hear it play. Free: 5 scans/day; Pro for unlimited. On-device reading — no account.`
+- What's New: `Scan printed sheet music and hear it on device. Free: 5 pages/day; Pro unlocks unlimited scans. Tempo, 11 instruments, library, and practice tools.`
 - Description: `metadata/en-US/description.txt`
 
-Keyword notes: name/subtitle words (ai, camera, music, reader, sheet, capture, playback) are not
-repeated; single words so Apple can combine them ("sight reading", "sheet music scanner",
-"piano notes"); no plurals of included singulars; no brand names ("SoundFont" is a Creative
-trademark, kept out of keywords).
+Keyword notes: name/subtitle words (ai, camera, music, reader, scan, sheet, hear, it, play) are not
+repeated; single tokens so Apple can combine them; no brand names (SoundFont kept out).
 
-## PENDING until shipped
-Each line names its gate. None of these are in `metadata/en-US/` or `LISTING.md`.
+## PENDING (keep out of upload-ready)
 
-| Field | Pending copy | Gate |
-|---|---|---|
-| Subtitle | `Scan sheet music, hear it play` | full-page recognition → playback of the user's photo |
-| Keywords | swap `scan,band` → `playback` (subtitle takes "scan") | ships with the subtitle swap |
-| Promo | post-ship promo (reads notes on device, hear it played) | full-page recognition |
-| Description | lead: "Photograph a page of sheet music and hear it played. … reads the notes right on your device … highlighting each note as it sounds." | recognition + note highlighting |
-| Description | "The app reads clefs, key and time signatures, notes and rests" | recognition |
-| Description | "Tap Play and follow the highlighted notes" | recognition + highlighting |
-| Description | "Choose an instrument: piano and other General MIDI sounds" | instrument picker |
-| Description | "Live level meter while it plays" | level meter |
-| Description | LIBRARY section (library, playlists, "Sample songs included" plural) | library/playlist + more bundled samples |
-| Description | "Recognition runs entirely on your device …" (PRIVATE) | recognition (shipped copy says model self-test instead) |
-| Description | GOOD FOR bullets 1–2, WORKS BEST WITH | recognition |
-| Captions | #2 Result, #4 Library; #3 as worded (your scan playing) | recognition; library |
+| Item | Why |
+|---|---|
+| "reads clefs, key and time signatures" as a marketing guarantee | Pipeline is best-effort; avoid overclaim |
+| "coming soon" | Must never appear in listing |
+| "collects no data" / "Data Not Collected" | False once telemetry/IAP ship |
+| "priority processing" / Pro-only instruments | Not enforced in binary |
+| Header / Search Results creatives | Deferred (playbook gap); peach `make_store_screenshots.py` remains SoT |
 
-## Post-ship final version (all gates shipped)
+## Post-ship blocks (same as upload-ready while tip matches)
 
 ### Post-ship name
 ```
@@ -66,65 +73,73 @@ Scan sheet music, hear it play
 
 ### Post-ship keywords
 ```
-scanner,OMR,MIDI,piano,notes,score,notation,sight,reading,practice,tempo,synth,choir,learn,playback
+OMR,piano,score,notation,notes,MIDI,sightreading,practice,tempo,choir,teacher,student,synth,library
 ```
 
 ### Post-ship promotional text
 ```
-Photograph sheet music and hear it played. Notes are read right on your device by an open-source recognition model, so your scores stay private. No account needed.
+Point your camera at printed sheet music and hear it play. Free: 5 scans/day; Pro for unlimited. On-device reading — no account.
 ```
 
 ### Post-ship description
 ```
-Photograph a page of sheet music and hear it played. AI Camera - Music Reader reads the notes right on your device and plays them back on a built-in synthesizer, highlighting each note as it sounds.
-
-Point your camera at a printed score, or import a photo, and hear how a passage goes before you play it.
+Point your camera at printed sheet music and hear it played. AI Camera - Music Reader reads the notes on your iPhone or iPad, then plays the page back so you can listen, learn, and practice.
 
 HOW IT WORKS
-• Capture a page with the camera, or import a photo
-• The app reads clefs, key and time signatures, notes and rests
-• Tap Play and follow the highlighted notes
+1. Take a photo of a page, or pick one from your photo library.
+2. Watch the live progress bar while the app reads the music on your device.
+3. Tap Play to hear it — follow highlighted notes on the scan, change tempo, or pick an instrument.
 
-PLAYER
-• Play, pause and seek
-• Change tempo from half speed to double speed
-• Choose an instrument: piano and other General MIDI sounds
-• Live level meter while it plays
+FREE AND PRO
+• Free: 5 page scans per day
+• Music Reader Pro (auto-renewable): unlimited scans via monthly or yearly subscription (prices shown in the app)
+• Payment charged to your Apple ID; renews unless canceled at least 24 hours before period end
+• Manage or cancel in Settings → Apple ID → Subscriptions
+• Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+• Privacy Policy: https://grepawk.com/music-reader/privacy.html
 
-LIBRARY
-• Every scan is saved to your library
-• Build playlists of the pieces you are practicing
-• Sample songs included to try right away
+A PLAYER MADE FOR PRACTICE
+• Tempo from 0.5x to 2x: slow a tricky passage down or speed it up
+• Choose the sound: piano, electric piano, harpsichord, music box, vibraphone, organ, guitar, violin, strings, choir, or flute
+• Play, pause, seek, A–B loop, and mute or solo hands
+• Live level meter; playback keeps going while you browse
+• Share MIDI from your library
 
-PRIVATE BY DESIGN
-Recognition runs entirely on your device with a model that ships inside the app. Your photos are never uploaded. No account, no sign-in, and no internet connection needed.
+YOUR LIBRARY
+Every page the app reads is saved to your Library on your device, ready to play again anytime.
 
-GOOD FOR
-• Hearing a new piece before you practice it
-• Checking pitches and rhythms while sight-reading
-• Students, teachers, choir and band members
+TRY IT INSTANTLY
+No sheet music nearby? Tap "Try sample picture" to read a bundled page of Beethoven's "Ode to Joy" and hear the result.
 
-WORKS BEST WITH
-Clean, printed sheet music photographed straight on in good light. Handwritten music is not supported.
+ON-DEVICE READING
+Recognition runs on your device with models built into the app. Your photos and scores are never uploaded. No account or sign-in is required.
 
-BUILT ON OPEN SOURCE
-Music recognition is based on homr, an open-source optical music recognition project, licensed under AGPL-3.0. Sounds use the GeneralUser GS SoundFont.
-Open source (AGPL-3.0).
+USAGE DATA
+The app sends anonymous usage events (such as app open, scan success or fail, and purchase funnel steps) to our servers to improve the product. Events include an anonymous device id — never your photos, MIDI, email, or location. Purchases are processed by Apple.
+
+WHO IT'S FOR
+Piano students who want to hear how a new piece should sound, teachers preparing lessons, choir singers learning a part before rehearsal, and hobbyists who read a little and want to hear the rest.
+
+GOOD TO KNOW
+Works best with clean, printed sheet music, one page at a time. Keep the whole page in frame, flat and well lit. Handwritten music, very dense scores, and worn or crumpled pages may not read correctly; results can contain mistakes.
+
+OPEN SOURCE
+The recognition engine is based on the open-source homr project. The app is AGPL-3.0. Sounds use the GeneralUser GS SoundFont.
 ```
 
-## Screenshot caption plan (build 6 consumer UI, 6.9" 1320×2868)
-Format: `# | caption | screen | status`. Upload via workflow only; never submit.
+## Screenshot caption plan (peach store frames)
+
+Format: `# | caption | screen | status`. Upload via workflow only; never submit from CI.
+Source of truth: `docs/asc/screenshots/en-US/make_store_screenshots.py` (not playbook configs).
 
 ### Screenshot captions
 ```
-1 | Snap your sheet music | Scan (camera) | shipped
-2 | See every note, then play | Result (notes highlighted + Play) | PENDING: recognition + highlighting
-3 | Hear it played back | Player (scan playing) | PENDING: recognition; shipped-now alt "Play, pause, change tempo" with sample song
-4 | Your scans, one library | Library | PENDING: library/playlist
-5 | Private, on your device | Privacy (on-device, no account) | shipped
+1 | Snap and hear it | Hero mockup | shipped (on-image: "Snap sheet music. Hear it play.")
+2 | Slow it to practice | Player tempo | shipped
+3 | Reads on your device | Reading progress | shipped
+4 | Piano strings and choir | Instrument chips | shipped
+5 | Private on your device | Privacy framing | shipped (photos on-device; telemetry in privacy policy)
 ```
-
-Until the gates ship, upload only #1, #3 (alt caption, sample song) and #5.
 
 ## Character counts (`python3 docs/asc/check_copy.py`)
 ```
@@ -132,24 +147,24 @@ upload-ready (metadata/en-US)
   field              chars  limit  ok
   Name                  24     30  yes
   Subtitle              30     30  yes
-  Keywords             100    100  yes
-  Promotional text     157    170  yes
-  Description         1099   4000  yes
+  Keywords              99    100  yes
+  Promotional text     128    170  yes
+  Description         2553   4000  yes
 
 post-ship (COPY.md)
   field              chars  limit  ok
   Name                  24     30  yes
   Subtitle              30     30  yes
   Keywords              99    100  yes
-  Promotional text     163    170  yes
-  Description         1450   4000  yes
+  Promotional text     128    170  yes
+  Description         2553   4000  yes
 
 screenshot captions (<= 5 words)
-  4 words  1 | Snap your sheet music | Scan (camera) | shipped
-  5 words  2 | See every note, then play | Result (notes highlighted + Play) | PENDING: recognition + highlighting
-  4 words  3 | Hear it played back | Player (scan playing) | PENDING: recognition; shipped-now alt "Play, pause, change tempo" with sample song
-  4 words  4 | Your scans, one library | Library | PENDING: library/playlist
-  4 words  5 | Private, on your device | Privacy (on-device, no account) | shipped
+  4 words  1 | Snap and hear it | Hero mockup | shipped (on-image: "Snap sheet music. Hear it play.")
+  4 words  2 | Slow it to practice | Player tempo | shipped
+  4 words  3 | Reads on your device | Reading progress | shipped
+  4 words  4 | Piano strings and choir | Instrument chips | shipped
+  4 words  5 | Private on your device | Privacy framing | shipped (photos on-device; telemetry in privacy policy)
 
 OK
 ```

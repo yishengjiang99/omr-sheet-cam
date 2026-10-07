@@ -1,1 +1,1 @@
-OMR,piano,score,notation,notes,MIDI,sightreading,practice,tempo,choir,teacher,student,scanner,synth
+OMR,piano,score,notation,notes,MIDI,sightreading,practice,tempo,choir,teacher,student,synth,library

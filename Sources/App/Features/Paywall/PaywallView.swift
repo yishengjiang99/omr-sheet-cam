@@ -13,7 +13,7 @@ struct PaywallView: View {
                         .font(.largeTitle.bold())
                         .multilineTextAlignment(.center)
 
-                    Text("Free scans 5 pages a day. Pro unlocks unlimited scans, premium voices, and priority processing.")
+                    Text("Free: 5 page scans a day. Music Reader Pro unlocks unlimited scans.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -105,15 +105,15 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Free").font(.subheadline.bold()).foregroundStyle(.secondary)
                 featureRow("5 scans / day", pro: false)
-                featureRow("Piano voice", pro: false)
-                featureRow("Standard processing", pro: false)
+                featureRow("On-device reading & playback", pro: false)
+                featureRow("All instruments", pro: false)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             VStack(alignment: .leading, spacing: 8) {
                 Text("Pro").font(.subheadline.bold())
                 featureRow("Unlimited scans", pro: true)
-                featureRow("11 instruments", pro: true)
-                featureRow("Priority processing", pro: true)
+                featureRow("Same player & instruments", pro: true)
+                featureRow("Same on-device recognition", pro: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -137,7 +137,7 @@ struct PaywallView: View {
             HStack(spacing: 20) {
                 Link("Terms of Use", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
                     .font(.caption)
-                Link("Privacy Policy", destination: URL(string: "https://photo.grepawk.com/privacy")!)
+                Link("Privacy Policy", destination: URL(string: "https://grepawk.com/music-reader/privacy.html")!)
                     .font(.caption)
             }
         }

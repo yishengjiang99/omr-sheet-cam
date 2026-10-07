@@ -4,16 +4,17 @@ Source of truth for the ASC listing. `docs/asc/push_listing.py` reads the fenced
 and pushes them to App Store Connect (app `6816476323`, `com.ragnus.vp`). Limits are Apple's.
 Never use the word "Grok" anywhere in the listing (Apple rejected it before).
 
-The fenced Subtitle / Promotional text / Keywords / Description blocks are the **upload-ready,
-shipped-now** copy and must equal `metadata/en-US/*.txt` (fastlane deliver layout). Post-ship copy
-and the lines gated on unshipped features (recognition, highlighting, library, level meter,
-instrument): `COPY.md`. Check: `python3 docs/asc/check_copy.py`.
+The fenced Subtitle / Promotional text / Keywords / Description blocks are the **upload-ready**
+copy and must equal `metadata/en-US/*.txt` (fastlane deliver layout). History and gates:
+`COPY.md`. Check: `python3 docs/asc/check_copy.py`.
 
-Status: listing prep for build 15 (pulled from review 2026-09-27 with `asc-cancel-review.yml`). Upload + verify with the manual workflow
-`.github/workflows/asc-music-reader-upload.yml` (script `scripts/asc/upload_music_reader_listing.py`,
-reads `metadata/` in fastlane layout incl. URLs, copyright, categories, App Review contact).
-Submitting for review is a separate manual step (`asc-submit-app-store.yml`), run by the owner only;
-it re-syncs this listing from the repo files first (input `sync_listing`, default true).
+**Sync gate:** tip-of-main listing discloses free quota + Pro IAP + anonymous telemetry.
+App Review **build 15** (do not cancel) does **not** include IAP/telemetry. Do **not** run
+`asc-music-reader-upload` / submit listing sync until the binary under review (or next submit)
+matches these claims. User runs submit; agents never dispatch `asc-submit`.
+
+Status: listing optimized 2026-10-06 for tip-of-main. Upload + verify with
+`.github/workflows/asc-music-reader-upload.yml` when ready.
 
 ## Name (30)
 ```
@@ -27,46 +28,58 @@ Scan sheet music, hear it play
 
 ## Promotional text (170)
 ```
-Point your camera at printed sheet music and hear it played back. Slow it down to practice, or pick an instrument. Runs on your device: no internet, no account.
+Point your camera at printed sheet music and hear it play. Free: 5 scans/day; Pro for unlimited. On-device reading — no account.
 ```
 
 ## Keywords (100, comma-separated)
 ```
-OMR,piano,score,notation,notes,MIDI,sightreading,practice,tempo,choir,teacher,student,scanner,synth
+OMR,piano,score,notation,notes,MIDI,sightreading,practice,tempo,choir,teacher,student,synth,library
 ```
 
 ## Description (4000)
 ```
-Point your camera at printed sheet music and hear it played. AI Camera - Music Reader reads the notes right on your iPhone or iPad, then plays the page back so you can listen, learn and practice.
+Point your camera at printed sheet music and hear it played. AI Camera - Music Reader reads the notes on your iPhone or iPad, then plays the page back so you can listen, learn, and practice.
 
 HOW IT WORKS
 1. Take a photo of a page, or pick one from your photo library.
-2. Watch the live progress bar while the app reads the music.
-3. Tap Play to hear it.
+2. Watch the live progress bar while the app reads the music on your device.
+3. Tap Play to hear it — follow highlighted notes on the scan, change tempo, or pick an instrument.
 
-PRIVATE BY DESIGN
-Reading happens entirely on your device, using machine-learning models built into the app. No internet connection is needed, there is no account or sign-in, and the app collects no data. Your photos are never uploaded.
+FREE AND PRO
+• Free: 5 page scans per day
+• Music Reader Pro (auto-renewable): unlimited scans via monthly or yearly subscription (prices shown in the app)
+• Payment charged to your Apple ID; renews unless canceled at least 24 hours before period end
+• Manage or cancel in Settings → Apple ID → Subscriptions
+• Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+• Privacy Policy: https://grepawk.com/music-reader/privacy.html
 
 A PLAYER MADE FOR PRACTICE
 • Tempo from 0.5x to 2x: slow a tricky passage down or speed it up
-• Choose the sound: piano, electric piano, harpsichord, music box, vibraphone, organ, guitar, violin, strings, choir or flute
-• Play, pause, seek and skip between pieces
-• Playback keeps going while you browse
+• Choose the sound: piano, electric piano, harpsichord, music box, vibraphone, organ, guitar, violin, strings, choir, or flute
+• Play, pause, seek, A–B loop, and mute or solo hands
+• Live level meter; playback keeps going while you browse
+• Share MIDI from your library
 
 YOUR LIBRARY
-Every page the app reads is saved to your Library on your device, ready to play again anytime, one piece after another.
+Every page the app reads is saved to your Library on your device, ready to play again anytime.
 
 TRY IT INSTANTLY
 No sheet music nearby? Tap "Try sample picture" to read a bundled page of Beethoven's "Ode to Joy" and hear the result.
 
+ON-DEVICE READING
+Recognition runs on your device with models built into the app. Your photos and scores are never uploaded. No account or sign-in is required.
+
+USAGE DATA
+The app sends anonymous usage events (such as app open, scan success or fail, and purchase funnel steps) to our servers to improve the product. Events include an anonymous device id — never your photos, MIDI, email, or location. Purchases are processed by Apple.
+
 WHO IT'S FOR
-Piano students who want to hear how a new piece should sound, teachers preparing lessons, choir singers getting to know a piece before rehearsal, and hobbyists who read a little and want to hear the rest.
+Piano students who want to hear how a new piece should sound, teachers preparing lessons, choir singers learning a part before rehearsal, and hobbyists who read a little and want to hear the rest.
 
 GOOD TO KNOW
-It works best with clean, printed sheet music, one page at a time. Keep the whole page in frame, flat and well lit. Handwritten music, very dense scores and worn or crumpled pages may not read correctly, and results can contain mistakes.
+Works best with clean, printed sheet music, one page at a time. Keep the whole page in frame, flat and well lit. Handwritten music, very dense scores, and worn or crumpled pages may not read correctly; results can contain mistakes.
 
 OPEN SOURCE
-The recognition engine is based on the open-source homr project, and the app is open source under the AGPL-3.0 license.
+The recognition engine is based on the open-source homr project. The app is AGPL-3.0. Sounds use the GeneralUser GS SoundFont.
 ```
 
 ## Support URL
@@ -90,7 +103,8 @@ https://grepawk.com/music-reader/terms.html
 
 Not an App Store Connect field. The privacy and support pages link to it.
 The page says Apple's standard Licensed Application EULA also applies, so the
-listing does not upload a custom license agreement.
+listing does not upload a custom license agreement. Subscriptions also link Apple's
+Standard EULA from the paywall and description.
 
 ## Copyright
 ```
@@ -103,19 +117,33 @@ listing does not upload a custom license agreement.
 
 ## TestFlight: What to Test
 ```
-Early build. The app opens a diagnostics screen: it loads the bundled recognition models in the background and shows warm-up timings and memory, plus a MIDI playback check. Please report crashes or slow warm-up. Camera capture and the score player are not in this build yet.
+Tip-of-main (IAP + telemetry + Library home). Please verify:
+
+1. Library is home — how-it-works art, Camera and Photos CTAs, Try sample picture.
+2. Capture or import a printed page — progress bar while reading; Play opens the SF2 player.
+3. Player: tempo 0.5×–2×, instrument chips, level meter, Sheet highlight, A–B loop, hand mute/solo; playback continues from Library mini-player.
+4. Free quota: after 5 scans the same day, paywall appears (Music Reader Pro monthly/yearly). Restore Purchases.
+5. Optional: Settings → confirm no account; Developer section still hidden behind version taps.
+
+Report crashes, wrong MIDI, quota/paywall bugs, and slow recognition (device + iOS version).
+Photos must never leave the device; only anonymous usage events go to telemetry.
 ```
 
 ## URLs: publishing status
-Privacy, support, and terms pages are live on grepawk.com (HTTP 200). Marketing URL: blank. Terms of Use is not sent as a custom EULA.
+Privacy, support, and terms URLs point at grepawk.com/music-reader/. Redeploy
+`docs/asc/web/privacy.html` and `support.html` if the live pages still claim "no analytics"
+or "no IAP". Marketing URL: blank. Terms of Use is not sent as a custom EULA.
 
 ## App Privacy
-No network calls, no analytics, no IAP: "Data Not Collected". The public ASC API has no endpoint for
-the privacy nutrition label, so set it in the App Store Connect web UI (App Privacy → Get Started →
-"No, we do not collect data" → Publish).
+**Do not answer "Data Not Collected".** Tip-of-main collects anonymous Product Interaction,
+Device ID (anon UUID), and Purchase History (StoreKit). Full manual ASC answers:
+`docs/asc/app-privacy.md`. Privacy manifest: `Sources/App/Resources/PrivacyInfo.xcprivacy`.
+Agents cannot safely edit the ASC nutrition label via API — owner updates the web UI.
 
 ## Screenshots
-Peach marketing frames built by `screenshots/en-US/make_store_screenshots.py` from `screenshots/en-US/source/`
+Peach marketing frames built by **`docs/asc/screenshots/en-US/make_store_screenshots.py`**
+(this repo is the source of truth; playbook `configs/` / promotional creatives are reference only —
+Header/Search Results assets deferred). From `screenshots/en-US/source/`
 (hero mockup, real-device player captures, and crops of the scanning screen that exclude the photo preview).
 Every frame has a large caption. Uploaded in filename order:
 01 "Snap sheet music. Hear it play." (hero mockup) · 02 "Slow it down to practice" (Für Elise player) ·
