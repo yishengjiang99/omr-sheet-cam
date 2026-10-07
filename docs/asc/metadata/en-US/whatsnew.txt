@@ -1,0 +1,1 @@
+Initial release: point your camera at printed sheet music and hear it played back. On-device reading, no internet or account needed. Slow down tricky passages, pick from 11 instruments, and build your library.
