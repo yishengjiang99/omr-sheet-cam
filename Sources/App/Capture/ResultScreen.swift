@@ -245,8 +245,17 @@ struct ResultScreen: View {
     private func recognize(_ jpeg: Data) async {
         let t0 = DispatchTime.now()
         progress.reset()
+        Analytics.shared.track("scan_start")
         let result = await service.recognize(imageData: jpeg, progress: progress.handler)
         let ms = Double(DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds) / 1_000_000
+        switch result {
+        case .recognized(let d):
+            Analytics.shared.track("scan_success", props: ["notes": "\(d.notes.count)", "ms": "\(Int(ms))"])
+        case .failed:
+            Analytics.shared.track("scan_fail", props: ["ms": "\(Int(ms))"])
+        default:
+            break
+        }
         if case .failed = result, photoQuality == nil {
             let image = photo.image
             photoQuality = await Task.detached(priority: .userInitiated) { PhotoQuality.measure(image) }.value
