@@ -327,7 +327,7 @@ struct HowItWorksArt: View {
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Theme.coralSoft.opacity(0.55))
-        }
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Theme.coral.opacity(0.25), lineWidth: 1)
