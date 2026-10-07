@@ -167,4 +167,71 @@ final class SMFWriterTests: XCTestCase {
         XCTAssertEqual(events.map(\.midiNote), [60, 62])
         XCTAssertEqual(events.map(\.onsetTicks), [0, 480])
     }
+    /// Grand-staff pickup: melody quarter + bass rest via `chord` must share onset.
+    /// Pre-fix stacked the rest after the note → full-measure silence (2/4 pickup gap).
+    func testPickupChordRestDoesNotPadMeasure() {
+        let sym: (String, String, String) -> EncodedSymbol = { rhythm, pitch, position in
+            EncodedSymbol(rhythm: rhythm, pitch: pitch, lift: "_", articulation: "_", slur: "_", position: position)
+        }
+        let chord = EncodedSymbol(rhythm: "chord", pitch: ".", lift: ".", articulation: ".", slur: ".", position: ".")
+        let bar = EncodedSymbol(rhythm: "barline", pitch: ".", lift: ".", articulation: ".", slur: ".", position: ".")
+        let symbols: [EncodedSymbol] = [
+            sym("clef_G2", ".", "upper"),
+            sym("clef_F4", ".", "lower"),
+            // Pickup (anacrusis): one quarter in the melody, other hand rests
+            sym("note_4", "C5", "upper"),
+            chord,
+            sym("rest_4", ".", "lower"),
+            bar,
+            // First full bar
+            sym("note_4", "D5", "upper"),
+            chord,
+            sym("note_4", "D3", "lower"),
+            sym("note_4", "E5", "upper"),
+            chord,
+            sym("note_4", "E3", "lower"),
+        ]
+        let events = SymbolMIDIMapping.noteEvents(from: symbols)
+        // C5 @0; D5+D3 @480 (not 960); E5+E3 @960
+        XCTAssertEqual(events.map(\.midiNote), [72, 74, 50, 76, 52])
+        XCTAssertEqual(events.map(\.onsetTicks), [0, 480, 480, 960, 960])
+        XCTAssertEqual(Set(events.map(\.durationTicks)), [480])
+    }
+
+    /// Rest then chord-tied note (bass enters under a rest): note at rest's onset, no extra gap.
+    func testRestThenChordNoteSharesOnset() {
+        let sym: (String, String, String) -> EncodedSymbol = { rhythm, pitch, position in
+            EncodedSymbol(rhythm: rhythm, pitch: pitch, lift: "_", articulation: "_", slur: "_", position: position)
+        }
+        let chord = EncodedSymbol(rhythm: "chord", pitch: ".", lift: ".", articulation: ".", slur: ".", position: ".")
+        let symbols: [EncodedSymbol] = [
+            sym("rest_4", ".", "upper"),
+            chord,
+            sym("note_4", "C3", "lower"),
+            sym("note_4", "D3", "lower"),
+        ]
+        let events = SymbolMIDIMapping.noteEvents(from: symbols)
+        XCTAssertEqual(events.map(\.midiNote), [48, 50])
+        XCTAssertEqual(events.map(\.onsetTicks), [0, 480])
+    }
+
+    /// Intentional sequential rests (no `chord`) still advance time — oracle mono.rests.
+    func testSequentialRestsStillAdvanceTime() {
+        let sym: (String, String, String) -> EncodedSymbol = { rhythm, pitch, position in
+            EncodedSymbol(rhythm: rhythm, pitch: pitch, lift: "_", articulation: "_", slur: "_", position: position)
+        }
+        let symbols: [EncodedSymbol] = [
+            sym("note_4", "C4", "upper"),
+            sym("rest_4", ".", "upper"),
+            sym("note_4", "E4", "upper"),
+            sym("rest_4", ".", "upper"),
+            EncodedSymbol(rhythm: "barline", pitch: ".", lift: ".", articulation: ".", slur: ".", position: "."),
+            sym("note_4", "G4", "upper"),
+        ]
+        let events = SymbolMIDIMapping.noteEvents(from: symbols)
+        XCTAssertEqual(events.map(\.midiNote), [60, 64, 67])
+        XCTAssertEqual(events.map(\.onsetTicks), [0, 960, 1920])
+    }
+
+
 }

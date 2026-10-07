@@ -1,5 +1,5 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-10-06 8:15 PM PT by OMR iOS_
+_Last updated: 2026-10-06 8:30 PM PT by OMR iOS_
 
 Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). v1.0 **build 24** WAITING_FOR_REVIEW with GPU/on-device listing + screenshots.
 
@@ -32,6 +32,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] Playback: pickup / incomplete measure gap — chord-tied rests share onset (no stacked silence after anacrusis); intentional sequential rests preserved — OMR iOS — 2026-10-06 8:30 PM PT
 - [x] Submitted v1.0 build 24 WAITING_FOR_REVIEW (GPU listing+screenshots synced; canceled build-15 review) — submit run 37565863422; upload 37565737062; cancel 37565696291 — OMR iOS — 2026-10-06 8:15 PM PT
 - [x] ASO: screenshot 03 + listing promo/description/whatsnew emphasize iPhone GPU / on-device Neural Engine OMR (honest: CoreML GPU/ANE for encoder+SegNet; decoder ORT CPU) — OMR iOS — 2026-10-06 8:11 PM PT
 - [x] README + GitHub description: zero-copy ORT I/O Binding decoder, StaffDecodeTiming, parallel staffs, fixture camera.die_letzte_kompanie — OMR iOS — 2026-10-06 7:53 PM PT

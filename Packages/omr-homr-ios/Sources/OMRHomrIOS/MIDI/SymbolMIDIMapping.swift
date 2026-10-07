@@ -94,8 +94,10 @@ public enum SymbolMIDIMapping: Sendable {
     /// Build sequential note events from decoded symbols (skips non-notes; advances time on rests).
     ///
     /// Chord handling mirrors upstream `_group_into_chords`: a `chord` rhythm marker means the
-    /// **next** note shares onset with the previous note (no invented pitches).
-    /// Barlines, clefs, key/time signatures are no-ops for the cursor.
+    /// **next** note *or rest* shares onset with the previous event (no invented pitches). A
+    /// chord-tied rest must not stack its duration after a note — that created artificial
+    /// measure-length gaps on pickups / incomplete bars when the other hand rests.
+    /// Barlines, clefs, key/time signatures are no-ops for the cursor (no pad-to-bar).
     ///
     /// Returned in token (emission) order. For the canonical sorted list shared with
     /// `noteLayout`, use `orderedNoteEvents(from:tpq:staffIndexOffset:)`.
@@ -189,8 +191,17 @@ public enum SymbolMIDIMapping: Sendable {
             }
             if isRestRhythm(sym.rhythm) {
                 let dur = durationTicks(rhythmToken: sym.rhythm, tpq: tpq) ?? tpq
-                onset += dur
-                shareNextOnset = false
+                // Chord-tied rest (other hand/voice): share the anchor onset — do not stack
+                // duration after the note. That stacking turned pickup + bass rest into a
+                // full-measure silence gap (Die Letzte Kompanie anacrusis).
+                if shareNextOnset {
+                    let restEnd = chordAnchor + dur
+                    if restEnd > onset { onset = restEnd }
+                    shareNextOnset = false
+                } else {
+                    chordAnchor = onset
+                    onset += dur
+                }
                 continue
             }
             if sym.rhythm.hasPrefix("clef_") {
@@ -223,6 +234,9 @@ public enum SymbolMIDIMapping: Sendable {
             if shareNextOnset {
                 tick = chordAnchor
                 shareNextOnset = false
+                // Longer chord member (or note after a shorter rest) must extend the cursor.
+                let memberEnd = chordAnchor + dur
+                if memberEnd > onset { onset = memberEnd }
             } else {
                 tick = onset
                 chordAnchor = onset
