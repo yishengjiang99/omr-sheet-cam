@@ -138,6 +138,21 @@ final class Build16Tests: XCTestCase {
         XCTAssertEqual(ScanLayout(boxed, imageWidth: 800, imageHeight: 1100, captureName: "x.jpg")?.notes.count, 4)
     }
 
+    func testSheetFollowFitScaleIsAspectFit() {
+        // Tall sheet in a short-wide viewport → height-limited.
+        XCTAssertEqual(SheetFollowView.fitScale(imageSize: CGSize(width: 800, height: 1100),
+                                               viewport: CGSize(width: 320, height: 380)),
+                       CGFloat(380) / 1100, accuracy: 1e-6)
+        // Wide sheet in a tall viewport → width-limited.
+        XCTAssertEqual(SheetFollowView.fitScale(imageSize: CGSize(width: 1200, height: 400),
+                                               viewport: CGSize(width: 300, height: 500)),
+                       CGFloat(300) / 1200, accuracy: 1e-6)
+        // Exact match.
+        XCTAssertEqual(SheetFollowView.fitScale(imageSize: CGSize(width: 200, height: 100),
+                                               viewport: CGSize(width: 200, height: 100)),
+                       1, accuracy: 1e-6)
+    }
+
     @MainActor
     func testScanLayoutSidecarIsSavedLoadedAndDeleted() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("b16-\(UUID().uuidString)", isDirectory: true)

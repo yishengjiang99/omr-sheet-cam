@@ -1,5 +1,5 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-10-06 7:15 PM PT by ASC listing agent_
+_Last updated: 2026-10-06 7:40 PM PT by OMR iOS agent_
 
 Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). App Review still has **build 15** (do not cancel). Listing/privacy optimized for tip (IAP+telemetry); do not sync listing to ASC until a matching binary is submitted. Redeploy live privacy/support HTML.
 
@@ -31,6 +31,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] Sheet Follow: fit-to-page default; no auto zoom/pan during Follow/playback (highlight only) — OMR iOS — 2026-10-06 7:40 PM PT
 - [x] ASO listing + privacy honesty: metadata/LISTING/COPY, PrivacyInfo.xcprivacy, app-privacy.md, paywall copy, AGENTS App Store rules; check_copy OK — ASC listing agent — 2026-10-06 7:15 PM PT
 - [x] Recognition always on (removed Experimental toggle + cleared legacy UserDefaults key); Library home with how-it-works art + Camera/Photos CTAs (camera no longer first screen) — OMR iOS — 2026-10-06 6:38 PM PT
 - [x] IAP/telemetry on main: Analytics, StoreKitManager, ScanQuota, PaywallView, StoreKit config, `docs/omr-iap-xcode-prompt.md`; pbxproj linked with non-colliding IDs (prior D1…001 collided with PBXTargetDependency) — OMR iOS — 2026-10-06

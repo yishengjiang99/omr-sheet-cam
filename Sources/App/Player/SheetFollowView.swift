@@ -2,12 +2,15 @@ import SwiftUI
 import UIKit
 
 /// Player "Sheet" mode: the scan photo with a box on every recognized note (`ScanLayout`).
-/// Notes sounding now (`activeIDs`, from `SF2MIDIPlayer.activeNoteIDs`) are filled coral and,
-/// while `follow` is on, scrolled to the middle. Tapping near a note calls `onTap` (seek there).
+/// Notes sounding now (`activeIDs`, from `SF2MIDIPlayer.activeNoteIDs`) are filled coral.
+/// The photo stays at fit-to-page by default; Follow/playback never zooms or pans — only
+/// highlights move. Manual +/- zoom remains for user control. Tapping near a note calls
+/// `onTap` (seek there).
 struct SheetFollowView: View {
     let image: UIImage
     let layout: ScanLayout
     let activeIDs: Set<Int>
+    /// Kept for call-site compatibility; Follow no longer drives camera transform.
     var follow: Bool = true
     /// Notes drawn with a secondary tint (e.g. inside an A–B loop).
     var tinted: Set<Int> = []
@@ -15,40 +18,44 @@ struct SheetFollowView: View {
     var badges: [Int: String] = [:]
     let onTap: (RecognizedNote) -> Void
 
-    @State private var zoom: CGFloat = 1.6
+    /// 1 = entire page visible (aspect-fit); higher values magnify around that baseline.
+    @State private var zoom: CGFloat = 1
     static let zoomRange: ClosedRange<CGFloat> = 1 ... 4
 
     var body: some View {
         GeometryReader { geo in
-            let width = max(1, geo.size.width * zoom)
-            let scale = width / CGFloat(max(1, layout.imageWidth))
+            let fit = Self.fitScale(imageSize: layout.imageSize, viewport: geo.size)
+            let scale = fit * zoom
+            let width = CGFloat(layout.imageWidth) * scale
             let height = CGFloat(layout.imageHeight) * scale
-            ScrollViewReader { proxy in
-                ScrollView([.horizontal, .vertical], showsIndicators: false) {
-                    ZStack(alignment: .topLeading) {
-                        Image(uiImage: image)
-                            .resizable()
-                            .frame(width: width, height: height)
-                            .accessibilityHidden(true)
-                        ForEach(layout.boxedNotes) { n in
-                            noteBox(n, scale: scale)
-                        }
+            // Center the sheet when it is smaller than the viewport (fit-to-page); allow
+            // pan only when the user has zoomed in past the viewport.
+            let contentW = max(width, geo.size.width)
+            let contentH = max(height, geo.size.height)
+            let originX = (contentW - width) / 2
+            let originY = (contentH - height) / 2
+            ScrollView([.horizontal, .vertical], showsIndicators: false) {
+                ZStack(alignment: .topLeading) {
+                    Color.clear.frame(width: contentW, height: contentH)
+                    Image(uiImage: image)
+                        .resizable()
+                        .frame(width: width, height: height)
+                        .offset(x: originX, y: originY)
+                        .accessibilityHidden(true)
+                    ForEach(layout.boxedNotes) { n in
+                        noteBox(n, scale: scale, originX: originX, originY: originY)
                     }
-                    .frame(width: width, height: height, alignment: .topLeading)
-                    .contentShape(Rectangle())
-                    .gesture(SpatialTapGesture().onEnded { v in
-                        let p = CGPoint(x: v.location.x / scale, y: v.location.y / scale)
-                        if let n = layout.note(near: p, maxDistance: Double(36 / scale)) { onTap(n) }
-                    })
                 }
-                .onChange(of: scrollTargetID) { _, id in
-                    guard follow, let id else { return }
-                    withAnimation(.easeInOut(duration: 0.35)) { proxy.scrollTo(id, anchor: .center) }
-                }
-                .onAppear {
-                    if let id = scrollTargetID ?? layout.boxedNotes.first?.noteIndex { proxy.scrollTo(id, anchor: .center) }
-                }
+                .frame(width: contentW, height: contentH, alignment: .topLeading)
+                .contentShape(Rectangle())
+                .gesture(SpatialTapGesture().onEnded { v in
+                    let p = CGPoint(x: (v.location.x - originX) / scale, y: (v.location.y - originY) / scale)
+                    if let n = layout.note(near: p, maxDistance: Double(36 / max(scale, 0.001))) { onTap(n) }
+                })
             }
+            // Follow/playback intentionally do not scroll or zoom — keep fit-to-page transform.
+            // `follow` is retained for API compatibility but does not change the camera.
+            .accessibilityValue(follow ? "Follow on" : "Follow off")
         }
         .overlay(alignment: .bottomTrailing) { zoomControls }
         .background(Color(uiColor: .secondarySystemBackground))
@@ -58,15 +65,22 @@ struct SheetFollowView: View {
         .accessibilityIdentifier("player.sheet")
     }
 
-    /// First sounding note with a box; changes only when the passage moves on.
-    private var scrollTargetID: Int? { layout.scrollTarget(for: activeIDs)?.noteIndex }
+    /// Scale that fits the full sheet inside `viewport` (no crop).
+    static func fitScale(imageSize: CGSize, viewport: CGSize) -> CGFloat {
+        let iw = max(1, imageSize.width)
+        let ih = max(1, imageSize.height)
+        let vw = max(1, viewport.width)
+        let vh = max(1, viewport.height)
+        return min(vw / iw, vh / ih)
+    }
 
     @ViewBuilder
-    private func noteBox(_ n: RecognizedNote, scale: CGFloat) -> some View {
+    private func noteBox(_ n: RecognizedNote, scale: CGFloat, originX: CGFloat, originY: CGFloat) -> some View {
         if let r = n.rect {
             let active = activeIDs.contains(n.noteIndex)
             let w = max(r.width * scale, 10), h = max(r.height * scale, 10)
-            let x = r.midX * scale - w / 2, y = r.midY * scale - h / 2
+            let x = originX + r.midX * scale - w / 2
+            let y = originY + r.midY * scale - h / 2
             RoundedRectangle(cornerRadius: 3)
                 .fill(active ? Theme.coral.opacity(0.45) : (tinted.contains(n.noteIndex) ? Color.blue.opacity(0.18) : Color.clear))
                 .overlay(
@@ -81,8 +95,7 @@ struct SheetFollowView: View {
                     }
                 }
                 .frame(width: w, height: h)
-                .alignmentGuide(.leading) { _ in -x }
-                .alignmentGuide(.top) { _ in -y }
+                .offset(x: x, y: y)
                 .id(n.noteIndex)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
