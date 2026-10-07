@@ -18,4 +18,14 @@ final class RedesignTests: XCTestCase {
         XCTAssertTrue(notice.contains { $0.title.contains("ONNX Runtime") })
         XCTAssertTrue(LicenseTexts.resource("ONNXRuntime-ThirdPartyNotices").contains("protobuf"))
     }
+
+    @MainActor
+    func testLibraryHomeHowItWorksArtExists() {
+        XCTAssertEqual(SamplePicture.buttonTitle, "Try sample picture")
+        _ = HowItWorksArt()
+    }
+
+    func testLegacyRecognitionGateKeyConstant() {
+        XCTAssertEqual(AppServices.legacyExperimentalRecognitionKey, "developer.experimentalPageRecognition")
+    }
 }

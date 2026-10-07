@@ -23,6 +23,7 @@
 		5F0000000000000000000004 /* SF2PlayerAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000004 /* SF2PlayerAppTests.swift */; };
 		5F0000000000000000000005 /* SF2Player in Frameworks */ = {isa = PBXBuildFile; productRef = 5D0000000000000000000002 /* SF2Player */; };
 		CA0000000000000000000001 /* CaptureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000001 /* CaptureStore.swift */; };
+		PLI200000000000000000001 /* PhotoLibraryImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = PLI100000000000000000001 /* PhotoLibraryImport.swift */; };
 		E20000000000000000000001 /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000002 /* Analytics.swift */; };
 		E20000000000000000000002 /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000003 /* StoreKitManager.swift */; };
 		E20000000000000000000003 /* ScanQuota.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000004 /* ScanQuota.swift */; };
@@ -103,6 +104,7 @@
 		5E000000000000000000000A /* ode-to-joy.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = "ode-to-joy.jpg"; path = "fixtures/samples/ode-to-joy.jpg"; sourceTree = SOURCE_ROOT; };
 		5E0000000000000000000004 /* SF2PlayerAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SF2PlayerAppTests.swift; sourceTree = "<group>"; };
 		CB0000000000000000000001 /* CaptureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStore.swift; sourceTree = "<group>"; };
+		PLI100000000000000000001 /* PhotoLibraryImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibraryImport.swift; sourceTree = "<group>"; };
 		CB0000000000000000000002 /* RecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecognitionService.swift; sourceTree = "<group>"; };
 		7E0000000000000000000002 /* ScanFailure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFailure.swift; sourceTree = "<group>"; };
 		CB0000000000000000000003 /* CameraController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraController.swift; sourceTree = "<group>"; };
@@ -183,6 +185,7 @@
 			isa = PBXGroup;
 			children = (
 				CB0000000000000000000001 /* CaptureStore.swift */,
+				PLI100000000000000000001 /* PhotoLibraryImport.swift */,
 				CB0000000000000000000002 /* RecognitionService.swift */,
 				7E0000000000000000000002 /* ScanFailure.swift */,
 				CB0000000000000000000003 /* CameraController.swift */,
@@ -540,6 +543,7 @@
 				A10000000000000000000004 /* ModelWarmup.swift in Sources */,
 				A1000000000000000000000B /* Gate1Runner.swift in Sources */,
 				CA0000000000000000000001 /* CaptureStore.swift in Sources */,
+				PLI200000000000000000001 /* PhotoLibraryImport.swift in Sources */,
 				E20000000000000000000001 /* Analytics.swift in Sources */,
 				E20000000000000000000002 /* StoreKitManager.swift in Sources */,
 				E20000000000000000000003 /* ScanQuota.swift in Sources */,

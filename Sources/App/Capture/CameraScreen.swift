@@ -1,5 +1,4 @@
 import AVFoundation
-import Photos
 import PhotosUI
 import SwiftUI
 
@@ -248,19 +247,7 @@ struct CameraScreen: View {
         Task {
             defer { loadingPick = false; pickerItem = nil }
             do {
-                guard let data = try await Self.loadPickedData(item) else {
-                    error = "Could not load that photo"
-                    DiagnosticsLog.shared.record(.error, .capture, "Photos pick: no data")
-                    return
-                }
-                let image = await Task.detached(priority: .userInitiated) { () -> UIImage? in
-                    UIImage(data: data).map(CaptureStore.normalizedUpright)
-                }.value
-                guard let image else {
-                    error = "Unsupported image"
-                    DiagnosticsLog.shared.record(.error, .capture, "Photos pick: unsupported image (\(data.count) bytes)")
-                    return
-                }
+                let image = try await PhotoLibraryImport.uprightImage(from: item)
                 onPhoto(CapturedPhoto(image: image, source: .library))
             } catch {
                 self.error = "Could not load that photo: \(error.localizedDescription)"
@@ -268,39 +255,4 @@ struct CameraScreen: View {
             }
         }
     }
-
-    /// Photo bytes for a picker item. `loadTransferable(type: Data.self)` throws "does not support
-    /// import" for assets that aren't on the device (iCloud-only photos), so fall back to PHAsset
-    /// with network access and let those download instead of failing.
-    private static func loadPickedData(_ item: PhotosPickerItem) async throws -> Data? {
-        do {
-            if let data = try await item.loadTransferable(type: Data.self) { return data }
-        } catch {
-            DiagnosticsLog.shared.record(.info, .capture,
-                "Photos pick: transferable failed (\(error.localizedDescription)); trying PHAsset download")
-        }
-        guard let id = item.itemIdentifier,
-              let asset = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject else {
-            return nil
-        }
-        return try await withCheckedThrowingContinuation { cont in
-            let opts = PHImageRequestOptions()
-            opts.isNetworkAccessAllowed = true
-            opts.deliveryMode = .highQualityFormat
-            opts.version = .current
-            var resumed = false
-            PHImageManager.default().requestImageDataAndOrientation(for: asset, options: opts) { data, _, _, info in
-                guard !resumed else { return }
-                resumed = true
-                if let data { cont.resume(returning: data); return }
-                if let err = info?[PHImageErrorKey] as? Error { cont.resume(throwing: err); return }
-                let cancelled = (info?[PHImageCancelledKey] as? Bool) ?? false
-                cont.resume(throwing: PhotoPickError.noData(cancelled: cancelled))
-            }
-        }
-    }
-}
-
-private enum PhotoPickError: Error {
-    case noData(cancelled: Bool)
 }

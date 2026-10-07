@@ -3,7 +3,7 @@ import UIKit
 import XCTest
 @testable import OMRSheetCam
 
-/// Build 6 prep: recognition gate (default OFF), CoreML cache folder, SegNet self-test + its prompt section.
+/// Build 6 prep: recognition always on, CoreML cache folder, SegNet self-test + its prompt section.
 final class Build6PrepTests: XCTestCase {
     private var cleanup: [() -> Void] = []
 
@@ -26,45 +26,18 @@ final class Build6PrepTests: XCTestCase {
         return d
     }
 
-    private actor CountingService: RecognitionService {
-        private(set) var calls = 0
-        func recognize(imageData: Data) async -> RecognitionOutcome {
-            calls += 1
-            return .failed("real service called")
-        }
+    // MARK: - Recognition always on (no developer gate)
+
+    func testAppRecognitionIsPageService() {
+        XCTAssertTrue(AppServices.recognition is PageRecognitionService)
     }
 
-    // MARK: - Recognition gate
-
-    func testExperimentalRecognitionDefaultsOff() {
-        XCTAssertFalse(RecognitionGate.defaultEnabled)
+    func testLegacyExperimentalKeyIsCleared() {
         let d = scratchDefaults()
-        XCTAssertFalse(RecognitionGate.isEnabled(d), "no override stored → default OFF")
-        d.set(true, forKey: RecognitionGate.key)
-        XCTAssertTrue(RecognitionGate.isEnabled(d))
-        d.set(false, forKey: RecognitionGate.key)
-        XCTAssertFalse(RecognitionGate.isEnabled(d))
-    }
-
-    func testGateBlocksServiceWhenOffAndForwardsWhenOn() async {
-        let d = scratchDefaults()
-        let real = CountingService()
-        let gated = GatedRecognitionService(real: real, isEnabled: { RecognitionGate.isEnabled(d) })
-        let off = await gated.recognize(imageData: Data([0xFF, 0xD8]))
-        XCTAssertEqual(off, .comingSoon)
-        let callsOff = await real.calls
-        XCTAssertEqual(callsOff, 0, "page service must not run while the gate is off")
-        d.set(true, forKey: RecognitionGate.key)
-        let on = await gated.recognize(imageData: Data([0xFF, 0xD8]))
-        XCTAssertEqual(on, .failed("real service called"))
-        let callsOn = await real.calls
-        XCTAssertEqual(callsOn, 1)
-    }
-
-    func testAppRecognitionIsGatedPageService() {
-        let g = AppServices.recognition as? GatedRecognitionService
-        XCTAssertNotNil(g)
-        XCTAssertTrue(g?.real is PageRecognitionService)
+        d.set(false, forKey: AppServices.legacyExperimentalRecognitionKey)
+        XCTAssertNotNil(d.object(forKey: AppServices.legacyExperimentalRecognitionKey))
+        AppServices.clearLegacyRecognitionGate(d)
+        XCTAssertNil(d.object(forKey: AppServices.legacyExperimentalRecognitionKey))
     }
 
     func testComingSoonGlyphIsNoneOrValidSymbol() {
@@ -73,11 +46,10 @@ final class Build6PrepTests: XCTestCase {
     }
 
     @MainActor
-    func testDeveloperRowsIncludeSelfTestAndToggle() {
+    func testDeveloperRowsIncludeSelfTestNotExperimentalToggle() {
         XCTAssertTrue(SettingsView.developerRows.contains(.segnetSelfTest))
-        XCTAssertTrue(SettingsView.developerRows.contains(.experimentalRecognition))
+        XCTAssertFalse(SettingsView.developerRows.map(\.rawValue).contains("experimentalRecognition"))
         XCTAssertEqual(SettingsView.title(.segnetSelfTest), "SegNet self-test")
-        XCTAssertEqual(SettingsView.title(.experimentalRecognition), "Experimental page recognition")
     }
 
     // MARK: - CoreML cache folder

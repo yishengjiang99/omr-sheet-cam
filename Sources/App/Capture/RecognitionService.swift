@@ -81,40 +81,16 @@ struct StubRecognitionService: RecognitionService {
     func recognize(imageData: Data) async -> RecognitionOutcome { .comingSoon }
 }
 
-/// Page recognition gate. ON: the real `PageRecognitionService` runs on every capture.
-/// Developers can still override it in Settings → Developer →
-/// "Experimental page recognition" (UserDefaults `key`).
-enum RecognitionGate {
-    /// THE switch: `true` = page recognition on for everyone. Turned on 2026-09-27:
-    /// SegNet on the CoreML EP is fixed in OMRHomrIOS and green on ios-sim (12/12 Gate-1).
-    static let defaultEnabled = true
-
-    static let key = "developer.experimentalPageRecognition"
-
-    /// Developer override if set, else `defaultEnabled`.
-    static func isEnabled(_ defaults: UserDefaults = .standard) -> Bool {
-        defaults.object(forKey: key) as? Bool ?? defaultEnabled
-    }
-}
-
-/// Returns `.comingSoon` while the gate is closed, else forwards to `real`.
-struct GatedRecognitionService: RecognitionService {
-    let real: any RecognitionService
-    var isEnabled: @Sendable () -> Bool = { RecognitionGate.isEnabled() }
-
-    func recognize(imageData: Data) async -> RecognitionOutcome {
-        guard isEnabled() else { return .comingSoon }
-        return await real.recognize(imageData: imageData)
-    }
-
-    func recognize(imageData: Data, progress: @escaping RecognitionProgressHandler) async -> RecognitionOutcome {
-        guard isEnabled() else { return .comingSoon }
-        return await real.recognize(imageData: imageData, progress: progress)
-    }
-}
-
 enum AppServices {
-    /// Full-page homr recognition on the warmed ORT sessions (`Inference/PageRecognitionService.swift`),
-    /// behind `RecognitionGate`.
-    static let recognition: any RecognitionService = GatedRecognitionService(real: PageRecognitionService.shared)
+    /// Full-page homr recognition on the warmed ORT sessions (`Inference/PageRecognitionService.swift`).
+    /// Always on: camera capture and photo-library import both run OMR (no developer gate).
+    static let recognition: any RecognitionService = PageRecognitionService.shared
+
+    /// Legacy UserDefaults key for the removed "Experimental page recognition" toggle.
+    /// Cleared on launch so a persisted `false` cannot leave recognition looking broken.
+    static let legacyExperimentalRecognitionKey = "developer.experimentalPageRecognition"
+
+    static func clearLegacyRecognitionGate(_ defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: legacyExperimentalRecognitionKey)
+    }
 }

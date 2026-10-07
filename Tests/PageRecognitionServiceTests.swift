@@ -264,7 +264,7 @@ final class PageRecognitionServiceTests: XCTestCase {
     }
 
     func testAppUsesPageRecognition() {
-        XCTAssertTrue((AppServices.recognition as? GatedRecognitionService)?.real is PageRecognitionService)
+        XCTAssertTrue(AppServices.recognition is PageRecognitionService)
     }
 
     /// "Try sample picture": ode-to-joy.jpg is bundled and decodes to an upright page image that

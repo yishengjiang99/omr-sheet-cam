@@ -1,7 +1,7 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-10-06 6:05 PM PT by OMR iOS_
+_Last updated: 2026-10-06 6:38 PM PT by OMR iOS_
 
-Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). App Review still has **build 15**; TestFlight **build 17** was VALID; IAP merge pending new TF after ios-sim green.
+Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). App Review still has **build 15**; recognition always on + Library home (this commit); TF after ios-sim green.
 
 ## Locked constraints
 - Decoder fp32 on ORT CPU EP; encoder + SegNet fp16 on CoreML EP with CPU fallback
@@ -11,7 +11,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 
 ## Now (in progress)
 - [ ] v1.0 build 15 in App Review (WAITING_FOR_REVIEW, submitted 2026-09-28 ~8:30 PM PT / 03:30 UTC; listing = captioned peach screenshots + rewritten copy, no Sweden). Check with read-only **ASC status** only; do NOT re-run cancel/submit while waiting — Chief of Staff — submit run 36373908988; status rechecked 2026-10-04 ~9:10 AM PT (run 37215746872)
-- [ ] Real-device page parse verdict on **TestFlight build 17**: 3–5 real sheet photos → parse time + peak `phys_footprint` from Copy as prompt; pass/fail per photo — OMR iOS + User
+- [ ] Real-device page parse verdict on latest TestFlight (after recognition-always-on / Library-home fix): 3–5 real sheet photos → parse time + peak `phys_footprint` from Copy as prompt; pass/fail per photo — OMR iOS + User
 - [ ] Real-photo accuracy spot check (2–3 photos, color preprocessing path; diagnostics `preprocess_mode`) — OMR Core + User
 - [ ] Regression fixtures (2026-09-27 audit): tuplet rounding, key signatures + accidentals, multi-row/grand-staff timing — OMR Core
 - [ ] Memory warning re-warm (~10 s); revisit after device numbers — OMR iOS
@@ -25,11 +25,12 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 
 ## Blocked / waiting on user
 - [ ] App Review outcome for build 15 — User
-- [ ] SF2 playback on a real device via TestFlight build 17 (latency, interruptions, route changes, level meter, playlist; Sheet-mode highlight timing on speaker + Bluetooth) — User
+- [ ] SF2 playback on a real device via latest TestFlight (latency, interruptions, route changes, level meter, playlist; Sheet-mode highlight timing on speaker + Bluetooth) — User
 - [ ] Optional: written OK from the homr authors (liebharc) for App Store distribution of the AGPL port + ONNX weights — Yisheng
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] Recognition always on (removed Experimental toggle + cleared legacy UserDefaults key); Library home with how-it-works art + Camera/Photos CTAs (camera no longer first screen) — OMR iOS — 2026-10-06 6:38 PM PT
 - [x] IAP/telemetry on main: Analytics, StoreKitManager, ScanQuota, PaywallView, StoreKit config, `docs/omr-iap-xcode-prompt.md`; pbxproj linked with non-colliding IDs (prior D1…001 collided with PBXTargetDependency) — OMR iOS — 2026-10-06
 - [x] TestFlight build 17 VALID (grand-staff timing / re-warm copy / per-staff diagnostics) — TF run 37172044074 `ca26f6d` — 2026-10-04
 - [x] TestFlight build 17 VALID (grand-staff timing / re-warm copy / per-staff diagnostics) — TF run 37172044074 `ca26f6d` — 2026-10-04

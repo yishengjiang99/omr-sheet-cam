@@ -14,7 +14,9 @@ enum ScreenshotDemo {
         switch route {
         case "library", "playlist":
             seedLibrary()
-            return [.library]
+            return [] // Library is the root screen
+        case "camera", "scan":
+            return [.camera]
         case "player": return [.player(.sample(SampleMIDI.odeToJoyKey, title: "Ode to Joy (sample)"))]
         case "result":
             guard let photo = try? gate1Photo() else { return [] }
