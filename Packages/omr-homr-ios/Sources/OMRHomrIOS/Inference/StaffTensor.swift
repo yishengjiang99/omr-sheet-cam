@@ -140,7 +140,7 @@ extension StaffInferenceSession {
 
     /// Staff tensor → encoder (fp16) → `castToFP32ForDecoder()` → decoder loop (fp32 CPU) → raw
     /// decoded symbols (EOS excluded), mirroring homr `Staff2Score.predict`.
-    /// Records `lastEncoderMs` / `lastDecoderMs` for diagnostics.
+    /// Records `lastTiming` (encoder/decoder ms + optional zero-copy metrics).
     public func decodeStaff(tensor: StaffTensor) throws -> [EncodedSymbol] {
         let t0 = ProcessInfo.processInfo.systemUptime
         let context = try encoder.generateContext(staffImageNormalized: tensor.float32LEData)
@@ -149,8 +149,11 @@ extension StaffInferenceSession {
         let runner = try decoder.makeStepRunner(context: context)
         let symbols = try decoderLoop.generate(context: context, stepRunner: runner)
         let t2 = ProcessInfo.processInfo.systemUptime
-        lastEncoderMs = (t1 - t0) * 1000
-        lastDecoderMs = (t2 - t1) * 1000
+        lastTiming = StaffDecodeTiming(
+            encoderMs: (t1 - t0) * 1000,
+            decoderMs: (t2 - t1) * 1000,
+            bound: runner.boundMetrics
+        )
         return symbols
     }
 }

@@ -1,5 +1,20 @@
 import Foundation
 
+/// Per-staff encode+decode timings for diagnostics / Copy-as-prompt. Thread-safe value.
+public struct StaffDecodeTiming: Sendable, Equatable {
+    public var encoderMs: Double = 0
+    public var decoderMs: Double = 0
+    /// Zero-copy IoBinding metrics when the bound decoder path ran; nil on generic path.
+    public var bound: DecoderBoundMetrics?
+
+    public init(encoderMs: Double = 0, decoderMs: Double = 0, bound: DecoderBoundMetrics? = nil) {
+        self.encoderMs = encoderMs
+        self.decoderMs = decoderMs
+        self.bound = bound
+    }
+}
+
+
 /// Staff-only inference orchestration for gate-1.
 ///
 /// Pipeline (locked): Encoder fp16 CoreML EP → cast fp16→fp32 → Decoder fp32 ORT CPU
@@ -16,9 +31,13 @@ public final class StaffInferenceSession: @unchecked Sendable {
     public let decoderLoop: DecoderLoop
     public let smfWriter: SMFWriter
 
-    /// Sub-timings (ms) of the last `decodeStaff` call. Reset each call.
-    public internal(set) var lastEncoderMs: Double = 0
-    public internal(set) var lastDecoderMs: Double = 0
+    /// Sub-timings of the last `decodeStaff` call (replaces bare lastEncoderMs/lastDecoderMs).
+    public internal(set) var lastTiming = StaffDecodeTiming()
+
+    /// Compatibility: encoder ms from `lastTiming` (prefer `lastTiming` for new code).
+    public var lastEncoderMs: Double { lastTiming.encoderMs }
+    /// Compatibility: decoder ms from `lastTiming` (prefer `lastTiming` for new code).
+    public var lastDecoderMs: Double { lastTiming.decoderMs }
 
     public init(
         vocabulary: HomrVocabulary,
