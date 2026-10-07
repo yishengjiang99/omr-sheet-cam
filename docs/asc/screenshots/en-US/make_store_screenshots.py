@@ -26,7 +26,7 @@ SIZES = {"iphone-69": (1320, 2868), "ipad-13": (2064, 2752)}
 SHOTS = [
     ("01-snap-and-play", "Snap sheet music.\nHear it play.", None),
     ("02-slow-it-down", "Slow it down\nto practice", "Tempo from 0.5\u00d7 to 2\u00d7"),
-    ("03-reads-on-device", "Reads music right\non your {device}", "A live progress bar while it reads"),
+    ("03-reads-on-device", "GPU-accelerated\non your {device}", "On-device optical music recognition"),
     ("04-pick-a-sound", "Piano, strings,\nchoir and more", "Pick the instrument for playback"),
 ]
 
@@ -223,7 +223,7 @@ def reading(W, H, scale):
     panel = Image.new("RGB", (cardimg.width, cancel.height + gap + cardimg.height + 40), bgc)
     panel.paste(cancel, (0, 20))
     panel.paste(cardimg, (0, cancel.height + gap))
-    badges = ["No internet needed", "No account or sign-in", "Photos stay on your device"]
+    badges = ["iPhone GPU acceleration", "No account or sign-in", "Photos stay on your device"]
     bh = 3 * round(150 * scale) + 2 * round(36 * scale)
     gap = round(150 * scale)
     width = fit_width(W, H, y, panel, gap + bh, scale)

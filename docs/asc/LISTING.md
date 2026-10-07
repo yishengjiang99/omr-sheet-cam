@@ -9,11 +9,10 @@ copy and must equal `metadata/en-US/*.txt` (fastlane deliver layout). History an
 `COPY.md`. Check: `python3 docs/asc/check_copy.py`.
 
 **Sync gate:** tip-of-main listing discloses free quota + Pro IAP + anonymous telemetry.
-App Review **build 15** (do not cancel) does **not** include IAP/telemetry. Do **not** run
-`asc-music-reader-upload` / submit listing sync until the binary under review (or next submit)
-matches these claims. User runs submit; agents never dispatch `asc-submit`.
+Tip-of-main (build **24**) includes IAP + telemetry + Library home. Sync listing + submit
+with that binary. Prefer `asc-submit-app-store.yml` (sync_listing=true, build_number=24).
 
-Status: listing optimized 2026-10-06 for tip-of-main. Upload + verify with
+Status: listing optimized 2026-10-06 for tip-of-main + iPhone GPU / on-device OMR emphasis. Upload + verify with
 `.github/workflows/asc-music-reader-upload.yml` when ready.
 
 ## Name (30)
@@ -28,7 +27,7 @@ Scan sheet music, hear it play
 
 ## Promotional text (170)
 ```
-Point your camera at printed sheet music and hear it play. Free: 5 scans/day; Pro for unlimited. On-device reading — no account.
+Point your camera at printed sheet music and hear it play. Free: 5 scans/day; Pro for unlimited. On-device with iPhone GPU acceleration — no account.
 ```
 
 ## Keywords (100, comma-separated)
@@ -67,7 +66,7 @@ TRY IT INSTANTLY
 No sheet music nearby? Tap "Try sample picture" to read a bundled page of Beethoven's "Ode to Joy" and hear the result.
 
 ON-DEVICE READING
-Recognition runs on your device with models built into the app. Your photos and scores are never uploaded. No account or sign-in is required.
+Recognition runs on your device with iPhone GPU acceleration for optical music recognition (Core ML on the GPU and Neural Engine for the heavy vision steps). Models are built into the app — your photos and scores are never uploaded. No account or sign-in is required.
 
 USAGE DATA
 The app sends anonymous usage events (such as app open, scan success or fail, and purchase funnel steps) to our servers to improve the product. Events include an anonymous device id — never your photos, MIDI, email, or location. Purchases are processed by Apple.
@@ -147,7 +146,7 @@ Header/Search Results assets deferred). From `screenshots/en-US/source/`
 (hero mockup, real-device player captures, and crops of the scanning screen that exclude the photo preview).
 Every frame has a large caption. Uploaded in filename order:
 01 "Snap sheet music. Hear it play." (hero mockup) · 02 "Slow it down to practice" (Für Elise player) ·
-03 "Reads music right on your iPhone" (progress card + privacy badges; iPad: "on your device") ·
+03 "GPU-accelerated on your iPhone" (progress card + GPU/privacy badges; iPad: "on your device") ·
 04 "Piano, strings, choir and more" (player controls + the app's instrument list).
 
 | ASC display type | Size | Files |

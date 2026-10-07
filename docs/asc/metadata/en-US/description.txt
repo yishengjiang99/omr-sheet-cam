@@ -27,7 +27,7 @@ TRY IT INSTANTLY
 No sheet music nearby? Tap "Try sample picture" to read a bundled page of Beethoven's "Ode to Joy" and hear the result.
 
 ON-DEVICE READING
-Recognition runs on your device with models built into the app. Your photos and scores are never uploaded. No account or sign-in is required.
+Recognition runs on your device with iPhone GPU acceleration for optical music recognition (Core ML on the GPU and Neural Engine for the heavy vision steps). Models are built into the app — your photos and scores are never uploaded. No account or sign-in is required.
 
 USAGE DATA
 The app sends anonymous usage events (such as app open, scan success or fail, and purchase funnel steps) to our servers to improve the product. Events include an anonymous device id — never your photos, MIDI, email, or location. Purchases are processed by Apple.

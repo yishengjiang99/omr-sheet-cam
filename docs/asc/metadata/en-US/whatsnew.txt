@@ -1,1 +1,1 @@
-Scan printed sheet music and hear it on device. Free: 5 pages/day; Pro unlocks unlimited scans. Tempo, 11 instruments, library, and practice tools.
+On-device OMR with iPhone GPU acceleration. Free: 5 pages/day; Pro unlocks unlimited scans. Tempo, 11 instruments, library, and practice tools.

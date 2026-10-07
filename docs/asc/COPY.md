@@ -12,7 +12,7 @@ the build currently in App Review is called out under **Binary gates** (do not c
 ## Shipped on tip-of-main (2026-10-06) — what upload-ready may claim
 
 - Camera capture (focus/expose, torch) + PhotosPicker import; pages saved on device
-- Full-page on-device recognition (`PageRecognitionService` / homr); live progress / warmup UI
+- Full-page on-device recognition (`PageRecognitionService` / homr); encoder+SegNet CoreML EP (GPU/ANE), decoder ORT CPU; live progress / warmup UI
 - Library home (how-it-works art, Camera/Photos CTAs, Your scans + Samples, search, rename/delete)
 - SF2 player (GeneralUser GS): play/pause/seek, tempo 0.5×–2×, instrument picker (Original + 11 GM programs), level meter, mini-player
 - Sheet mode note highlighting, Follow toggle, A–B loop, per-hand mute/solo, Share MIDI, transpose
@@ -24,7 +24,7 @@ the build currently in App Review is called out under **Binary gates** (do not c
 Honest Pro scope in listing: **unlimited scans**. Instruments and recognition are not Pro-gated
 in code (paywall UI matches that). Do not claim "priority processing".
 
-## Binary gates (vs App Review build 15)
+## Binary gates (vs App Review build 15; submit tip with build 24)
 
 | Claim | In build 15? | In tip-of-main? |
 |---|---|---|
@@ -42,8 +42,8 @@ advertise IAP/telemetry/highlighting that build 15 lacks. Prefer sync when submi
 - Name: `AI Camera - Music Reader`
 - Subtitle: `Scan sheet music, hear it play`
 - Keywords: `OMR,piano,score,notation,notes,MIDI,sightreading,practice,tempo,choir,teacher,student,synth,library`
-- Promotional text: `Point your camera at printed sheet music and hear it play. Free: 5 scans/day; Pro for unlimited. On-device reading — no account.`
-- What's New: `Scan printed sheet music and hear it on device. Free: 5 pages/day; Pro unlocks unlimited scans. Tempo, 11 instruments, library, and practice tools.`
+- Promotional text: `Point your camera at printed sheet music and hear it play. Free: 5 scans/day; Pro for unlimited. On-device with iPhone GPU acceleration — no account.`
+- What's New: `On-device OMR with iPhone GPU acceleration. Free: 5 pages/day; Pro unlocks unlimited scans. Tempo, 11 instruments, library, and practice tools.`
 - Description: `metadata/en-US/description.txt`
 
 Keyword notes: name/subtitle words (ai, camera, music, reader, scan, sheet, hear, it, play) are not
@@ -78,7 +78,7 @@ OMR,piano,score,notation,notes,MIDI,sightreading,practice,tempo,choir,teacher,st
 
 ### Post-ship promotional text
 ```
-Point your camera at printed sheet music and hear it play. Free: 5 scans/day; Pro for unlimited. On-device reading — no account.
+Point your camera at printed sheet music and hear it play. Free: 5 scans/day; Pro for unlimited. On-device with iPhone GPU acceleration — no account.
 ```
 
 ### Post-ship description
@@ -112,7 +112,7 @@ TRY IT INSTANTLY
 No sheet music nearby? Tap "Try sample picture" to read a bundled page of Beethoven's "Ode to Joy" and hear the result.
 
 ON-DEVICE READING
-Recognition runs on your device with models built into the app. Your photos and scores are never uploaded. No account or sign-in is required.
+Recognition runs on your device with iPhone GPU acceleration for optical music recognition (Core ML on the GPU and Neural Engine for the heavy vision steps). Models are built into the app — your photos and scores are never uploaded. No account or sign-in is required.
 
 USAGE DATA
 The app sends anonymous usage events (such as app open, scan success or fail, and purchase funnel steps) to our servers to improve the product. Events include an anonymous device id — never your photos, MIDI, email, or location. Purchases are processed by Apple.
@@ -136,7 +136,7 @@ Source of truth: `docs/asc/screenshots/en-US/make_store_screenshots.py` (not pla
 ```
 1 | Snap and hear it | Hero mockup | shipped (on-image: "Snap sheet music. Hear it play.")
 2 | Slow it to practice | Player tempo | shipped
-3 | Reads on your device | Reading progress | shipped
+3 | GPU on your iPhone | Reading progress | shipped (on-image: "GPU-accelerated on your iPhone")
 4 | Piano strings and choir | Instrument chips | shipped
 5 | Private on your device | Privacy framing | shipped (photos on-device; telemetry in privacy policy)
 ```
@@ -148,21 +148,21 @@ upload-ready (metadata/en-US)
   Name                  24     30  yes
   Subtitle              30     30  yes
   Keywords              99    100  yes
-  Promotional text     128    170  yes
-  Description         2553   4000  yes
+  Promotional text     149    170  yes
+  Description         2679   4000  yes
 
 post-ship (COPY.md)
   field              chars  limit  ok
   Name                  24     30  yes
   Subtitle              30     30  yes
   Keywords              99    100  yes
-  Promotional text     128    170  yes
-  Description         2553   4000  yes
+  Promotional text     149    170  yes
+  Description         2679   4000  yes
 
 screenshot captions (<= 5 words)
   4 words  1 | Snap and hear it | Hero mockup | shipped (on-image: "Snap sheet music. Hear it play.")
   4 words  2 | Slow it to practice | Player tempo | shipped
-  4 words  3 | Reads on your device | Reading progress | shipped
+  4 words  3 | GPU on your iPhone | Reading progress | shipped (on-image: "GPU-accelerated on your iPhone")
   4 words  4 | Piano strings and choir | Instrument chips | shipped
   4 words  5 | Private on your device | Privacy framing | shipped (photos on-device; telemetry in privacy policy)
 
