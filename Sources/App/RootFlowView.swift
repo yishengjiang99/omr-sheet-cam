@@ -13,6 +13,8 @@ struct RootFlowView: View {
     @State private var path: [Route] = Self.initialPath()
     @State private var showSettings = Self.initialSettings()
     @EnvironmentObject private var playback: PlaybackController
+    @StateObject private var storeKit = StoreKitManager()
+    @StateObject private var quota = ScanQuota.shared
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -20,7 +22,11 @@ struct RootFlowView: View {
                 onSettings: { showSettings = true },
                 onLibrary: { path.append(.library) },
                 onOpenPlayer: { openNowPlaying() },
-                onPhoto: { photo in path.append(.result(photo)) }
+                onPhoto: { photo in
+                    if quota.checkAndConsume() {
+                        path.append(.result(photo))
+                    }
+                }
             )
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Route.self) { route in
@@ -40,6 +46,10 @@ struct RootFlowView: View {
         }
         .tint(Theme.coral)
         .sheet(isPresented: $showSettings) { SettingsView().environmentObject(playback) }
+        .sheet(isPresented: $quota.showPaywall) {
+            PaywallView().environmentObject(storeKit)
+        }
+        .environmentObject(storeKit)
     }
 
     /// Empty-library "Try sample picture": same Result/recognition flow as a camera or Photos pick.
