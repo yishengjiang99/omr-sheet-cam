@@ -111,10 +111,10 @@
 		CB0000000000000000000006 /* ResultScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultScreen.swift; sourceTree = "<group>"; };
 		CB0000000000000000000007 /* PlayerRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerRoute.swift; sourceTree = "<group>"; };
 		CB0000000000000000000008 /* RootFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootFlowView.swift; sourceTree = "<group>"; };
-		D10000000000000000000001 /* Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Analytics.swift; sourceTree = "<group>"; };
-		D10000000000000000000002 /* StoreKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitManager.swift; sourceTree = "<group>"; };
-		D10000000000000000000003 /* ScanQuota.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanQuota.swift; sourceTree = "<group>"; };
-		D10000000000000000000004 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		D10000000000000000000001 /* Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/Analytics.swift"; sourceTree = "<group>"; };
+		D10000000000000000000002 /* StoreKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/StoreKitManager.swift"; sourceTree = "<group>"; };
+		D10000000000000000000003 /* ScanQuota.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/ScanQuota.swift"; sourceTree = "<group>"; };
+		D10000000000000000000004 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/Paywall/PaywallView.swift"; sourceTree = "<group>"; };
 		CB0000000000000000000009 /* CaptureHelpersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureHelpersTests.swift; sourceTree = "<group>"; };
 		CB000000000000000000000A /* DiagnosticsLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLog.swift; sourceTree = "<group>"; };
 		CB000000000000000000000B /* PromptBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptBuilder.swift; sourceTree = "<group>"; };
@@ -264,36 +264,12 @@
 				6E0000000000000000000007 /* NOTICE */,
 				6D0000000000000000000001 /* Settings */,
 				6D0000000000000000000002 /* Licenses */,
-				D30000000000000000000001 /* Services */,
-				D30000000000000000000002 /* Features */,
-			);
-			path = App;
-			sourceTree = "<group>";
-		};
-		D30000000000000000000001 /* Services */ = {
-			isa = PBXGroup;
-			children = (
 				D10000000000000000000001 /* Analytics.swift */,
 				D10000000000000000000002 /* StoreKitManager.swift */,
 				D10000000000000000000003 /* ScanQuota.swift */,
-			);
-			path = Services;
-			sourceTree = "<group>";
-		};
-		D30000000000000000000002 /* Features */ = {
-			isa = PBXGroup;
-			children = (
-				D30000000000000000000003 /* Paywall */,
-			);
-			path = Features;
-			sourceTree = "<group>";
-		};
-		D30000000000000000000003 /* Paywall */ = {
-			isa = PBXGroup;
-			children = (
 				D10000000000000000000004 /* PaywallView.swift */,
 			);
-			path = Paywall;
+			path = App;
 			sourceTree = "<group>";
 		};
 		G10000000000000000000004 /* MIDI */ = {
