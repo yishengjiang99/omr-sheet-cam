@@ -1,5 +1,5 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-10-06 7:46 PM PT by OMR iOS_
+_Last updated: 2026-10-06 7:50 PM PT by OMR iOS_
 
 Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). App Review still has **build 15** (do not cancel). Listing/privacy optimized for tip (IAP+telemetry); do not sync listing to ASC until a matching binary is submitted. Redeploy live privacy/support HTML.
 
@@ -32,6 +32,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] Fixture `camera.die_letzte_kompanie` (real photo Die Letzte Kompanie, snapshot tier) — OMR iOS — 2026-10-06 7:50 PM PT
 - [x] EncoderContext.castToFP32ForDecoder: single preallocated fp32 buffer (no intermediate [Float]) — OMR iOS — 2026-10-06 7:46 PM PT
 - [x] Decoder parity tests (generic vs zero-copy exact match) + StaffDecodeTiming / bound metrics; cacheSwiftBytes=0 — OMR iOS — 2026-10-06 7:45 PM PT
 - [x] Decoder KV-cache zero-copy via ORT I/O Binding (`ORTBoundDecoderRunner` / `ORTCDecoderBinding`); generic path behind `OMR_DECODER_GENERIC=1`; gate-1 oracle green — OMR iOS — 2026-10-06 7:42 PM PT

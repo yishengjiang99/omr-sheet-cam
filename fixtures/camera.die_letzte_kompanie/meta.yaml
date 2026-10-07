@@ -1,0 +1,12 @@
+id: camera.die_letzte_kompanie
+match_tier: snapshot
+clef: treble+bass
+key: F   # one flat (F major / D minor); confirm after OMR
+time: "2/4"
+source: real phone photo of printed sheet "Die Letzte Kompanie" (auch: Die Graue Kompanie); voice+piano, German lyrics, rehearsal marks [I]/[II]/[III]
+license: user-captured photo for internal OMR testing; sheet music copyright may apply — do not redistribute as GT art
+photo:
+  bytes: 5551173
+  sha256: 6475e7392c7ab360e0b42bc70b2d516cc2c8567dee347574741bd828f46d3476
+  notes: thumb on left edge; slight CCW rotation; indoor lighting; 5 piano+voice systems
+notes: Snapshot fixture only — no expected.tokens yet. Use for page-parse timing / staff detection / visual QA. Oracle export is a follow-up.

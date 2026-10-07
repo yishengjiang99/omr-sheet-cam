@@ -66,6 +66,7 @@ Canonicalize (Layer B): C4=MIDI 60; lift `#` +1 / `b` −1; `note_4`=480 TPQ tic
 | `clefs.bass` | exact_tokens | complete | complete | LilyPond `input.png` (200 dpi gray) |
 | `piano.grand` | exact_midi | complete | complete | LilyPond `input.png` (200 dpi gray) |
 | `camera.deskew` | midi_distance (≤2 / 16 notes) | stub | complete (scale mirror) | synthetic ~15° rotate + keystone of scale |
+| `camera.die_letzte_kompanie` | snapshot | awaiting_oracle_export | — | real photo `input.jpg` (Die Letzte Kompanie) |
 | `oracle.c_scale_staff` | exact_tokens (Gate 1, 12/12) | complete (Python homr export) | derived from oracle tokens | `staff.png` 256×1280 + `staff.npy` |
 
 Images are rendered from `fixtures/<id>/source.ly` by `tools/fixtures/render_fixtures.py`
