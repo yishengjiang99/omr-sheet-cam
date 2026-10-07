@@ -293,19 +293,16 @@ public struct EncoderContext: Sendable {
             // Malformed half buffer — keep dtype marker honest; ORT bind will fail loudly later.
             return EncoderContext(bytes: bytes, dtype: .float32, shape: shape)
         }
+        // Single preallocated fp32 buffer — no intermediate [Float] then second Data copy.
         let halfCount = bytes.count / 2
-        var out = [Float]()
-        out.reserveCapacity(halfCount)
-        bytes.withUnsafeBytes { raw in
-            let src = raw.bindMemory(to: UInt16.self)
-            for i in 0..<halfCount {
-                out.append(Self.float32(fromFloat16Bits: src[i]))
-            }
-        }
         var outData = Data(count: halfCount * MemoryLayout<Float>.size)
-        outData.withUnsafeMutableBytes { dst in
-            out.withUnsafeBytes { src in
-                dst.copyMemory(from: src)
+        bytes.withUnsafeBytes { srcRaw in
+            outData.withUnsafeMutableBytes { dstRaw in
+                let src = srcRaw.bindMemory(to: UInt16.self)
+                let dst = dstRaw.bindMemory(to: Float.self)
+                for i in 0..<halfCount {
+                    dst[i] = Self.float32(fromFloat16Bits: src[i])
+                }
             }
         }
         return EncoderContext(bytes: outData, dtype: .float32, shape: shape)
