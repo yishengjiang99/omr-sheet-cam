@@ -55,7 +55,7 @@ class ApiError(Exception):
 
 
 def api(method, path, body=None, ok404=False):
-    assert "reviewSubmission" not in path and "Submission" not in path, "this script never submits"
+    assert method == "GET" or "Submission" not in path, "this script never submits"
     if VERIFY_ONLY and method != "GET":
         raise SystemExit(f"VERIFY_ONLY but tried {method} {path}")
     for attempt in range(5):
