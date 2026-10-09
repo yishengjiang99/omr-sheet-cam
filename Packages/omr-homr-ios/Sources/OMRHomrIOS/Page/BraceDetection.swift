@@ -199,6 +199,23 @@ enum BraceDetection {
         return (b.1, b.2, b.3)
     }
 
+    /// Not in homr. A grand staff (treble + bass already merged by `createGrandstaffs`) is a complete
+    /// piano system, so a row holding two or more of them means brace / bar-line connections chained
+    /// *consecutive systems* into one multi-staff (e.g. systems 1+2 and 3+4 of a 4-system page). homr
+    /// would then decode each grand staff as its own voice, and every voice starts at tick 0 — two
+    /// systems play at once. When every staff on the page is a grand staff, put each one in its own
+    /// row (top to bottom) so the page becomes one grand-staff voice whose systems play in sequence.
+    /// Rows mixing a single staff with a grand staff (voice + piano) are real ensembles and are kept.
+    static func splitStackedGrandStaffSystems(_ rows: [HMultiStaff]) -> [HMultiStaff] {
+        let all = rows.flatMap { $0.staffs }
+        guard !all.isEmpty, all.allSatisfy(\.isGrandstaff), rows.contains(where: { $0.staffs.count > 1 }) else {
+            return rows
+        }
+        return all.enumerated().sorted {
+            $0.element.minY != $1.element.minY ? $0.element.minY < $1.element.minY : $0.offset < $1.offset
+        }.map { HMultiStaff([$0.element], []) }
+    }
+
     static func ensureSameNumberOfStaffs(_ multi: [HMultiStaff]) -> [HMultiStaff] {
         let lengths = Set(multi.map { $0.staffs.count })
         if lengths.count == 1, let l = lengths.first, l > 1 { return multi }
