@@ -165,6 +165,30 @@ enum PageStaffDetection {
                 out.append(.init(geometry: geo, isGrandstaff: s.isGrandstaff, voice: v, row: r))
             }
         }
+        // Defensive: if brace detection collapsed to one row (every staff its own voice),
+        // all staffs start at tick 0. Reinterpret consecutive pairs as piano systems:
+        // even-indexed -> treble voice 0, odd-indexed -> bass voice 1, rows sequence.
+        var finalVoices = voices
+        if voices >= 4, out.count >= 4, out.count % 2 == 0,
+           Set(out.map { $0.voice }).count == out.count {
+            var fixed: [PageStaffLayout.Staff] = []
+            for (pairIdx, i) in stride(from: 0, to: out.count, by: 2).enumerated() {
+                var treble = out[i]
+                treble.voice = 0
+                treble.row = pairIdx
+                treble.isGrandstaff = true
+                fixed.append(treble)
+            }
+            for (pairIdx, i) in stride(from: 1, to: out.count, by: 2).enumerated() {
+                var bass = out[i]
+                bass.voice = 1
+                bass.row = pairIdx
+                bass.isGrandstaff = true
+                fixed.append(bass)
+            }
+            out = fixed
+            finalVoices = 2
+        }
         let symbols: [String: [[Double]]] = [
             "noteheads": noteheads.map { $0.box },
             "staff_fragments_raw": fragmentsRaw.map { $0.box },
@@ -176,7 +200,7 @@ enum PageStaffDetection {
             "bar_line_boxes": barBoxes.map { $0.box },
             "brace_dot": braceDot.map { $0.box },
         ]
-        return PageStaffLayout(staffs: out, voices: voices, noiseMask: mask, symbols: symbols,
+        return PageStaffLayout(staffs: out, voices: finalVoices, noiseMask: mask, symbols: symbols,
                                averageNoteHeadHeight: avgH, detectedStaffs: staffs.map(info),
                                multiStaffs: grouped.multi.map { $0.staffs.map(info) },
                                ensuredRows: rows.map { $0.staffs.count })
