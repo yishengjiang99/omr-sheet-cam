@@ -1,1 +1,94 @@
-{"products":[{"id":"com.ragnus.vp.pro.monthly","locale":"en_US","price":4.99,"subscriptionGroup":"pro","type":"autoRenewableSubscription"},{"id":"com.ragnus.vp.pro.yearly","locale":"en_US","price":29.99,"subscriptionGroup":"pro","type":"autoRenewableSubscription"}]}
+{
+  "identifier" : "6C0D3A1E",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6816476323",
+    "_developerTeamID" : "83D36RPMUM",
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "22457674",
+      "localizations" : [
+        {
+          "description" : "",
+          "displayName" : "Music Reader Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "Music Reader Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "29.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6820910054",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlock all Pro features, billed yearly",
+              "displayName" : "Music Reader Pro Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.ragnus.vp.pro.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Music Reader Pro Yearly",
+          "subscriptionGroupID" : "22457674",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6820909696",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlock all Pro features, billed monthly",
+              "displayName" : "Music Reader Pro Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.ragnus.vp.pro.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Music Reader Pro Monthly",
+          "subscriptionGroupID" : "22457674",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9C0000000000000000000001 /* PaywallScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D0000000000000000000001 /* PaywallScreenshotTests.swift */; };
 		5F000000000000000000000A /* ScreenshotDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000009 /* ScreenshotDemo.swift */; };
 		5F0000000000000000000006 /* PlaylistStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000005 /* PlaylistStore.swift */; };
 		7F0000000000000000000004 /* MIDIExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E0000000000000000000003 /* MIDIExport.swift */; };
@@ -90,6 +91,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		9D0000000000000000000001 /* PaywallScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallScreenshotTests.swift; sourceTree = "<group>"; };
 		5E0000000000000000000009 /* ScreenshotDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotDemo.swift; sourceTree = "<group>"; };
 		5E0000000000000000000005 /* PlaylistStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistStore.swift; sourceTree = "<group>"; };
 		7E0000000000000000000003 /* MIDIExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDIExport.swift; sourceTree = "<group>"; };
@@ -349,6 +351,7 @@
 				B10000000000000000000008 /* Fixtures */,
 				6E000000000000000000000A /* RedesignTests.swift */,
 				8B0000000000000000000003 /* Build6PrepTests.swift */,
+				9D0000000000000000000001 /* PaywallScreenshotTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -608,6 +611,7 @@
 				7A0000000000000000000004 /* Gray8ImageTests.swift in Sources */,
 				6F000000000000000000000A /* RedesignTests.swift in Sources */,
 				8A0000000000000000000003 /* Build6PrepTests.swift in Sources */,
+				9C0000000000000000000001 /* PaywallScreenshotTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
