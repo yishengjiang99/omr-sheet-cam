@@ -16,7 +16,6 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Real-photo accuracy spot check (2–3 photos, color preprocessing path; diagnostics `preprocess_mode`) — OMR Core + User
 - [ ] Regression fixtures (2026-09-27 audit): tuplet rounding, key signatures + accidentals, multi-row/grand-staff timing — OMR Core
 - [ ] Memory warning re-warm (~10 s); revisit after device numbers — OMR iOS
-- [ ] ASC subscriptions `com.ragnus.vp.pro.monthly` ($4.99/mo) / `com.ragnus.vp.pro.yearly` ($29.99/yr) in group Music Reader Pro via `asc-create-subscriptions.yml` (IDs match StoreKitManager + `OMRSheetCam.storekit`); see `docs/asc/IAP_SETUP.md` — ASC IAP agent
 - [ ] Real-device IAP smoke on new TestFlight: free quota 5/day → paywall; Restore Purchases — OMR iOS + User
 
 ## Next
@@ -33,6 +32,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] ASC subscription group Music Reader Pro (22457674): `com.ragnus.vp.pro.monthly` (6820909696, ONE_MONTH $4.99) + `com.ragnus.vp.pro.yearly` (6820910054, ONE_YEAR $29.99); en-US localizations, 175 territories, prices equalized from USA, Family Sharing off; both MISSING_METADATA (review screenshot still needed) — run 37910111707; `docs/asc/IAP_SETUP.md` — ASC IAP agent — 2026-10-09 2:20 AM PT
 - [x] Playback: pickup / incomplete measure gap — chord-tied rests share onset (no stacked silence after anacrusis); intentional sequential rests preserved — OMR iOS — 2026-10-06 8:30 PM PT
 - [x] Submitted v1.0 build 24 WAITING_FOR_REVIEW (GPU listing+screenshots synced; canceled build-15 review) — submit run 37565863422; upload 37565737062; cancel 37565696291 — OMR iOS — 2026-10-06 8:15 PM PT
 - [x] ASO: screenshot 03 + listing promo/description/whatsnew emphasize iPhone GPU / on-device Neural Engine OMR (honest: CoreML GPU/ANE for encoder+SegNet; decoder ORT CPU) — OMR iOS — 2026-10-06 8:11 PM PT
