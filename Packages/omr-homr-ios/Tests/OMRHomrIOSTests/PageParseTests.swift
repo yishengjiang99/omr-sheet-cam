@@ -126,8 +126,38 @@ final class PageParseTests: XCTestCase {
         for (k, e) in r.noteLayout.enumerated() { XCTAssertEqual(e.noteIndex, k) }
     }
 
-    func testInputHandling() {
-        let jpeg = Data([0xFF, 0xD8, 0xFF, 0xE0, 0, 0x10, 0x4A, 0x46, 0x49, 0x46])
+    /// Two-system piano score as one merged grandstaff voice: each row carries treble
+    /// (upper) then bass (lower) symbols. System 2 must start after system 1 ends;
+    /// the two hands of one system sound simultaneously. Regression test for
+    /// "all staffs at once".
+    func testMultiSystemPianoSequentialSystems() {
+        func n(_ r: String, _ p: String, _ pos: String = "upper") -> EncodedSymbol {
+            EncodedSymbol(rhythm: r, pitch: p, lift: "_", articulation: "_", slur: "_", position: pos)
+        }
+        let nl = EncodedSymbol(rhythm: "newline", pitch: "_", lift: "_", articulation: "_", slur: "_", position: "upper")
+        // System 1: treble C5 D5 (quarters), bass C3 D3 (quarters).
+        // System 2: treble E5 F5, bass E3 F3.
+        let voice: [EncodedSymbol] = [
+            n("note_4", "C5"), n("note_4", "D5"),
+            n("note_4", "C3", "lower"), n("note_4", "D3", "lower"), nl,
+            n("note_4", "E5"), n("note_4", "F5"),
+            n("note_4", "E3", "lower"), n("note_4", "F3", "lower"), nl,
+        ]
+        let r = PagePipeline.render(voices: [voice], grandstaffVoices: [0])
+        XCTAssertEqual(r.staffCount, 2)
+        let treble = r.noteLayout.filter { $0.staffIndex == 0 }
+        let bass = r.noteLayout.filter { $0.staffIndex == 1 }
+        XCTAssertEqual(treble.count, 4)
+        XCTAssertEqual(bass.count, 4)
+        // Sequential systems per hand (quarter = 480 ticks).
+        XCTAssertEqual(treble.map(\.onsetTicks), [0, 480, 960, 1440])
+        XCTAssertEqual(bass.map(\.onsetTicks), [0, 480, 960, 1440])
+        // Hands of the same system are simultaneous.
+        XCTAssertEqual(treble[0].onsetTicks, bass[0].onsetTicks)
+        XCTAssertEqual(treble[2].onsetTicks, bass[2].onsetTicks)
+    }
+
+    func testInputHandling() {        let jpeg = Data([0xFF, 0xD8, 0xFF, 0xE0, 0, 0x10, 0x4A, 0x46, 0x49, 0x46])
         XCTAssertThrowsError(try OMRHomrIOS.parseSheetMusicWithLayout(input: ParseSheetMusicInput(imageData: jpeg, staffOnly: false))) {
             guard case OMRError.unsupportedImageFormat = $0 else { return XCTFail("got \($0)") }
         }
