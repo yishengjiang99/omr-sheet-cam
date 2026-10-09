@@ -37,9 +37,9 @@ crash SDK beyond optional Apple Opt-In), Advertising Data, etc.
 
 | Data type | Purposes | Linked to identity? | Used for Tracking? |
 |---|---|---|---|
-| Product Interaction | Analytics | **Yes** (anon id) | **No** |
-| Device ID | Analytics | **Yes** | **No** |
-| Purchase History | App Functionality; Analytics | **Yes** | **No** |
+| Product Interaction | Analytics | **No** (random install UUID, not tied to any account, name, email or Apple ID) | **No** |
+| Device ID | Analytics | **No** | **No** |
+| Purchase History | Analytics | **No** | **No** |
 
 Tracking = No: no third-party advertising SDKs, no ATT, empty `NSPrivacyTrackingDomains`,
 `NSPrivacyTracking=false` in the privacy manifest.
@@ -47,8 +47,8 @@ Tracking = No: no third-party advertising SDKs, no ATT, empty `NSPrivacyTracking
 ## Resulting label (expected)
 
 - **Data Used to Track You:** none
-- **Data Linked to You:** Identifiers, Purchases, Usage Data
-- **Data Not Linked to You:** none required for the types above
+- **Data Linked to You:** none
+- **Data Not Linked to You:** Identifiers, Purchases, Usage Data
 
 ## Also before next submit
 

@@ -194,7 +194,7 @@ struct PrivacyScreen: View {
     var body: some View {
         List {
             Text("AI Camera – Music Reader reads your sheet music right on your iPhone. Photos and recognized music are stored only on this device and are never uploaded.")
-            Text("There is no account, no sign-in, no analytics and no network access. The diagnostics event log stays on the device unless you copy it yourself.")
+            Text("There is no account or sign-in. The app sends anonymous usage events (like app opened, scan finished, paywall shown) with a random install ID so we can improve it. They never include your photos, music, name, email or location. Purchases are handled by Apple. The diagnostics event log stays on the device unless you copy it yourself.")
         }
         .navigationTitle("Privacy")
         .navigationBarTitleDisplayMode(.inline)
