@@ -168,25 +168,21 @@ enum PageStaffDetection {
         // Defensive: if brace detection collapsed to one row (every staff its own voice),
         // all staffs start at tick 0. Reinterpret consecutive pairs as piano systems:
         // even-indexed -> treble voice 0, odd-indexed -> bass voice 1, rows sequence.
+        // NOTE: keep `out` in place (do NOT reorder) — callers zip it with staffSymbols.
         var finalVoices = voices
         if voices >= 4, out.count >= 4, out.count % 2 == 0,
            Set(out.map { $0.voice }).count == out.count {
-            var fixed: [PageStaffLayout.Staff] = []
-            for (pairIdx, i) in stride(from: 0, to: out.count, by: 2).enumerated() {
-                var treble = out[i]
-                treble.voice = 0
-                treble.row = pairIdx
-                treble.isGrandstaff = true
-                fixed.append(treble)
+            for i in 0..<out.count {
+                let pairIdx = i / 2
+                if i % 2 == 0 {
+                    out[i].voice = 0
+                    out[i].row = pairIdx
+                } else {
+                    out[i].voice = 1
+                    out[i].row = pairIdx
+                }
+                out[i].isGrandstaff = true
             }
-            for (pairIdx, i) in stride(from: 1, to: out.count, by: 2).enumerated() {
-                var bass = out[i]
-                bass.voice = 1
-                bass.row = pairIdx
-                bass.isGrandstaff = true
-                fixed.append(bass)
-            }
-            out = fixed
             finalVoices = 2
         }
         let symbols: [String: [[Double]]] = [
