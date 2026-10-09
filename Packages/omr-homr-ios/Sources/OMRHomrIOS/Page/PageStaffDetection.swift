@@ -153,9 +153,12 @@ enum PageStaffDetection {
         let braceDot = HomrBoxes.rotatedBoxes(braceImg, width: w, height: h, skipMerging: true, maxSize: (100, -1))
         if staffs.isEmpty { throw PageStaffDetectionError.noStaffs }
         let grouped = BraceDetection.findBracesAndGrandStaffs(staffs, braceDot)
-        let rows = BraceDetection.ensureSameNumberOfStaffs(grouped.multi)
+        let homrRows = BraceDetection.ensureSameNumberOfStaffs(grouped.multi)
+        // homr's regions (all staffs, homr row order) for prepare_staff_image parity.
+        let regions: [[Double]] = homrRows.flatMap { $0.staffs.map { [$0.minY, $0.maxY] } }
+        // Stacked piano systems -> one grand-staff voice, systems in sequence (see the function doc).
+        let rows = BraceDetection.splitStackedGrandStaffSystems(homrRows)
         let voices = rows.first?.staffs.count ?? 0
-        let regions: [[Double]] = rows.flatMap { $0.staffs.map { [$0.minY, $0.maxY] } }
         var out: [PageStaffLayout.Staff] = []
         for v in 0..<voices {
             for (r, row) in rows.enumerated() where v < row.staffs.count {
@@ -199,6 +202,6 @@ enum PageStaffDetection {
         return PageStaffLayout(staffs: out, voices: finalVoices, noiseMask: mask, symbols: symbols,
                                averageNoteHeadHeight: avgH, detectedStaffs: staffs.map(info),
                                multiStaffs: grouped.multi.map { $0.staffs.map(info) },
-                               ensuredRows: rows.map { $0.staffs.count })
+                               ensuredRows: homrRows.map { $0.staffs.count })
     }
 }

@@ -47,4 +47,29 @@ final class PageStaffDetectionTests: XCTestCase {
     func testPianoGrandStaff() throws {
         try check("piano.grand", staffs: 1, grandstaff: true)
     }
+
+    private func staff(top: Double, grand: Bool) -> HStaff {
+        let lines = grand ? 10 : 5
+        let ys = (0..<lines).map { top + Double($0) * 10 + ($0 >= 5 ? 40 : 0) }
+        let s = HStaff(grid: [HStaffPoint(x: 100, y: ys, angle: 0), HStaffPoint(x: 1800, y: ys, angle: 0)])!
+        s.isGrandstaff = grand
+        return s
+    }
+
+    /// Scan "Sweden": 4 piano systems; brace detection returned rows [[sys1, sys2], [sys3, sys4]] (each a
+    /// grand staff), so sys1 and sys2 became two voices that both start at tick 0. Must become 4 rows of
+    /// one grand staff each, top to bottom.
+    func testStackedGrandStaffSystemsSplitIntoSequentialRows() {
+        let s = [0.0, 300, 600, 900].map { staff(top: $0, grand: true) }
+        let rows = BraceDetection.splitStackedGrandStaffSystems([HMultiStaff([s[0], s[1]], []), HMultiStaff([s[2], s[3]], [])])
+        XCTAssertEqual(rows.map { $0.staffs.count }, [1, 1, 1, 1])
+        XCTAssertTrue(zip(rows.map { $0.staffs[0] }, s).allSatisfy { $0 === $1 })
+    }
+
+    /// Voice + piano (single staff above a grand staff) is a real 2-voice ensemble: unchanged.
+    func testVoiceAndPianoRowsKept() {
+        let rows = [HMultiStaff([staff(top: 0, grand: false), staff(top: 100, grand: true)], []),
+                    HMultiStaff([staff(top: 500, grand: false), staff(top: 600, grand: true)], [])]
+        XCTAssertEqual(BraceDetection.splitStackedGrandStaffSystems(rows).map { $0.staffs.count }, [2, 2])
+    }
 }
