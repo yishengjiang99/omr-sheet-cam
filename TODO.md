@@ -1,5 +1,5 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-10-09 2:30 AM PT by ASC IAP agent_
+_Last updated: 2026-10-09 3:10 AM PT by ASC IAP agent_
 
 Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). v1.0 **build 24** WAITING_FOR_REVIEW with GPU/on-device listing + screenshots.
 
@@ -11,7 +11,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 
 ## Now (in progress)
 - [ ] Full-page OMR perf later: Core ML encoder offline experiment + fixed-batch-8 SegNet (commits 5–6); optional page locator / stateful decoder (7–8) — OMR iOS
-- [ ] v1.0 build **24** in App Review (WAITING_FOR_REVIEW). Check with read-only **ASC status** only; do not cancel/resubmit while waiting — OMR iOS — submit run 37565863422; listing upload 37565737062
+- [ ] v1.0 build **30** + Music Reader Pro subscriptions (group version + monthly/yearly versions) in App Review (reviewSubmission 61ac442b, WAITING_FOR_REVIEW since 2026-10-09 3:05 AM PT). Check with read-only **ASC status** only; do not cancel/resubmit while waiting — submit run 37915292596
 - [ ] Real-device page parse verdict on latest TestFlight (after recognition-always-on / Library-home fix): 3–5 real sheet photos → parse time + peak `phys_footprint` from Copy as prompt; pass/fail per photo — OMR iOS + User
 - [ ] Real-photo accuracy spot check (2–3 photos, color preprocessing path; diagnostics `preprocess_mode`) — OMR Core + User
 - [ ] Regression fixtures (2026-09-27 audit): tuplet rounding, key signatures + accidentals, multi-row/grand-staff timing — OMR Core
@@ -19,7 +19,6 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Real-device IAP smoke on new TestFlight: free quota 5/day → paywall; Restore Purchases — OMR iOS + User
 
 ## Next
-- [ ] Add a subscription review screenshot (paywall) for both Music Reader Pro products, then attach both subscriptions to the next app version submission — User
 - [ ] ASC console App Privacy: publish answers in `docs/asc/app-privacy.md` (not "Data Not Collected") before next IAP binary submit — User
 - [ ] Redeploy `docs/asc/web/privacy.html` + `support.html` to grepawk.com/music-reader/ (live pages still claim no analytics/no IAP) — User / web
 - [ ] Real-device CoreML cache numbers (encoder/SegNet cold vs warm) — OMR iOS + User
@@ -32,6 +31,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] Subscription review screenshot `docs/asc/review/subscription-paywall.png` (real PaywallView via SKTestSession, ios-screenshots `only_paywall`) uploaded to both products; yearly level 1 / monthly level 2; both READY_TO_SUBMIT then submitted with v1.0 build 30 in one reviewSubmission (appStoreVersion + subscriptionGroupVersion + 2 subscriptionVersions); App Review notes describe Pro + how to reach the paywall — runs 37910799043, 37912335748, cancel 37912534789, submit 37915292596 — ASC IAP agent — 2026-10-09 3:05 AM PT
 - [x] ASC subscription group Music Reader Pro (22457674): `com.ragnus.vp.pro.monthly` (6820909696, ONE_MONTH $4.99) + `com.ragnus.vp.pro.yearly` (6820910054, ONE_YEAR $29.99); en-US localizations, 175 territories, prices equalized from USA, Family Sharing off; both MISSING_METADATA (review screenshot still needed) — run 37910111707; `docs/asc/IAP_SETUP.md` — ASC IAP agent — 2026-10-09 2:20 AM PT
 - [x] Playback: pickup / incomplete measure gap — chord-tied rests share onset (no stacked silence after anacrusis); intentional sequential rests preserved — OMR iOS — 2026-10-06 8:30 PM PT
 - [x] Submitted v1.0 build 24 WAITING_FOR_REVIEW (GPU listing+screenshots synced; canceled build-15 review) — submit run 37565863422; upload 37565737062; cancel 37565696291 — OMR iOS — 2026-10-06 8:15 PM PT
