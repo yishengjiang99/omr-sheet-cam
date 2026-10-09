@@ -1,5 +1,5 @@
 # TODO — AI Camera - Music Reader
-_Last updated: 2026-10-06 8:30 PM PT by OMR iOS_
+_Last updated: 2026-10-09 2:30 AM PT by ASC IAP agent_
 
 Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). v1.0 **build 24** WAITING_FOR_REVIEW with GPU/on-device listing + screenshots.
 
@@ -16,10 +16,11 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Real-photo accuracy spot check (2–3 photos, color preprocessing path; diagnostics `preprocess_mode`) — OMR Core + User
 - [ ] Regression fixtures (2026-09-27 audit): tuplet rounding, key signatures + accidentals, multi-row/grand-staff timing — OMR Core
 - [ ] Memory warning re-warm (~10 s); revisit after device numbers — OMR iOS
-- [ ] Confirm ASC subscription products `com.ragnus.vp.pro.monthly` / `com.ragnus.vp.pro.yearly` match StoreKitManager + `OMRSheetCam.storekit` — OMR iOS
+- [ ] ASC subscriptions `com.ragnus.vp.pro.monthly` ($4.99/mo) / `com.ragnus.vp.pro.yearly` ($29.99/yr) in group Music Reader Pro via `asc-create-subscriptions.yml` (IDs match StoreKitManager + `OMRSheetCam.storekit`); see `docs/asc/IAP_SETUP.md` — ASC IAP agent
 - [ ] Real-device IAP smoke on new TestFlight: free quota 5/day → paywall; Restore Purchases — OMR iOS + User
 
 ## Next
+- [ ] Add a subscription review screenshot (paywall) for both Music Reader Pro products, then attach both subscriptions to the next app version submission — User
 - [ ] ASC console App Privacy: publish answers in `docs/asc/app-privacy.md` (not "Data Not Collected") before next IAP binary submit — User
 - [ ] Redeploy `docs/asc/web/privacy.html` + `support.html` to grepawk.com/music-reader/ (live pages still claim no analytics/no IAP) — User / web
 - [ ] Real-device CoreML cache numbers (encoder/SegNet cold vs warm) — OMR iOS + User
