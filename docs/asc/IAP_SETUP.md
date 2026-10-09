@@ -33,12 +33,15 @@ You need an active **Paid Apps Agreement** (ASC > Business). Without it, Apple r
 
 ## Still manual
 
-- **Review screenshot** for each subscription (a screenshot of the paywall). Until it's added,
-  the subscriptions can stay in `MISSING_METADATA`. Add it in ASC > app > Subscriptions >
-  Music Reader Pro > each product > Review Information.
+- ~~Review screenshot~~ now automated: `docs/asc/review/subscription-paywall.png` (real PaywallView,
+  iPhone 6.9" 1320x2868, prices from `OMRSheetCam.storekit`) is captured by `ios-screenshots.yml`
+  (input `only_paywall`, test `Tests/PaywallScreenshotTests.swift`) and uploaded to both products by
+  `create_subscriptions.py`. Group levels: yearly = 1, monthly = 2.
 - **First submission:** new subscriptions have to be submitted together with the **next app version**.
-  On the version page in ASC, under "In-App Purchases and Subscriptions", select both
-  subscriptions before you submit that version for review.
+  `asc-submit-app-store.yml` (input `submit_subscriptions`, default on) runs
+  `scripts/asc/submit_subscriptions.py` (POST /v1/subscriptionSubmissions) right before it submits the
+  version. Manual alternative: on the version page, under "In-App Purchases and Subscriptions", select
+  both subscriptions before submitting. App Review notes: `docs/asc/metadata/review_information/notes.txt`.
 
 ## Verification
 
