@@ -201,23 +201,7 @@ enum BraceDetection {
 
     static func ensureSameNumberOfStaffs(_ multi: [HMultiStaff]) -> [HMultiStaff] {
         let lengths = Set(multi.map { $0.staffs.count })
-        if lengths.count == 1, let l = lengths.first, l > 1 {
-            // Defensive: a single row of 4+ unpaired staffs means brace detection
-            // chained them via false positives (e.g., bar lines) but found no real
-            // braces to pair. Split into consecutive pairs (piano systems) and mark
-            // grandstaff so hands split and systems sequence instead of stacking.
-            if l >= 4, l % 2 == 0, let single = multi.first,
-               single.staffs.allSatisfy({ !$0.isGrandstaff }) {
-                return stride(from: 0, to: l, by: 2).map { i in
-                    let a = single.staffs[i]
-                    let b = single.staffs[i + 1]
-                    a.isGrandstaff = true
-                    b.isGrandstaff = true
-                    return HMultiStaff([a, b], [])
-                }
-            }
-            return multi
-        }
+        if lengths.count == 1, let l = lengths.first, l > 1 { return multi }
         let flat = multi.flatMap { $0.staffs }
         if let core = findPeriodicCore(flat) {
             let c = Array(flat[core.front..<(flat.count - core.back)])
