@@ -257,8 +257,18 @@ def verify(app_id):
         locs, _ = get_all(f"/v1/subscriptionGroups/{g['id']}/subscriptionGroupLocalizations?limit=200")
         print("GROUP", g["id"], repr(g["attributes"]["referenceName"]),
               [(l["attributes"]["locale"], l["attributes"].get("name"), l["attributes"].get("state")) for l in locs])
+        try:
+            gv = api("GET", f"/v1/subscriptionGroups/{g['id']}/versions?limit=50", ok404=True)
+            print("  GROUP VERSIONS", None if gv is None else [(v["id"], v["attributes"]) for v in gv.get("data", [])])
+        except ApiError as e:
+            print("  GROUP VERSIONS error", str(e)[:300])
         subs, _ = get_all(f"/v1/subscriptionGroups/{g['id']}/subscriptions?limit=200")
         for s in subs:
+            try:
+                sv = api("GET", f"/v1/subscriptions/{s['id']}/versions?limit=50", ok404=True)
+                print("  SUB VERSIONS", s["attributes"]["productId"], None if sv is None else [(v["id"], v["attributes"]) for v in sv.get("data", [])])
+            except ApiError as e:
+                print("  SUB VERSIONS error", str(e)[:300])
             a = s["attributes"]
             sl, _ = get_all(f"/v1/subscriptions/{s['id']}/subscriptionLocalizations?limit=200")
             prices = existing_prices(s["id"])
@@ -298,6 +308,17 @@ def verify(app_id):
     return ok
 
 
+def review_submissions(app_id):
+    subs, _ = get_all(f"/v1/apps/{app_id}/reviewSubmissions?filter[platform]=IOS&limit=50")
+    for rs in subs:
+        a = rs["attributes"]
+        if a.get("state") in ("COMPLETE",):
+            continue
+        items = api("GET", f"/v1/reviewSubmissions/{rs['id']}/items?limit=50", ok404=True) or {}
+        print("REVIEW SUBMISSION", rs["id"], a.get("state"), a.get("submittedDate"),
+              [(i["id"], i["attributes"].get("state"), list((i.get("relationships") or {}).keys())) for i in items.get("data", [])])
+
+
 def main():
     apps = api("GET", f"/v1/apps?filter[bundleId]={BUNDLE_ID}")["data"]
     if not apps:
@@ -319,6 +340,7 @@ def main():
             ensure_review_screenshot(s["id"], p["productId"])
         ensure_levels(ids)
     ok = verify(app_id)
+    review_submissions(app_id)
     if not ok:
         print("VERIFY FAILED: missing product, USA price, group level or review screenshot")
         sys.exit(1)
