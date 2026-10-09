@@ -8,7 +8,7 @@ Sources (fastlane deliver layout):
   docs/asc/metadata/en-US/{name,subtitle,description,keywords,promotional_text,
                            support_url,marketing_url,privacy_url}.txt
   docs/asc/metadata/{copyright,primary_category,secondary_category}.txt
-  docs/asc/metadata/review_information/{first_name,last_name,phone_number,email_address,demo_required}.txt
+  docs/asc/metadata/review_information/{first_name,last_name,phone_number,email_address,demo_required,notes}.txt
   docs/asc/screenshots/en-US/iphone-69-*.png  -> APP_IPHONE_67          (1320x2868)
   docs/asc/screenshots/en-US/ipad-13-*.png    -> APP_IPAD_PRO_3GEN_129  (2064x2752)
 
@@ -89,7 +89,7 @@ def main():
                                                   "support_url", "marketing_url", "privacy_url")}
     copyright_ = txt(META / "copyright.txt")
     cat1, cat2 = txt(META / "primary_category.txt"), txt(META / "secondary_category.txt")
-    R = {k: txt(META / "review_information" / f"{k}.txt") for k in ("first_name", "last_name", "phone_number", "email_address", "demo_required")}
+    R = {k: txt(META / "review_information" / f"{k}.txt") for k in ("first_name", "last_name", "phone_number", "email_address", "demo_required", "notes")}
     blob = " ".join(L.values()).lower()
     for banned in ("sweden", "c418", "minecraft", "grok"):
         assert banned not in blob, f"metadata mentions {banned!r}"
@@ -202,12 +202,14 @@ def write(app_id, ver, info, build, L, copyright_, cat1, cat2, R, shots, warning
     rd = api("GET", f"/v1/appStoreVersions/{vid}/appStoreReviewDetail", ok404=True)
     rattrs = {"contactFirstName": R["first_name"], "contactLastName": R["last_name"], "contactPhone": R["phone_number"],
               "contactEmail": R["email_address"], "demoAccountRequired": R["demo_required"].lower() == "true"}
+    if R["notes"]:
+        rattrs["notes"] = R["notes"]
     if rd and rd.get("data"):
         api("PATCH", f"/v1/appStoreReviewDetails/{rd['data']['id']}", {"data": {"type": "appStoreReviewDetails", "id": rd["data"]["id"], "attributes": rattrs}})
     else:
         api("POST", "/v1/appStoreReviewDetails", {"data": {"type": "appStoreReviewDetails", "attributes": rattrs,
             "relationships": {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": vid}}}}})
-    print("review contact:", rattrs)
+    print("review contact:", {k: (v if k != "notes" else f"<{len(v)} chars>") for k, v in rattrs.items()})
 
     # Export compliance + attach build
     ba = build["attributes"]
@@ -318,6 +320,8 @@ def verify(app_id, app, vid, info_id, L, copyright_, cat1, R, shots, warnings) -
     check("App Review contact", rd.get("contactFirstName") == R["first_name"] and rd.get("contactLastName") == R["last_name"]
           and rd.get("contactPhone") == R["phone_number"] and rd.get("contactEmail") == R["email_address"],
           f"{rd.get('contactFirstName')} {rd.get('contactLastName')} {rd.get('contactPhone')} {rd.get('contactEmail')} demo={rd.get('demoAccountRequired')}")
+    if R["notes"]:
+        check("App Review notes", (rd.get("notes") or "").strip() == R["notes"], f"{len(rd.get('notes') or '')} chars")
     if vloc:
         sets = api("GET", f"/v1/appStoreVersionLocalizations/{vloc['id']}/appScreenshotSets?limit=50")["data"]
         seen = {}

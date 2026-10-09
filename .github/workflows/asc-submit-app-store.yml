@@ -17,6 +17,10 @@ on:
         description: First sync the listing from the repo (docs/asc/metadata/en-US/*.txt, docs/asc/screenshots/en-US/*.png), attach the build, clear export compliance
         type: boolean
         default: true
+      submit_subscriptions:
+        description: First submit the Music Reader Pro subscriptions (POST subscriptionSubmissions) so they ride with this version
+        type: boolean
+        default: true
 
 jobs:
   submit:
@@ -24,7 +28,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-        if: ${{ inputs.sync_listing }}
+        if: ${{ inputs.sync_listing || inputs.submit_subscriptions }}
 
       # Source of truth is the repo: same script as asc-music-reader-upload.yml (never submits).
       - name: Sync listing from repo (metadata, URLs, screenshots, build, export compliance)
@@ -44,6 +48,19 @@ jobs:
           set -euo pipefail
           pip install -q PyJWT cryptography requests
           python3 scripts/asc/upload_music_reader_listing.py
+
+      - name: Submit Music Reader Pro subscriptions with this version
+        if: ${{ inputs.submit_subscriptions }}
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+          BUNDLE_ID: com.ragnus.vp
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set -euo pipefail
+          pip install -q PyJWT cryptography requests
+          python3 scripts/asc/submit_subscriptions.py
 
       - name: Attach build and submit for review
         env:

@@ -7,7 +7,9 @@ Finds existing objects and creates only what is missing:
   com.ragnus.vp.pro.monthly  ONE_MONTH  USD 4.99
   com.ragnus.vp.pro.yearly   ONE_YEAR   USD 29.99
   en-US subscription localizations, availability in all territories (+ new territories),
-  prices in every territory equalized from the USA price point, Family Sharing off.
+  prices in every territory equalized from the USA price point, Family Sharing off,
+  group levels (yearly = 1, monthly = 2), and the App Store review screenshot
+  docs/asc/review/subscription-paywall.png on both (replaced unless the md5 already matches).
 
 Never submits anything for review. VERIFY_ONLY=true does read-only verification.
 Product IDs must match Sources/App/Services/StoreKitManager.swift (IAPProductID).
@@ -15,19 +17,22 @@ Env: APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_AP
      BUNDLE_ID (com.ragnus.vp), VERIFY_ONLY (true/false)
 """
 from __future__ import annotations
-import os, sys, time
+import hashlib, os, sys, time
+from pathlib import Path
 import jwt, requests
 
 BASE = "https://api.appstoreconnect.apple.com"
 BUNDLE_ID = os.environ.get("BUNDLE_ID", "com.ragnus.vp").strip()
 VERIFY_ONLY = os.environ.get("VERIFY_ONLY", "false").strip().lower() == "true"
 LOCALE = "en-US"
+ROOT = Path(__file__).resolve().parents[2]
+REVIEW_SHOT = Path(os.environ.get("REVIEW_SCREENSHOT", ROOT / "docs/asc/review/subscription-paywall.png"))
 GROUP_REF = "Music Reader Pro"
 GROUP_DISPLAY = "Music Reader Pro"
 PRODUCTS = [
-    {"productId": "com.ragnus.vp.pro.monthly", "name": "Music Reader Pro Monthly",
+    {"productId": "com.ragnus.vp.pro.monthly", "name": "Music Reader Pro Monthly", "level": 2,
      "period": "ONE_MONTH", "usd": "4.99", "desc": "Unlock all Pro features, billed monthly"},
-    {"productId": "com.ragnus.vp.pro.yearly", "name": "Music Reader Pro Yearly",
+    {"productId": "com.ragnus.vp.pro.yearly", "name": "Music Reader Pro Yearly", "level": 1,
      "period": "ONE_YEAR", "usd": "29.99", "desc": "Unlock all Pro features, billed yearly"},
 ]
 _tok = {"v": None, "t": 0}
@@ -193,6 +198,57 @@ def ensure_prices(sub_id, p):
         print(f"PRICES {p['productId']}: created {len(todo)}")
 
 
+def ensure_levels(subs):
+    """subs: {productId: subscription id}. Yearly level 1 (highest), monthly level 2."""
+    for p in sorted(PRODUCTS, key=lambda p: p["level"]):
+        sid = subs[p["productId"]]
+        cur = api("GET", f"/v1/subscriptions/{sid}")["data"]["attributes"].get("groupLevel")
+        if cur == p["level"]:
+            print("FOUND level", p["productId"], cur)
+            continue
+        print(f"SET level {p['productId']}: {cur} -> {p['level']}")
+        api("PATCH", f"/v1/subscriptions/{sid}", {"data": {"type": "subscriptions", "id": sid,
+                                                            "attributes": {"groupLevel": p["level"]}}})
+
+
+def ensure_review_screenshot(sub_id, product_id):
+    if not REVIEW_SHOT.exists():
+        print(f"WARNING review screenshot {REVIEW_SHOT} not in repo; skipping upload")
+        return
+    data = REVIEW_SHOT.read_bytes()
+    md5 = hashlib.md5(data).hexdigest()
+    j = api("GET", f"/v1/subscriptions/{sub_id}/appStoreReviewScreenshot", ok404=True)
+    cur = j.get("data") if j else None
+    if cur:
+        a = cur["attributes"]
+        state = (a.get("assetDeliveryState") or {}).get("state")
+        if a.get("sourceFileChecksum") == md5 and state in ("COMPLETE", "UPLOAD_COMPLETE"):
+            print("FOUND review screenshot", product_id, cur["id"], state, "(same md5)")
+            return
+        print("DELETE review screenshot", product_id, cur["id"], state)
+        api("DELETE", f"/v1/subscriptionAppStoreReviewScreenshots/{cur['id']}")
+    res = create("subscriptionAppStoreReviewScreenshots", {"fileName": REVIEW_SHOT.name, "fileSize": len(data)},
+                 {"subscription": rel("subscriptions", sub_id)})
+    for op in res["attributes"]["uploadOperations"]:
+        off, ln = op["offset"], op["length"]
+        r = requests.request(op["method"], op["url"], data=data[off:off + ln],
+                             headers={h["name"]: h["value"] for h in op.get("requestHeaders", [])}, timeout=120)
+        if r.status_code >= 300:
+            raise ApiError(f"upload part {off}+{ln} -> {r.status_code}: {r.text[:500]}")
+    api("PATCH", f"/v1/subscriptionAppStoreReviewScreenshots/{res['id']}", {"data": {
+        "type": "subscriptionAppStoreReviewScreenshots", "id": res["id"],
+        "attributes": {"uploaded": True, "sourceFileChecksum": md5}}})
+    for _ in range(40):
+        a = api("GET", f"/v1/subscriptionAppStoreReviewScreenshots/{res['id']}")["data"]["attributes"]
+        state = (a.get("assetDeliveryState") or {}).get("state")
+        if state in ("COMPLETE", "FAILED"):
+            break
+        time.sleep(5)
+    print("UPLOADED review screenshot", product_id, res["id"], state, a.get("assetDeliveryState"))
+    if state != "COMPLETE":
+        raise ApiError(f"review screenshot {product_id} state {state}: {a.get('assetDeliveryState')}")
+
+
 def verify(app_id):
     print("\n===== VERIFY =====")
     ok = True
@@ -212,13 +268,26 @@ def verify(app_id):
                 t, _ = get_all(f"/v1/subscriptionAvailabilities/{av['data']['id']}/availableTerritories?limit=200")
                 nterr = len(t)
             shot = api("GET", f"/v1/subscriptions/{s['id']}/appStoreReviewScreenshot", ok404=True)
+            sd = (shot or {}).get("data")
+            shot_desc = "MISSING"
+            if sd:
+                sa = sd["attributes"]
+                shot_desc = (f"{sd['id']} {sa.get('fileName')} {sa.get('imageAsset', {}) and str(sa['imageAsset'].get('width'))+'x'+str(sa['imageAsset'].get('height'))} "
+                             f"md5={sa.get('sourceFileChecksum')} delivery={(sa.get('assetDeliveryState') or {}).get('state')}")
             print(f"  SUB {s['id']} {a['productId']} name={a.get('name')!r} period={a.get('subscriptionPeriod')} "
                   f"state={a.get('state')} familySharable={a.get('familySharable')} level={a.get('groupLevel')}")
             print(f"      localizations={[(l['attributes']['locale'], l['attributes'].get('name'), l['attributes'].get('description'), l['attributes'].get('state')) for l in sl]}")
             print(f"      USA price={prices.get('USA')} priced_territories={len(prices)} available_territories={nterr} "
-                  f"review_screenshot={'yes' if shot and shot.get('data') else 'MISSING'} review_note={a.get('reviewNote')!r}")
+                  f"review_note={a.get('reviewNote')!r}")
+            print(f"      review_screenshot={shot_desc}")
             want = next((p for p in PRODUCTS if p["productId"] == a["productId"]), None)
             if want and (not prices.get("USA") or float(prices["USA"][0]) != float(want["usd"])):
+                ok = False
+            if want and a.get("groupLevel") != want["level"]:
+                print(f"      LEVEL MISMATCH want {want['level']}")
+                ok = False
+            if want and REVIEW_SHOT.exists() and "delivery=COMPLETE" not in shot_desc:
+                print("      REVIEW SCREENSHOT NOT COMPLETE")
                 ok = False
     found = {s["attributes"]["productId"] for g in groups
              for s in get_all(f"/v1/subscriptionGroups/{g['id']}/subscriptions?limit=200")[0]}
@@ -240,14 +309,18 @@ def main():
         territory_ids = [t["id"] for t in terr]
         print("TERRITORIES", len(territory_ids))
         g, groups = ensure_group(app_id)
+        ids = {}
         for p in PRODUCTS:
             s = ensure_sub(g["id"], groups, p)
+            ids[p["productId"]] = s["id"]
             ensure_sub_loc(s["id"], p)
             ensure_availability(s["id"], territory_ids)
             ensure_prices(s["id"], p)
+            ensure_review_screenshot(s["id"], p["productId"])
+        ensure_levels(ids)
     ok = verify(app_id)
     if not ok:
-        print("VERIFY FAILED: USA price mismatch or missing")
+        print("VERIFY FAILED: missing product, USA price, group level or review screenshot")
         sys.exit(1)
     print("VERIFY OK")
 
