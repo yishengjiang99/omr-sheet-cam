@@ -237,7 +237,7 @@ def upload_one(set_id, f: Path) -> str:
         requests.request(op["method"], op["url"], data=chunk, headers=h, timeout=180).raise_for_status()
     api("PATCH", f"/v1/appScreenshots/{shot['id']}", {"data": {"type": "appScreenshots", "id": shot["id"],
         "attributes": {"uploaded": True, "sourceFileChecksum": hashlib.md5(data).hexdigest()}}})
-    for _ in range(60):
+    for _ in range(180):  # Apple's asset processing sometimes sits in UPLOAD_COMPLETE for >5 min
         st = (api("GET", f"/v1/appScreenshots/{shot['id']}")["data"]["attributes"].get("assetDeliveryState") or {})
         if st.get("state") in ("COMPLETE", "FAILED"):
             break
@@ -263,7 +263,13 @@ def replace_screenshots(vloc_id, shots, warnings):
         if sset is None:
             sset = api("POST", "/v1/appScreenshotSets", {"data": {"type": "appScreenshotSets", "attributes": {"screenshotDisplayType": dtype},
                        "relationships": {"appStoreVersionLocalization": {"data": {"type": "appStoreVersionLocalizations", "id": vloc_id}}}}})["data"]
-        old = [x["id"] for x in api("GET", f"/v1/appScreenshotSets/{sset['id']}/appScreenshots")["data"]]
+        cur = api("GET", f"/v1/appScreenshotSets/{sset['id']}/appScreenshots")["data"]
+        want_md5 = [hashlib.md5(f.read_bytes()).hexdigest() for f in files]
+        have_md5 = [x["attributes"].get("sourceFileChecksum") for x in cur]
+        if have_md5 == want_md5 and all(((x["attributes"].get("assetDeliveryState") or {}).get("state")) == "COMPLETE" for x in cur):
+            print(f"{dtype}: set {sset['id']} already matches repo ({len(cur)} screenshots, md5 + order); skip upload")
+            continue
+        old = [x["id"] for x in cur]
         print(f"{dtype}: set {sset['id']}, replacing {len(old)} old screenshot(s)")
         for oid in old:  # Apple caps a set at 10; delete first, then upload in order
             api("DELETE", f"/v1/appScreenshots/{oid}")
