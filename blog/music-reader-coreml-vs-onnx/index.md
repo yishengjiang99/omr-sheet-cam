@@ -3,11 +3,19 @@ title: "On-device sheet music recognition: Core ML or ONNX Runtime?"
 description: Music Reader reads a photo of sheet music on the iPhone with ONNX Runtime and its Core ML provider. What we measured, what it costs, and what we chose.
 date: 2026-10-12
 publish: true
+hero: 01-snap-and-play.jpg
+heroAlt: Music Reader playing back a photographed page of sheet music with the current notes highlighted
 product: music-reader
 tags: [Music Reader, optical music recognition, Core ML, ONNX Runtime]
 properNouns: [Core, Runtime, Music, Reader]
 ---
 AI Camera - Music Reader turns a photo of printed sheet music into sound. You photograph a page, the app recognizes the notes, writes a MIDI file and plays it back with each note highlighted on the page. The recognition runs entirely on the iPhone. This post is about the main engineering choice behind that: how to run the neural networks.
+
+```gallery
+01-snap-and-play.jpg | Music Reader playing a photographed page with the current notes highlighted | Snap a page, hear it play
+03-reads-on-device.jpg | The reading progress screen saying the page is read on the iPhone with no internet needed | Recognition runs on the phone
+02-slow-it-down.jpg | The Music Reader player with a tempo control for practice | Slow it down to practice
+```
 
 ## The pipeline
 
