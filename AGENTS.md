@@ -28,3 +28,7 @@ These apply to every agent working App Store, TestFlight, or listing work in thi
 6. **Do not edit `docs/agents/*.md` role files** unless the user explicitly requires it.
 7. **Do not cancel/pull an in-review build** unless the user explicitly asks.
 8. Identity locked: name `AI Camera - Music Reader`, bundle `com.ragnus.vp`, SKU `Ai-cam-omr`, en-US.
+
+## Blog posts
+
+Posts for grepawk.com/blog go in `blog/<slug>/index.md`; see [blog/AGENTS.md](blog/AGENTS.md).
