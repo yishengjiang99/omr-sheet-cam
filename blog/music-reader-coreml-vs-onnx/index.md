@@ -1,4 +1,5 @@
 ---
+keyword: Core ML
 title: "On-device sheet music recognition: Core ML or ONNX Runtime?"
 description: Music Reader reads a photo of sheet music on the iPhone with ONNX Runtime and its Core ML provider. What we measured, what it costs, and what we chose.
 date: 2026-10-12

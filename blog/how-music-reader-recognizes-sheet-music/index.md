@@ -1,4 +1,6 @@
 ---
+keyword: sheet music
+image_alt: Music Reader share card for the post on recognizing sheet music with on-device AI
 title: How Music Reader recognizes sheet music with on-device AI
 description: How Music Reader turns a photo of printed sheet music into MIDI on the iPhone: segmentation, staff geometry, a transformer decoder, and no server.
 date: 2026-10-12
