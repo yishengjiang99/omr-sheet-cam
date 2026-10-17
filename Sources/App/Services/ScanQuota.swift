@@ -31,11 +31,25 @@ final class ScanQuota: ObservableObject {
 
     @Published var showPaywall = false
 
-    private var today: String {
+    /// Stored day key: `yyyy-MM-dd` in the Gregorian calendar with the POSIX locale, so changing
+    /// Region / Calendar (Buddhist, Japanese, Hijri...) can't change the string and reset the counter
+    /// early (P1.8). Cached: building a `DateFormatter` per read is expensive. Main-actor only.
+    private static let dayFormatter: DateFormatter = {
         let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.calendar = Calendar(identifier: .gregorian)
         f.dateFormat = "yyyy-MM-dd"
-        return f.string(from: Date())
+        f.timeZone = .autoupdatingCurrent
+        return f
+    }()
+
+    /// Day key for `date` in `timeZone` (default: the device's current zone, i.e. local midnight rollover).
+    static func dayKey(_ date: Date, timeZone: TimeZone = .autoupdatingCurrent) -> String {
+        dayFormatter.timeZone = timeZone
+        return dayFormatter.string(from: date)
     }
+
+    private var today: String { Self.dayKey(Date()) }
 
     /// Read-only gate: true if the user may start a scan now. Does NOT consume quota. If false
     /// (free limit reached), tracks the paywall trigger and sets `showPaywall`.
