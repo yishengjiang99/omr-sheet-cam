@@ -111,4 +111,39 @@ final class UpgradePromptPolicyTests: XCTestCase {
         XCTAssertTrue(PaywallReason.postScan.isUnsolicited)
         XCTAssertFalse(PaywallReason.quota.isUnsolicited)
     }
+
+    // MARK: ScanQuota.requestPaywall (single presenter for every reason)
+
+    @MainActor
+    private final class FakePro: ProEntitlementSource {
+        var isPro: Bool
+        init(pro: Bool) { isPro = pro }
+        func refreshEntitlements() async {}
+    }
+
+    @MainActor
+    func testRequestPaywallOpensWithTheGivenReasonForFreeUsers() {
+        let q = ScanQuota(storeKit: FakePro(pro: false), promptPolicy: makePolicy().0)
+        XCTAssertTrue(q.requestPaywall(.settings))
+        XCTAssertTrue(q.showPaywall)
+        XCTAssertEqual(q.paywallReason, .settings)
+    }
+
+    @MainActor
+    func testRequestPaywallNeverOpensForPro() {
+        let q = ScanQuota(storeKit: FakePro(pro: true), promptPolicy: makePolicy().0)
+        XCTAssertFalse(q.requestPaywall(.nudge))
+        XCTAssertFalse(q.showPaywall)
+    }
+
+    @MainActor
+    func testRequestPaywallAppliesPolicyToUnsolicitedReasons() {
+        let policy = makePolicy().0
+        let q = ScanQuota(storeKit: FakePro(pro: false), promptPolicy: policy)
+        policy.recordDismissed(.postScan) // user already dismissed a prompt this session
+        XCTAssertFalse(q.requestPaywall(.appReturn))
+        XCTAssertFalse(q.showPaywall)
+        XCTAssertTrue(q.requestPaywall(.quota), "the quota wall is exempt")
+        XCTAssertEqual(q.paywallReason, .quota)
+    }
 }
