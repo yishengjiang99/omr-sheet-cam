@@ -137,13 +137,22 @@ final class UpgradePromptPolicyTests: XCTestCase {
     }
 
     @MainActor
-    func testRequestPaywallAppliesPolicyToUnsolicitedReasons() {
+    func testTappingSeeProOnAPromptSurfaceIsNotCapped() {
         let policy = makePolicy().0
         let q = ScanQuota(storeKit: FakePro(pro: false), promptPolicy: policy)
-        policy.recordDismissed(.postScan) // user already dismissed a prompt this session
-        XCTAssertFalse(q.requestPaywall(.appReturn))
-        XCTAssertFalse(q.showPaywall)
-        XCTAssertTrue(q.requestPaywall(.quota), "the quota wall is exempt")
-        XCTAssertEqual(q.paywallReason, .quota)
+        XCTAssertTrue(q.shouldShowPrompt(.postScan))
+        q.promptShown(.postScan)
+        q.promptDismissed(.postScan)
+        XCTAssertFalse(q.shouldShowPrompt(.appReturn), "cap and dismissal suppress further unsolicited surfaces")
+        XCTAssertTrue(q.requestPaywall(.postScan), "but a user tap on See Pro always opens the paywall")
+        XCTAssertEqual(q.paywallReason, .postScan)
+    }
+
+    @MainActor
+    func testShouldShowPromptSuppressedForProAndInFlightPurchase() {
+        let free = ScanQuota(storeKit: FakePro(pro: false), promptPolicy: makePolicy().0)
+        XCTAssertFalse(free.shouldShowPrompt(.postScan, purchaseInProgress: true))
+        let pro = ScanQuota(storeKit: FakePro(pro: true), promptPolicy: makePolicy().0)
+        XCTAssertFalse(pro.shouldShowPrompt(.postScan))
     }
 }

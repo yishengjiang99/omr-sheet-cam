@@ -36,20 +36,27 @@ final class ScanQuota: ObservableObject {
     /// Why the paywall is (or was last) shown; passed to `PaywallView` for `reason` telemetry.
     @Published private(set) var paywallReason: PaywallReason = .quota
 
-    /// The single way to open the paywall. Pro never sees it; unsolicited reasons obey the shared
-    /// policy; user-initiated reasons (quota wall, Settings, taps) are exempt from the cap.
+    /// The single way to open the paywall. Opening is always user-initiated (quota wall, Settings row,
+    /// nudge tap, or "See Pro" on a card/banner), so it is never capped; Pro never sees it.
+    /// The frequency cap applies earlier, to *showing* an unsolicited surface: see `shouldShowPrompt`.
     /// Returns whether the paywall was presented.
     @discardableResult
     func requestPaywall(_ reason: PaywallReason) -> Bool {
-        guard promptPolicy.decision(for: reason, isPro: storeKit.isPro, purchaseInProgress: false).allowed else {
-            return false
-        }
+        guard !storeKit.isPro else { return false }
         track("paywall_trigger", ["reason": reason.analyticsValue])
-        promptPolicy.recordShown(reason)
         paywallReason = reason
         showPaywall = true
         return true
     }
+
+    /// Ask before showing an unsolicited upsell surface (post-scan card, return banner).
+    func shouldShowPrompt(_ reason: PaywallReason, purchaseInProgress: Bool = false) -> Bool {
+        promptPolicy.decision(for: reason, isPro: storeKit.isPro, purchaseInProgress: purchaseInProgress).allowed
+    }
+
+    /// Call when an unsolicited surface appears / is dismissed, so the shared cap sees it.
+    func promptShown(_ reason: PaywallReason) { promptPolicy.recordShown(reason) }
+    func promptDismissed(_ reason: PaywallReason) { promptPolicy.recordDismissed(reason) }
 
     /// Stored day key: `yyyy-MM-dd` in the Gregorian calendar with the POSIX locale, so changing
     /// Region / Calendar (Buddhist, Japanese, Hijri...) can't change the string and reset the counter
