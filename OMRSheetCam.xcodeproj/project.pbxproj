@@ -78,6 +78,8 @@
 		8A0000000000000000000001 /* SegNetSelfTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B0000000000000000000001 /* SegNetSelfTest.swift */; };
 		8A0000000000000000000002 /* CoreMLCacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B0000000000000000000002 /* CoreMLCacheStore.swift */; };
 		8A0000000000000000000003 /* Build6PrepTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B0000000000000000000003 /* Build6PrepTests.swift */; };
+		FA0000000000000000000002 /* UserFacingErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000001 /* UserFacingErrorTests.swift */; };
+		FB0000000000000000000002 /* UserFacingError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000000000000000000001 /* UserFacingError.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -163,6 +165,8 @@
 		8B0000000000000000000001 /* SegNetSelfTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegNetSelfTest.swift; sourceTree = "<group>"; };
 		8B0000000000000000000002 /* CoreMLCacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMLCacheStore.swift; sourceTree = "<group>"; };
 		8B0000000000000000000003 /* Build6PrepTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Build6PrepTests.swift; sourceTree = "<group>"; };
+		FA0000000000000000000001 /* UserFacingErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserFacingErrorTests.swift; sourceTree = "<group>"; };
+		FB0000000000000000000001 /* UserFacingError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserFacingError.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -281,6 +285,7 @@
 		E30000000000000000000001 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				FB0000000000000000000001 /* UserFacingError.swift */,
 				E10000000000000000000002 /* Analytics.swift */,
 				E10000000000000000000003 /* StoreKitManager.swift */,
 				E10000000000000000000004 /* ScanQuota.swift */,
@@ -336,6 +341,7 @@
 		G10000000000000000000006 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				FA0000000000000000000001 /* UserFacingErrorTests.swift */,
 				B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */,
 				B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */,
 				B1000000000000000000000A /* ModelWarmupTests.swift */,
@@ -559,6 +565,7 @@
 				A1000000000000000000000B /* Gate1Runner.swift in Sources */,
 				CA0000000000000000000001 /* CaptureStore.swift in Sources */,
 				PLI200000000000000000001 /* PhotoLibraryImport.swift in Sources */,
+				FB0000000000000000000002 /* UserFacingError.swift in Sources */,
 				E20000000000000000000001 /* Analytics.swift in Sources */,
 				E20000000000000000000002 /* StoreKitManager.swift in Sources */,
 				E20000000000000000000003 /* ScanQuota.swift in Sources */,
@@ -597,6 +604,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FA0000000000000000000002 /* UserFacingErrorTests.swift in Sources */,
 				A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */,
 				A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */,
 				A1000000000000000000000A /* ModelWarmupTests.swift in Sources */,

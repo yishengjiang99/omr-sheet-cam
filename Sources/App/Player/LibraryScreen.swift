@@ -232,7 +232,7 @@ struct LibraryScreen: View {
             try store.rename(e, to: renameText)
             deleteError = nil
         } catch {
-            deleteError = "Rename failed: \(error)"
+            deleteError = UserFacingError.message(for: error, action: .rename)
             DiagnosticsLog.shared.record(error: error, category: .playback, context: "library rename")
         }
     }
@@ -297,7 +297,7 @@ struct LibraryScreen: View {
             for e in entries { try store.delete(e) }
             deleteError = nil
         } catch {
-            deleteError = "Delete failed: \(error)"
+            deleteError = UserFacingError.message(for: error, action: .delete)
             DiagnosticsLog.shared.record(error: error, category: .playback, context: "library delete")
         }
     }
