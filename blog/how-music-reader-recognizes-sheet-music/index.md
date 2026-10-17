@@ -34,7 +34,7 @@ A symbol is not one prediction but several at once, made by separate output head
 - **Pitch**: the note name, such as `C4`, for symbols that have one.
 - **Smaller attributes**: articulation, slur, lift and position markers, which cover markings and notes shared between staffs.
 
-So a C major scale comes out of the decoder like this:
+Written out in full, the expected score for a C major scale looks like this:
 
 ```
 clef_G2   keySignature_0   timeSignature/4
@@ -63,7 +63,7 @@ The three model files total about 100 MB and ship with the app. Once installed, 
 
 ## How we check the port tells the truth
 
-A port can look right and still read music wrong, so the engine is tested against the reference Python implementation of homr on fixed pages called oracles. For each oracle staff, the Swift decoder must produce the same symbol stream, token for token. A C major scale staff is the smallest gate: 13 symbols, starting with the clef, key signature and time signature above. If a change to the fastest path (the bound decoder, a new provider setting, a cache change) alters even one token, the gate fails. That is what makes the speed work above safe to ship: the fast path and the slow path have to agree exactly.
+A port can look right and still read music wrong, so the engine is tested against the reference Python implementation of homr on fixed pages called oracles. For each oracle staff, the Swift decoder must produce the same symbol stream, token for token. A C major scale staff is the smallest gate: the oracle stream the decoder must match is 12 symbols. The reference decoder emits no key signature token for C major, so the gate stream runs clef, time signature, eight notes and two barlines, one symbol shorter than the written-out score above. If a change to the fastest path (the bound decoder, a new provider setting, a cache change) alters even one token, the gate fails. That is what makes the speed work above safe to ship: the fast path and the slow path have to agree exactly.
 
 ## Get it
 
