@@ -37,4 +37,12 @@ final class ProSettingsTests: XCTestCase {
         XCTAssertNil(ProSettings.restoreToast(.cancelled), "dismissing the Apple ID prompt is silent")
         XCTAssertEqual(ProSettings.restoreToast(.failed(.network)), PurchaseResolver.userMessage(for: .network))
     }
+
+    /// P1.10: after purchase the user gets visible confirmation (the paywall used to close silently).
+    func testProConfirmationOnlyWhenProTurnsOn() {
+        XCTAssertEqual(ProConfirmation.message(wasPro: false, isPro: true), "You're Pro. Unlimited scans are unlocked.")
+        XCTAssertNil(ProConfirmation.message(wasPro: true, isPro: true))
+        XCTAssertNil(ProConfirmation.message(wasPro: false, isPro: false))
+        XCTAssertNil(ProConfirmation.message(wasPro: true, isPro: false), "no toast when Pro lapses")
+    }
 }
