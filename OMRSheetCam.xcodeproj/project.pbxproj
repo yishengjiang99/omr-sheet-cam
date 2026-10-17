@@ -381,6 +381,7 @@
 			isa = PBXGroup;
 			children = (
 				E10000000000000000000005 /* PaywallView.swift */,
+				DE0000000000000000000008 /* UpgradeCard.swift */,
 				DE0000000000000000000005 /* ScansLeftLabel.swift */,
 			);
 			path = Paywall;
