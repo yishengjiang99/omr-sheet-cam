@@ -9,7 +9,7 @@ enum IAPProductID {
 }
 
 @MainActor
-final class StoreKitManager: ObservableObject {
+final class StoreKitManager: ObservableObject, ProEntitlementSource {
     /// App-wide instance (one `Transaction.updates` listener, one entitlement refresh).
     static let shared = StoreKitManager()
 
@@ -19,9 +19,16 @@ final class StoreKitManager: ObservableObject {
     @Published var purchaseError: String?
     @Published private(set) var isPurchasing = false
 
+    /// Pro state. Cached in UserDefaults as an offline fallback only; re-derived from
+    /// `Transaction.currentEntitlements` on launch, foreground, every `Transaction.updates` event
+    /// and before each scan (`ScanQuota.admitScan`).
+    @Published private(set) var isPro = UserDefaults.standard.bool(forKey: StoreKitManager.proKey)
+
     private var updatesTask: Task<Void, Never>?
-    private let proKey = "omr.isPro"
-    private let proTxKey = "omr.proTransactionId"
+    private var refreshSeq = 0
+    private var appliedSeq = 0
+    private static let proKey = "omr.isPro"
+    private static let proTxKey = "omr.proTransactionId"
 
     init() {
         // Hold self weakly between updates (unwrapping it once for the whole loop kept it alive forever).
@@ -36,10 +43,6 @@ final class StoreKitManager: ObservableObject {
 
     deinit {
         updatesTask?.cancel()
-    }
-
-    var isPro: Bool {
-        UserDefaults.standard.bool(forKey: proKey)
     }
 
     var yearlyProduct: Product? {
@@ -77,8 +80,7 @@ final class StoreKitManager: ObservableObject {
             case .success(let verification):
                 let transaction = try checkVerified(verification)
                 await transaction.finish()
-                grantPro(transactionId: String(transaction.id))
-                purchasedProductIDs.insert(product.id)
+                await refresh(extra: [EntitlementSnapshot(transaction)])
                 Analytics.shared.track("purchase_success", props: ["product": product.id])
                 return true
             case .userCancelled:
@@ -110,49 +112,45 @@ final class StoreKitManager: ObservableObject {
     }
 
     private func handle(_ update: VerificationResult<Transaction>) async {
-        do {
-            let transaction = try checkVerified(update)
-            guard IAPProductID.all.contains(transaction.productID) else { return }
-            if transaction.revocationDate == nil {
-                grantPro(transactionId: String(transaction.id))
-                purchasedProductIDs.insert(transaction.productID)
-            } else {
-                revokePro()
-                purchasedProductIDs.remove(transaction.productID)
-            }
-            await transaction.finish()
-        } catch {
-            // Ignore unverified updates
-        }
+        guard let transaction = try? checkVerified(update),
+              IAPProductID.all.contains(transaction.productID) else { return }
+        await transaction.finish()
+        // Never patch Pro per transaction: recompute from the full current entitlement list.
+        await refresh(update: EntitlementSnapshot(transaction))
     }
 
     func refreshEntitlements() async {
-        var ids = Set<String>()
-        var hasPro = false
+        await refresh()
+    }
+
+    /// Recompute Pro from `Transaction.currentEntitlements` (+ `extra`, e.g. the just-bought transaction).
+    private func refresh(update: EntitlementSnapshot? = nil, extra: [EntitlementSnapshot] = []) async {
+        refreshSeq += 1
+        let seq = refreshSeq
+        var snapshots = extra
         for await result in Transaction.currentEntitlements {
-            do {
-                let transaction = try checkVerified(result)
-                guard IAPProductID.all.contains(transaction.productID) else { continue }
-                if transaction.revocationDate == nil {
-                    ids.insert(transaction.productID)
-                    hasPro = true
-                }
-            } catch {
-                continue
-            }
+            if case .verified(let transaction) = result { snapshots.append(EntitlementSnapshot(transaction)) }
         }
-        purchasedProductIDs = ids
-        UserDefaults.standard.set(hasPro, forKey: proKey)
-    }
-
-    private func grantPro(transactionId: String) {
-        UserDefaults.standard.set(true, forKey: proKey)
-        UserDefaults.standard.set(transactionId, forKey: proTxKey)
-    }
-
-    private func revokePro() {
-        UserDefaults.standard.set(false, forKey: proKey)
-        UserDefaults.standard.removeObject(forKey: proTxKey)
+        // An older refresh that finishes after a newer one must not overwrite it.
+        guard seq > appliedSeq else { return }
+        appliedSeq = seq
+        let active = EntitlementLogic.activeEntitlements(snapshots, validIDs: IAPProductID.all)
+        purchasedProductIDs = Set(active.map(\.productID))
+        let pro: Bool
+        if let update {
+            pro = EntitlementLogic.proAfterUpdate(
+                current: isPro, update: update, entitlements: snapshots, validIDs: IAPProductID.all)
+        } else {
+            pro = EntitlementLogic.isPro(entitlements: snapshots, validIDs: IAPProductID.all)
+        }
+        isPro = pro
+        let defaults = UserDefaults.standard
+        defaults.set(pro, forKey: Self.proKey)
+        if pro, let latest = active.map(\.transactionID).max() {
+            defaults.set(String(latest), forKey: Self.proTxKey)
+        } else {
+            defaults.removeObject(forKey: Self.proTxKey)
+        }
     }
 
     private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
@@ -162,5 +160,13 @@ final class StoreKitManager: ObservableObject {
         case .verified(let safe):
             return safe
         }
+    }
+}
+
+extension EntitlementSnapshot {
+    init(_ t: Transaction) {
+        self.init(
+            productID: t.productID, transactionID: t.id, revocationDate: t.revocationDate,
+            isUpgraded: t.isUpgraded)
     }
 }

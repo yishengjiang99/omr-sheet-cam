@@ -13,6 +13,7 @@ struct RootFlowView: View {
     @State private var showSettings = Self.initialSettings()
     @EnvironmentObject private var playback: PlaybackController
     @ObservedObject private var storeKit = StoreKitManager.shared
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var quota = ScanQuota.shared
 
     var body: some View {
@@ -51,11 +52,17 @@ struct RootFlowView: View {
             PaywallView().environmentObject(storeKit)
         }
         .environmentObject(storeKit)
+        .onChange(of: scenePhase) { _, phase in
+            // Expiry, renewal or refund can happen while the app stays alive in the background.
+            if phase == .active { Task { await storeKit.refreshEntitlements() } }
+        }
     }
 
     /// Camera capture, Photos import, and Try sample: same Result/recognition path (quota gated).
     private func handlePhoto(_ photo: CapturedPhoto) {
-        if quota.checkAndConsume() {
+        Task { @MainActor in
+            // Re-check Pro against the store first (P7.4), then consume quota.
+            guard await quota.admitScan() else { return }
             // Leave camera if we came from it, then show result.
             path.removeAll { $0 == .camera }
             path.append(.result(photo))
