@@ -47,15 +47,43 @@ final class Analytics {
         ])
     }
 
-    func track(_ event: String, props: [String: String] = [:]) {
-        var cleaned: [String: String] = [:]
-        for (k, v) in props {
-            if k.range(of: "email|phone|image|photo|base64|gps|lat|lng|token|password", options: .regularExpression) != nil {
+    /// Whole words that mark a prop key as PII / bulky payload. Matched against the key's *words*
+    /// (split on `_ - .` and camelCase), never as substrings: `platform`, `latency_ms`, `template`
+    /// survive (P10.3: "lat" used to match inside "platform"); `user_email`, `gpsLat`, `lat` don't.
+    nonisolated static let blockedKeyWords: Set<String> = [
+        "email", "phone", "image", "photo", "base64", "gps", "lat", "lng", "latitude", "longitude", "token", "password",
+    ]
+
+    nonisolated static func keyWords(_ key: String) -> [String] {
+        var words: [String] = [], cur = ""
+        var prevLower = false
+        for ch in key {
+            if !(ch.isLetter || ch.isNumber) {
+                if !cur.isEmpty { words.append(cur.lowercased()); cur = "" }
+                prevLower = false
                 continue
             }
+            if ch.isUppercase, prevLower, !cur.isEmpty { words.append(cur.lowercased()); cur = "" }
+            cur.append(ch)
+            prevLower = ch.isLowercase || ch.isNumber
+        }
+        if !cur.isEmpty { words.append(cur.lowercased()) }
+        return words
+    }
+
+    /// Drops PII-looking keys, inline images and oversized values; caps values at 200 chars.
+    nonisolated static func clean(props: [String: String]) -> [String: String] {
+        var cleaned: [String: String] = [:]
+        for (k, v) in props {
+            if keyWords(k).contains(where: blockedKeyWords.contains) { continue }
             if v.hasPrefix("data:image") || v.count > 200 { continue }
             cleaned[k] = String(v.prefix(200))
         }
+        return cleaned
+    }
+
+    func track(_ event: String, props: [String: String] = [:]) {
+        let cleaned = Self.clean(props: props)
         let payload: [String: Any] = [
             "app": appName,
             "event": event,
