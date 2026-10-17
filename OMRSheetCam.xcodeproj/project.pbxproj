@@ -351,7 +351,6 @@
 				E10000000000000000000004 /* ScanQuota.swift */,
 				A60000000000000000000009 /* ProSettings.swift */,
 				A6000000000000000000000B /* PaywallState.swift */,
-				DE0000000000000000000005 /* ScansLeftLabel.swift */,
 				DE0000000000000000000003 /* ScansLeft.swift */,
 				DE0000000000000000000001 /* UpgradePromptPolicy.swift */,
 				A60000000000000000000005 /* PurchaseOutcome.swift */,
