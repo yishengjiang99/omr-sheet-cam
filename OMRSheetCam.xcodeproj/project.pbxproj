@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A50000000000000000000007 /* PendingScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000007 /* PendingScan.swift */; };
+		A50000000000000000000006 /* PendingScanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000006 /* PendingScanTests.swift */; };
 		A50000000000000000000003 /* EntitlementLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000003 /* EntitlementLogic.swift */; };
 		A50000000000000000000002 /* EntitlementLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000002 /* EntitlementLogicTests.swift */; };
 		A50000000000000000000001 /* ProEntitlementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000001 /* ProEntitlementTests.swift */; };
@@ -94,6 +96,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A60000000000000000000007 /* PendingScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingScan.swift; sourceTree = "<group>"; };
+		A60000000000000000000006 /* PendingScanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingScanTests.swift; sourceTree = "<group>"; };
 		A60000000000000000000003 /* EntitlementLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementLogic.swift; sourceTree = "<group>"; };
 		A60000000000000000000002 /* EntitlementLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementLogicTests.swift; sourceTree = "<group>"; };
 		A60000000000000000000001 /* ProEntitlementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests.swift; sourceTree = "<group>"; };
@@ -290,6 +294,7 @@
 				E10000000000000000000002 /* Analytics.swift */,
 				E10000000000000000000003 /* StoreKitManager.swift */,
 				E10000000000000000000004 /* ScanQuota.swift */,
+				A60000000000000000000007 /* PendingScan.swift */,
 				A60000000000000000000003 /* EntitlementLogic.swift */,
 			);
 			path = Services;
@@ -360,6 +365,7 @@
 				8B0000000000000000000003 /* Build6PrepTests.swift */,
 				9D0000000000000000000001 /* PaywallScreenshotTests.swift */,
 				A60000000000000000000001 /* ProEntitlementTests.swift */,
+				A60000000000000000000006 /* PendingScanTests.swift */,
 				A60000000000000000000002 /* EntitlementLogicTests.swift */,
 			);
 			path = Tests;
@@ -571,6 +577,7 @@
 				E20000000000000000000001 /* Analytics.swift in Sources */,
 				E20000000000000000000002 /* StoreKitManager.swift in Sources */,
 				E20000000000000000000003 /* ScanQuota.swift in Sources */,
+				A50000000000000000000007 /* PendingScan.swift in Sources */,
 				A50000000000000000000003 /* EntitlementLogic.swift in Sources */,
 				E20000000000000000000004 /* PaywallView.swift in Sources */,
 				CA0000000000000000000002 /* RecognitionService.swift in Sources */,
@@ -623,6 +630,7 @@
 				8A0000000000000000000003 /* Build6PrepTests.swift in Sources */,
 				9C0000000000000000000001 /* PaywallScreenshotTests.swift in Sources */,
 				A50000000000000000000001 /* ProEntitlementTests.swift in Sources */,
+				A50000000000000000000006 /* PendingScanTests.swift in Sources */,
 				A50000000000000000000002 /* EntitlementLogicTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
