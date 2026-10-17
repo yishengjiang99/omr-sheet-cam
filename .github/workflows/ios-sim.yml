@@ -85,6 +85,7 @@ jobs:
             -only-testing:OMRSheetCamTests/PostScanCardTests \
             -only-testing:OMRSheetCamTests/ReturnReminderTests \
             -only-testing:OMRSheetCamTests/LibraryProEntryTests \
+            -only-testing:OMRSheetCamTests/ProFeatureGateTests \
             -only-testing:OMRSheetCamTests/PhotoLibraryImportTests \
             -only-testing:OMRSheetCamTests/AnalyticsTests \
             -only-testing:OMRSheetCamTests/BackgroundAudioTests \
