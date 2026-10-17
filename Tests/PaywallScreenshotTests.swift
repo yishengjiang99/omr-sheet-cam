@@ -31,8 +31,8 @@ final class PaywallScreenshotTests: XCTestCase {
             await store.loadProducts()
             if store.monthlyProduct == nil { try await Task.sleep(nanoseconds: 1_000_000_000) }
         }
-        let monthly = try XCTUnwrap(store.monthlyProduct, "monthly not loaded: \(store.purchaseError ?? "-")")
-        let yearly = try XCTUnwrap(store.yearlyProduct, "yearly not loaded: \(store.purchaseError ?? "-")")
+        let monthly = try XCTUnwrap(store.monthlyProduct, "monthly not loaded: \(store.loadState)")
+        let yearly = try XCTUnwrap(store.yearlyProduct, "yearly not loaded: \(store.loadState)")
         print("[paywall-shot] monthly=\(monthly.displayPrice) yearly=\(yearly.displayPrice)")
         XCTAssertEqual(monthly.displayPrice, "$4.99")
         XCTAssertEqual(yearly.displayPrice, "$29.99")
