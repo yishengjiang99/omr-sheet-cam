@@ -21,17 +21,27 @@ struct PaywallProductsDisplay: Equatable, Sendable {
 enum PaywallState {
     static let emptyMessage = "No subscription options are available right now. Please try again."
 
+    /// Plain-language load-failure text (raw StoreKit / system text never reaches the user).
     static func loadFailureMessage(for kind: PurchaseFailureKind) -> String {
-        "Could not load products. Check your connection and try again."
+        switch kind {
+        case .network: return "Couldn't load subscription options. Check your connection and try again."
+        case .notAvailable: return "Subscriptions aren't available in your country or region right now."
+        default: return "Couldn't load subscription options. Please try again."
+        }
     }
 
+    /// One state drives the product area: spinner until loaded (never an error on the first frame),
+    /// then products, or exactly one message plus Retry.
     static func display(_ state: PaywallLoadState, hasProducts: Bool) -> PaywallProductsDisplay {
-        var messages: [String] = []
-        if !hasProducts, state != .loading {
-            messages.append("Could not load products. Check your connection and try again.")
+        func make(spinner: Bool = false, messages: [String] = [], retry: Bool = false) -> PaywallProductsDisplay {
+            PaywallProductsDisplay(showsSpinner: spinner, showsProducts: hasProducts, messages: messages, showsRetry: retry)
         }
-        if case .failed(let message) = state { messages.append(message) }
-        return PaywallProductsDisplay(showsSpinner: false, showsProducts: hasProducts, messages: messages, showsRetry: false)
+        if hasProducts { return make() }
+        switch state {
+        case .idle, .loading: return make(spinner: true)
+        case .loaded: return make(messages: [emptyMessage], retry: true)
+        case .failed(let message): return make(messages: [message], retry: true)
+        }
     }
 }
 
@@ -42,6 +52,15 @@ struct RestoreFeedback: Equatable, Sendable {
     let dismissPaywall: Bool
 
     static func resolve(_ outcome: RestoreOutcome) -> RestoreFeedback {
-        RestoreFeedback(text: nil, isError: false, dismissPaywall: false)
+        switch outcome {
+        case .restored:
+            return RestoreFeedback(text: "Pro restored", isError: false, dismissPaywall: true)
+        case .nothingToRestore:
+            return RestoreFeedback(text: "No active subscription found for this Apple ID", isError: false, dismissPaywall: false)
+        case .cancelled, .failed(.cancelled):
+            return RestoreFeedback(text: nil, isError: false, dismissPaywall: false)
+        case .failed(let kind):
+            return RestoreFeedback(text: PurchaseResolver.userMessage(for: kind), isError: true, dismissPaywall: false)
+        }
     }
 }
