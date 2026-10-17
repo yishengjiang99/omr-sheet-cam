@@ -72,9 +72,17 @@ struct RootFlowView: View {
             // Expiry, renewal or refund can happen while the app stays alive in the background.
             if phase == .active {
                 quota.refreshRemaining() // day rollover
-                Task { await storeKit.refreshEntitlements() }
+                Task { await refreshThenConsiderReturnReminder() }
             }
         }
+        // scenePhase's first value (cold start) does not fire onChange.
+        .task { await refreshThenConsiderReturnReminder() }
+    }
+
+    /// Refresh first so lapsed/Pro state is right before deciding whether to show the return banner (P2.9).
+    private func refreshThenConsiderReturnReminder() async {
+        await storeKit.refreshEntitlements()
+        ReturnReminder.shared.appBecameActive(quota: quota, purchaseInFlight: storeKit.purchaseInFlight)
     }
 
     /// Camera capture, Photos import, and Try sample: same Result/recognition path (quota gated).

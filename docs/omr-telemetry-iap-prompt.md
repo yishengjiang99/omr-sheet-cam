@@ -70,7 +70,7 @@ Track these events at the appropriate call sites:
 - `purchase_start`, then exactly one of `purchase_success`, `purchase_cancel`, `purchase_pending`, `purchase_fail{reason: network|notAvailable|notAllowed|verification|unknown}`
 - `restore_start`, then one of `restore_success`, `restore_none`, `restore_cancel`, `restore_fail{reason}`
 - `paywall_dismiss{pro, reason}` — paywall closed
-- `upgrade_card_view{reason}`, `upgrade_card_dismiss{reason}` — soft post-scan upgrade card shown / "Not now" (P2.2)
+- `upgrade_card_view{reason}`, `upgrade_card_dismiss{reason}` — soft post-scan upgrade card shown / "Not now" (P2.2); also used by the app-return banner with `reason=app_return` (P2.9)
 
 ### 1d. Admin panel: add app filter
 

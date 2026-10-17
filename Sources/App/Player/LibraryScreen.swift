@@ -17,6 +17,7 @@ struct LibraryScreen: View {
     /// Photo-library import → same recognition path as camera (nil hides Photos on home).
     var onPhoto: ((CapturedPhoto) -> Void)?
 
+    @ObservedObject private var returnReminder = ReturnReminder.shared
     @State private var query = ""
     @State private var deleteError: String?
     @State private var renaming: PlaylistEntry?
@@ -73,6 +74,15 @@ struct LibraryScreen: View {
                         .listRowBackground(Color.clear)
                     scanActions
                         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 12, trailing: 16))
+                    if returnReminder.showBanner, controller.current == nil {
+                        UpgradeCard(
+                            message: "Welcome back. Pro gives you unlimited scans.",
+                            onSeePro: { returnReminder.seeProTapped(quota: .shared) },
+                            onDismiss: { returnReminder.dismiss(quota: .shared) }
+                        )
+                        .onAppear { returnReminder.bannerAppeared(quota: .shared) }
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    }
                     ScansLeftLabel(style: .footnote)
                         .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
                         .listRowBackground(Color.clear)
