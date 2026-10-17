@@ -305,9 +305,9 @@ struct PlayerScreen: View {
         .overlay(Capsule().stroke(Color.primary.opacity(0.08)))
     }
 
-    /// P9.1 (flag `omr.flag.lockedFeatures`, default OFF = never locked): gate at the action, not the screen.
+    /// P9.1: Transpose needs Pro. Gate at the action, not the screen.
     private var transposeLocked: Bool {
-        !ProFeatureGate.allows(.transpose, isPro: storeKit.isPro, flagEnabled: ProFeatureGate.flagEnabled())
+        !ProFeatureGate.allows(.transpose, isPro: storeKit.isPro)
     }
 
     private func setTransposeGated(_ semitones: Int) {
