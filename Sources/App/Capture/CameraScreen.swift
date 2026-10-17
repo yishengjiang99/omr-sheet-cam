@@ -125,6 +125,8 @@ struct CameraScreen: View {
                     .lineLimit(2)
                     .padding(.horizontal, 12).padding(.vertical, 7)
                     .background(.black.opacity(0.4), in: Capsule())
+            } else {
+                ScansLeftLabel(style: .capsule)
             }
             Spacer()
             if cameraLive && camera.torchAvailable {

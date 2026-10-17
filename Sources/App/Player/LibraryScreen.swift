@@ -73,6 +73,9 @@ struct LibraryScreen: View {
                         .listRowBackground(Color.clear)
                     scanActions
                         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 12, trailing: 16))
+                    ScansLeftLabel(style: .footnote)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
+                        .listRowBackground(Color.clear)
                         .listRowBackground(Color.clear)
                     if let importError {
                         Text(importError).font(.footnote).foregroundStyle(.red)

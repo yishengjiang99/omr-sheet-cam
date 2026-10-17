@@ -30,9 +30,18 @@ final class ScanQuota: ObservableObject {
         self.promptPolicy = promptPolicy
         self.defaults = defaults
         self.track = track ?? { Analytics.shared.track($0, props: $1) }
+        self.remaining = scansRemaining
     }
 
     @Published var showPaywall = false
+    /// Free scans left today (`Int.max` for Pro). Published so the Library/Camera counter refreshes
+    /// immediately after each scan and at day rollover (`refreshRemaining()`).
+    @Published private(set) var remaining: Int = ScanQuota.freeDailyLimit
+
+    /// Recompute `remaining` from the stored count (call on launch/foreground for day rollover).
+    func refreshRemaining() {
+        remaining = scansRemaining
+    }
     /// Why the paywall is (or was last) shown; passed to `PaywallView` for `reason` telemetry.
     @Published private(set) var paywallReason: PaywallReason = .quota
 
@@ -96,6 +105,7 @@ final class ScanQuota: ObservableObject {
         if storeKit.isPro { return }
         rollDateIfNeeded()
         defaults.set(defaults.integer(forKey: countKey) + 1, forKey: countKey)
+        refreshRemaining()
     }
 
     private func rollDateIfNeeded() {

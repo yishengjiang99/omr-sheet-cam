@@ -11,6 +11,9 @@
 		A50000000000000000000008 /* ProSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000008 /* ProSettingsTests.swift */; };
 		A5000000000000000000000B /* PaywallState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6000000000000000000000B /* PaywallState.swift */; };
 		A5000000000000000000000A /* PaywallStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6000000000000000000000A /* PaywallStateTests.swift */; };
+		DD0000000000000000000005 /* ScansLeftLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0000000000000000000005 /* ScansLeftLabel.swift */; };
+		DD0000000000000000000004 /* ScansLeftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0000000000000000000004 /* ScansLeftTests.swift */; };
+		DD0000000000000000000003 /* ScansLeft.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0000000000000000000003 /* ScansLeft.swift */; };
 		DD0000000000000000000002 /* UpgradePromptPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0000000000000000000002 /* UpgradePromptPolicyTests.swift */; };
 		DD0000000000000000000001 /* UpgradePromptPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0000000000000000000001 /* UpgradePromptPolicy.swift */; };
 		A50000000000000000000005 /* PurchaseOutcome.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000005 /* PurchaseOutcome.swift */; };
@@ -123,6 +126,9 @@
 		A60000000000000000000008 /* ProSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProSettingsTests.swift; sourceTree = "<group>"; };
 		A6000000000000000000000B /* PaywallState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallState.swift; sourceTree = "<group>"; };
 		A6000000000000000000000A /* PaywallStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallStateTests.swift; sourceTree = "<group>"; };
+		DE0000000000000000000005 /* ScansLeftLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScansLeftLabel.swift; sourceTree = "<group>"; };
+		DE0000000000000000000004 /* ScansLeftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScansLeftTests.swift; sourceTree = "<group>"; };
+		DE0000000000000000000003 /* ScansLeft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScansLeft.swift; sourceTree = "<group>"; };
 		DE0000000000000000000002 /* UpgradePromptPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpgradePromptPolicyTests.swift; sourceTree = "<group>"; };
 		DE0000000000000000000001 /* UpgradePromptPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpgradePromptPolicy.swift; sourceTree = "<group>"; };
 		A60000000000000000000005 /* PurchaseOutcome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseOutcome.swift; sourceTree = "<group>"; };
@@ -345,6 +351,7 @@
 				E10000000000000000000004 /* ScanQuota.swift */,
 				A60000000000000000000009 /* ProSettings.swift */,
 				A6000000000000000000000B /* PaywallState.swift */,
+				DE0000000000000000000003 /* ScansLeft.swift */,
 				DE0000000000000000000001 /* UpgradePromptPolicy.swift */,
 				A60000000000000000000005 /* PurchaseOutcome.swift */,
 				A60000000000000000000007 /* PendingScan.swift */,
@@ -365,6 +372,7 @@
 			isa = PBXGroup;
 			children = (
 				E10000000000000000000005 /* PaywallView.swift */,
+				DE0000000000000000000005 /* ScansLeftLabel.swift */,
 			);
 			path = Paywall;
 			sourceTree = "<group>";
@@ -434,6 +442,7 @@
 				A60000000000000000000001 /* ProEntitlementTests.swift */,
 				A60000000000000000000008 /* ProSettingsTests.swift */,
 				A6000000000000000000000A /* PaywallStateTests.swift */,
+				DE0000000000000000000004 /* ScansLeftTests.swift */,
 				DE0000000000000000000002 /* UpgradePromptPolicyTests.swift */,
 				A60000000000000000000004 /* PurchaseOutcomeTests.swift */,
 				A60000000000000000000006 /* PendingScanTests.swift */,
@@ -651,6 +660,8 @@
 				E20000000000000000000003 /* ScanQuota.swift in Sources */,
 				A50000000000000000000009 /* ProSettings.swift in Sources */,
 				A5000000000000000000000B /* PaywallState.swift in Sources */,
+				DD0000000000000000000005 /* ScansLeftLabel.swift in Sources */,
+				DD0000000000000000000003 /* ScansLeft.swift in Sources */,
 				DD0000000000000000000001 /* UpgradePromptPolicy.swift in Sources */,
 				A50000000000000000000005 /* PurchaseOutcome.swift in Sources */,
 				A50000000000000000000007 /* PendingScan.swift in Sources */,
@@ -722,6 +733,7 @@
 				A50000000000000000000001 /* ProEntitlementTests.swift in Sources */,
 				A50000000000000000000008 /* ProSettingsTests.swift in Sources */,
 				A5000000000000000000000A /* PaywallStateTests.swift in Sources */,
+				DD0000000000000000000004 /* ScansLeftTests.swift in Sources */,
 				DD0000000000000000000002 /* UpgradePromptPolicyTests.swift in Sources */,
 				A50000000000000000000004 /* PurchaseOutcomeTests.swift in Sources */,
 				A50000000000000000000006 /* PendingScanTests.swift in Sources */,
