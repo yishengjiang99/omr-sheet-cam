@@ -362,7 +362,6 @@
 				A60000000000000000000009 /* ProSettings.swift */,
 				A6000000000000000000000B /* PaywallState.swift */,
 				DE0000000000000000000009 /* ReturnReminder.swift */,
-				DE0000000000000000000008 /* UpgradeCard.swift */,
 				DE0000000000000000000006 /* PostScanCard.swift */,
 				DE0000000000000000000003 /* ScansLeft.swift */,
 				DE0000000000000000000001 /* UpgradePromptPolicy.swift */,
