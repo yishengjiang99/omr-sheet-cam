@@ -224,8 +224,17 @@ struct OMRCompareView: View {
         )
     }
 
+    /// F8.7: feedback is only written to the on-device diagnostics log; nothing is sent anywhere.
+    enum FeedbackCopy {
+        static let sectionTitle = "Was the reading accurate?"
+        static let sectionFooter = "Saved on this device only, for your own reference. Nothing is sent to the developer."
+        static let saveButton = "Save note on this device"
+        static let savedToast = "Saved on this device only"
+        static let failedToast = "Could not save the note on this device"
+    }
+
     private var feedbackSection: some View {
-        Section("Was the reading accurate?") {
+        Section {
             Picker("Overall", selection: $feedback.verdict) {
                 Text("—").tag(OMRFeedback.Verdict?.none)
                 ForEach(OMRFeedback.Verdict.allCases, id: \.self) { Text($0.label).tag(Optional($0)) }
@@ -249,11 +258,15 @@ struct OMRCompareView: View {
             .font(.footnote)
             TextField("What was wrong? (optional)", text: $feedback.note, axis: .vertical)
                 .lineLimit(2...6)
-            Button("Save feedback") { save() }
+            Button(FeedbackCopy.saveButton) { save() }
                 .disabled(feedback.isEmpty)
             if showsDeveloperTools {
                 CopyPromptButton(captureName: captureName, feedback: feedback, toast: $toast)
             }
+        } header: {
+            Text(FeedbackCopy.sectionTitle)
+        } footer: {
+            Text(FeedbackCopy.sectionFooter)
         }
     }
 
@@ -266,10 +279,10 @@ struct OMRCompareView: View {
         f.date = Date()
         do {
             DiagnosticsLog.shared.record(try f.event())
-            toast = "Feedback saved"
+            toast = FeedbackCopy.savedToast
         } catch {
             DiagnosticsLog.shared.record(error: error, category: .feedback, context: "feedback encode")
-            toast = "Could not save feedback"
+            toast = FeedbackCopy.failedToast
         }
     }
 }
