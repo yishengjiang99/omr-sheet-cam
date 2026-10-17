@@ -49,6 +49,13 @@ struct ResultScreen: View {
         return parts.joined(separator: " · ")
     }
 
+    /// Share item for the saved scan: same `<Title>.mid` export as Library / Player (F7.7), not the
+    /// capture-timestamp file name of the playlist file.
+    @MainActor
+    static func shareItem(for entry: PlaylistEntry, store: PlaylistStore = .shared) -> MIDIExport? {
+        store.export(for: entry)
+    }
+
     /// Capture file name used to tie log events + feedback together.
     private var captureName: String { savedURL?.lastPathComponent ?? "unsaved-\(photo.id.uuidString.prefix(8))" }
 
@@ -70,8 +77,8 @@ struct ResultScreen: View {
                 .accessibilityIdentifier("result.retake")
             }
             ToolbarItem(placement: .topBarTrailing) {
-                if let url = playlistEntry?.fileName.map({ PlaylistStore.shared.directory.appendingPathComponent($0) }) {
-                    ShareLink(item: url) { Image(systemName: "square.and.arrow.up") }
+                if let entry = playlistEntry, let export = Self.shareItem(for: entry) {
+                    ShareLink(item: export, preview: SharePreview(entry.title)) { Image(systemName: "square.and.arrow.up") }
                         .accessibilityLabel("Share MIDI")
                 }
             }
