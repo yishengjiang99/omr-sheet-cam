@@ -10,7 +10,6 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - Apple ORT SPM pinned `exact: "1.24.2"`
 
 ## Now (in progress)
-- [ ] IAP audit Stream A (PR per bug, branch `fix/p*`): P1.12 single StoreKitManager (PR #6) → P7.4+P7.6 entitlement refresh (PR open) → P5.1/P4.2/P10.2 purchase results (PR open) → P2.5/P6.3 paywall retry + restore feedback → P6.1/P1.10 Settings Pro/Restore/Manage — OMR iOS
 - [ ] IAP audit Stream A (PR per bug, branch `fix/p*`): P1.12 single StoreKitManager (PR #6) → P7.4+P7.6 entitlement refresh (PR #56) → P3.7 keep photo after paywall (PR open) → P5.1/P4.2/P10.2 purchase results → P2.5/P6.3 paywall retry + restore feedback → P6.1/P1.10 Settings Pro/Restore/Manage — OMR iOS
 - [ ] Full-page OMR perf later: Core ML encoder offline experiment + fixed-batch-8 SegNet (commits 5–6); optional page locator / stateful decoder (7–8) — OMR iOS
 - [ ] v1.0 build **30** + Music Reader Pro subscriptions (group version + monthly/yearly versions) in App Review (reviewSubmission 61ac442b, WAITING_FOR_REVIEW since 2026-10-09 3:05 AM PT). Check with read-only **ASC status** only; do not cancel/resubmit while waiting — submit run 37915292596
