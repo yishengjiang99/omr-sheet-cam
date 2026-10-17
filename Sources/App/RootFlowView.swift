@@ -56,7 +56,7 @@ struct RootFlowView: View {
         .tint(Theme.coral)
         .sheet(isPresented: $showSettings) { SettingsView().environmentObject(playback) }
         .sheet(isPresented: $quota.showPaywall, onDismiss: resumePendingScan) {
-            PaywallView().environmentObject(storeKit)
+            PaywallView(reason: quota.paywallReason).environmentObject(storeKit)
         }
         .alert("Couldn't open the sample", isPresented: Binding(get: { sampleError != nil }, set: { if !$0 { sampleError = nil } })) {
             Button("OK", role: .cancel) {}

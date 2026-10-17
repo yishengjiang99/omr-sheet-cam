@@ -6,6 +6,8 @@ struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isRestoring = false
     @State private var restoreFeedback: RestoreFeedback?
+    /// Why this paywall opened (P2.1); tagged on `paywall_view` / `paywall_dismiss`.
+    var reason: PaywallReason = .quota
 
     var body: some View {
         NavigationStack {
@@ -84,7 +86,7 @@ struct PaywallView: View {
             }
             .navigationTitle("Upgrade")
             .navigationBarTitleDisplayMode(.inline)
-            .onAppear { Analytics.shared.track("paywall_view") }
+            .onAppear { Analytics.shared.track("paywall_view", props: ["reason": reason.analyticsValue]) }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
@@ -93,7 +95,10 @@ struct PaywallView: View {
             .task { await storeKit.loadProducts() }
             // Ask to Buy approved (arrives via Transaction.updates) or restore found Pro: close the paywall.
             .onChange(of: storeKit.isPro) { _, pro in if pro { dismiss() } }
-            .onDisappear { Analytics.shared.track("paywall_dismiss", props: ["pro": storeKit.isPro ? "true" : "false"]) }
+            .onDisappear {
+                Analytics.shared.track("paywall_dismiss", props: ["pro": storeKit.isPro ? "true" : "false", "reason": reason.analyticsValue])
+                UpgradePromptPolicy.shared.recordDismissed(reason)
+            }
         }
     }
 
