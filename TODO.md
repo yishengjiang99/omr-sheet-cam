@@ -11,7 +11,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 
 ## Now (in progress)
 - [ ] IAP audit Stream A (PR per bug, branch `fix/p*`): P1.12 single StoreKitManager (PR #6) → P7.4+P7.6 entitlement refresh (PR #56) → P3.7 keep photo after paywall (PR open) → P5.1/P4.2/P10.2 purchase results → P2.5/P6.3 paywall retry + restore feedback → P6.1/P1.10 Settings Pro/Restore/Manage — OMR iOS
-- [ ] IAP audit Stream D (enhancements, stacked on Stream A; PR per issue): P2.1 shared upgrade-prompt policy (#45) → P1.6 scans-left nudge (#44, PR open) → P2.2 post-scan card (#46, PR open) → P2.9 return banner (#47, PR open) → P9.4 Library Pro entry (#49) → P9.1 locked-feature prompt behind flag, default OFF (#48) — OMR iOS
+- [ ] IAP audit Stream D (enhancements, stacked on Stream A; PR per issue): P2.1 shared upgrade-prompt policy (#45) → P1.6 scans-left nudge (#44, PR open) → P2.2 post-scan card (#46, PR open) → P2.9 return banner (#47, PR open) → P9.4 Library Pro entry (#49, PR open) → P9.1 locked-feature prompt behind flag, default OFF (#48) — OMR iOS
 - [ ] Full-page OMR perf later: Core ML encoder offline experiment + fixed-batch-8 SegNet (commits 5–6); optional page locator / stateful decoder (7–8) — OMR iOS
 - [ ] v1.0 build **30** + Music Reader Pro subscriptions (group version + monthly/yearly versions) in App Review (reviewSubmission 61ac442b, WAITING_FOR_REVIEW since 2026-10-09 3:05 AM PT). Check with read-only **ASC status** only; do not cancel/resubmit while waiting — submit run 37915292596
 - [ ] Real-device page parse verdict on latest TestFlight (after recognition-always-on / Library-home fix): 3–5 real sheet photos → parse time + peak `phys_footprint` from Copy as prompt; pass/fail per photo — OMR iOS + User
