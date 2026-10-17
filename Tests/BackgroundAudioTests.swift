@@ -53,4 +53,20 @@ final class BackgroundAudioTests: XCTestCase {
         XCTAssertGreaterThan(c.player.duration, 0)
         XCTAssertEqual(info[MPNowPlayingInfoPropertyPlaybackRate] as? Double, 0, "paused, not playing")
     }
+
+    func testNowPlayingInfoBuilder() {
+        let playing = PlaybackController.nowPlayingInfo(title: "T", subtitle: "Piano", duration: 40, elapsed: 12.5,
+                                                        isPlaying: true, rate: 1.5, artwork: nil)
+        XCTAssertEqual(playing[MPMediaItemPropertyTitle] as? String, "T")
+        XCTAssertEqual(playing[MPMediaItemPropertyArtist] as? String, "Piano")
+        XCTAssertEqual(playing[MPMediaItemPropertyPlaybackDuration] as? Double, 40)
+        XCTAssertEqual(playing[MPNowPlayingInfoPropertyElapsedPlaybackTime] as? Double, 12.5)
+        XCTAssertEqual(playing[MPNowPlayingInfoPropertyPlaybackRate] as? Double, 1.5, "tempo scale is the playback rate")
+        XCTAssertNil(playing[MPMediaItemPropertyArtwork])
+        let paused = PlaybackController.nowPlayingInfo(title: "T", subtitle: "", duration: 40, elapsed: 99,
+                                                       isPlaying: false, rate: 1, artwork: UIImage())
+        XCTAssertEqual(paused[MPNowPlayingInfoPropertyPlaybackRate] as? Double, 0)
+        XCTAssertEqual(paused[MPNowPlayingInfoPropertyElapsedPlaybackTime] as? Double, 40, "elapsed clamped to duration")
+        XCTAssertNotNil(paused[MPMediaItemPropertyArtwork])
+    }
 }

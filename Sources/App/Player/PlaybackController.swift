@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import MediaPlayer
 import SF2Player
 import UIKit
 
@@ -41,6 +42,10 @@ final class PlaybackController: ObservableObject {
         }.store(in: &bag)
         // F11.2: a scan deleted from the Library (swipe, menu, anywhere) must not keep playing.
         store.$scans.dropFirst().sink { [weak self] scans in self?.libraryScansChanged(scans) }.store(in: &bag)
+        // F10.10: lock-screen / Control Center transport + Now Playing.
+        player.$isPlaying.removeDuplicates().sink { [weak self] playing in self?.updateNowPlaying(playing: playing) }.store(in: &bag)
+        $current.dropFirst().sink { [weak self] route in if route == nil { self?.clearNowPlaying() } }.store(in: &bag)
+        registerRemoteCommands()
         player.onFinished = { [weak self] in
             guard let self else { return }
             self.log("finished", [:])
@@ -153,6 +158,65 @@ final class PlaybackController: ObservableObject {
     func seek(to s: Double) {
         player.seek(to: s)
         log("seek", ["to": String(format: "%.2f", s)])
+        updateNowPlaying(playing: player.isPlaying)
+    }
+
+    // MARK: Now Playing / remote commands (F10.10)
+
+    /// `MPNowPlayingInfoCenter` payload. Pure so it can be unit-tested.
+    nonisolated static func nowPlayingInfo(title: String, subtitle: String, duration: Double, elapsed: Double,
+                                           isPlaying: Bool, rate: Double, artwork: UIImage?) -> [String: Any] {
+        var info: [String: Any] = [
+            MPMediaItemPropertyTitle: title,
+            MPMediaItemPropertyArtist: subtitle,
+            MPMediaItemPropertyPlaybackDuration: duration,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: max(0, min(elapsed, duration > 0 ? duration : elapsed)),
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? rate : 0.0,
+            MPNowPlayingInfoPropertyDefaultPlaybackRate: 1.0,
+        ]
+        if let artwork {
+            info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: artwork.size) { _ in artwork }
+        }
+        return info
+    }
+
+    /// Publishes title / duration / position / rate for the lock screen. No-op until a song is loaded.
+    func updateNowPlaying(playing: Bool) {
+        guard current != nil, ready else { return }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = Self.nowPlayingInfo(
+            title: title, subtitle: settings.instrument.name, duration: player.duration,
+            elapsed: player.position.seconds, isPlaying: playing, rate: player.tempoScale, artwork: artwork)
+        MPNowPlayingInfoCenter.default().playbackState = playing ? .playing : .paused
+        MPRemoteCommandCenter.shared().nextTrackCommand.isEnabled = nextRoute != nil
+        MPRemoteCommandCenter.shared().previousTrackCommand.isEnabled = true
+    }
+
+    private func clearNowPlaying() {
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+        MPNowPlayingInfoCenter.default().playbackState = .stopped
+    }
+
+    /// Wires play / pause / toggle / next / previous / scrub. Replaces earlier targets so only the
+    /// newest controller (the app has one) receives events.
+    private func registerRemoteCommands() {
+        let cc = MPRemoteCommandCenter.shared()
+        func bind(_ cmd: MPRemoteCommand, _ action: @escaping @MainActor (PlaybackController, MPRemoteCommandEvent) -> Void) {
+            cmd.removeTarget(nil)
+            cmd.isEnabled = true
+            cmd.addTarget { [weak self] event in
+                Task { @MainActor in if let self { action(self, event) } }
+                return .success
+            }
+        }
+        bind(cc.playCommand) { c, _ in if c.ready, !c.player.isPlaying { c.togglePlay() } }
+        bind(cc.pauseCommand) { c, _ in if c.player.isPlaying { c.togglePlay() } }
+        bind(cc.togglePlayPauseCommand) { c, _ in if c.ready { c.togglePlay() } }
+        bind(cc.nextTrackCommand) { c, _ in c.next() }
+        bind(cc.previousTrackCommand) { c, _ in c.previous() }
+        bind(cc.changePlaybackPositionCommand) { c, e in
+            if let e = e as? MPChangePlaybackPositionCommandEvent, c.ready { c.seek(to: e.positionTime) }
+        }
+        cc.nextTrackCommand.isEnabled = false
     }
 
     // MARK: Practice: A–B loop, hands
@@ -306,6 +370,7 @@ final class PlaybackController: ObservableObject {
             ready = true
             status = ""
             log("load", ["bytes": "\(midi.count)", "duration": String(format: "%.2f", player.duration)])
+            updateNowPlaying(playing: false)
             if route.autoplay { play(auto: true) }
         } catch {
             ready = false
