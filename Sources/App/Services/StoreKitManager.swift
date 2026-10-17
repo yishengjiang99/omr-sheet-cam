@@ -10,6 +10,9 @@ enum IAPProductID {
 
 @MainActor
 final class StoreKitManager: ObservableObject {
+    /// App-wide instance (one `Transaction.updates` listener, one entitlement refresh).
+    static let shared = StoreKitManager()
+
     @Published private(set) var products: [Product] = []
     @Published private(set) var purchasedProductIDs: Set<String> = []
     @Published private(set) var isLoading = false

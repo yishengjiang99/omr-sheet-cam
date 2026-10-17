@@ -8,7 +8,7 @@ final class ScanQuota: ObservableObject {
 
     private let countKey = "omr.freeScansUsed"
     private let dateKey = "omr.freeScansDate"
-    private let storeKit = StoreKitManager()
+    let storeKit = StoreKitManager()
 
     @Published var showPaywall = false
 
