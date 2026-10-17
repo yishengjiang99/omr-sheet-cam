@@ -93,6 +93,7 @@
 		F90000000000000000000002 /* FeedbackCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F90000000000000000000001 /* FeedbackCopyTests.swift */; };
 		FC0000000000000000000002 /* PlaybackDeleteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000001 /* PlaybackDeleteTests.swift */; };
 		FD0000000000000000000002 /* BackgroundAudioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD0000000000000000000001 /* BackgroundAudioTests.swift */; };
+		FF0000000000000000000002 /* AnalyticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000001 /* AnalyticsTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -194,6 +195,7 @@
 		F90000000000000000000001 /* FeedbackCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackCopyTests.swift; sourceTree = "<group>"; };
 		FC0000000000000000000001 /* PlaybackDeleteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackDeleteTests.swift; sourceTree = "<group>"; };
 		FD0000000000000000000001 /* BackgroundAudioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundAudioTests.swift; sourceTree = "<group>"; };
+		FF0000000000000000000001 /* AnalyticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -376,6 +378,7 @@
 				F90000000000000000000001 /* FeedbackCopyTests.swift */,
 				FC0000000000000000000001 /* PlaybackDeleteTests.swift */,
 				FD0000000000000000000001 /* BackgroundAudioTests.swift */,
+				FF0000000000000000000001 /* AnalyticsTests.swift */,
 				B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */,
 				B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */,
 				B1000000000000000000000A /* ModelWarmupTests.swift */,
@@ -652,6 +655,7 @@
 				F90000000000000000000002 /* FeedbackCopyTests.swift in Sources */,
 				FC0000000000000000000002 /* PlaybackDeleteTests.swift in Sources */,
 				FD0000000000000000000002 /* BackgroundAudioTests.swift in Sources */,
+				FF0000000000000000000002 /* AnalyticsTests.swift in Sources */,
 				A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */,
 				A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */,
 				A1000000000000000000000A /* ModelWarmupTests.swift in Sources */,
