@@ -83,6 +83,7 @@
 		FE0000000000000000000002 /* ReviewNotesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0000000000000000000001 /* ReviewNotesTests.swift */; };
 		5C0000000000000000000002 /* StoreKitConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0000000000000000000001 /* StoreKitConfigTests.swift */; };
 		FA0000000000000000000002 /* UserFacingErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000001 /* UserFacingErrorTests.swift */; };
+		FB0000000000000000000002 /* UserFacingError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000000000000000000001 /* UserFacingError.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -174,6 +175,7 @@
 		5C0000000000000000000001 /* StoreKitConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitConfigTests.swift; sourceTree = "<group>"; };
 		5C0000000000000000000003 /* OMRSheetCam.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = OMRSheetCam.storekit; sourceTree = "<group>"; };
 		FA0000000000000000000001 /* UserFacingErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserFacingErrorTests.swift; sourceTree = "<group>"; };
+		FB0000000000000000000001 /* UserFacingError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserFacingError.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -293,6 +295,7 @@
 		E30000000000000000000001 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				FB0000000000000000000001 /* UserFacingError.swift */,
 				E10000000000000000000002 /* Analytics.swift */,
 				E10000000000000000000003 /* StoreKitManager.swift */,
 				E10000000000000000000004 /* ScanQuota.swift */,
@@ -576,6 +579,7 @@
 				A1000000000000000000000B /* Gate1Runner.swift in Sources */,
 				CA0000000000000000000001 /* CaptureStore.swift in Sources */,
 				PLI200000000000000000001 /* PhotoLibraryImport.swift in Sources */,
+				FB0000000000000000000002 /* UserFacingError.swift in Sources */,
 				E20000000000000000000001 /* Analytics.swift in Sources */,
 				E20000000000000000000002 /* StoreKitManager.swift in Sources */,
 				E20000000000000000000003 /* ScanQuota.swift in Sources */,

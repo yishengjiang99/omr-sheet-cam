@@ -285,7 +285,7 @@ final class PlaybackController: ObservableObject {
             if route.autoplay { play(auto: true) }
         } catch {
             ready = false
-            status = "Can't play this: \(error)"
+            status = UserFacingError.message(for: error, action: .play)
             DiagnosticsLog.shared.record(error: error, category: .playback, context: "player load \(route.title)")
         }
     }
