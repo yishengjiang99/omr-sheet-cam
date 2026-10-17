@@ -83,6 +83,7 @@ jobs:
             -project OMRSheetCam.xcodeproj \
             -scheme OMRSheetCam \
             -destination "${{ steps.sim.outputs.destination }}" \
+            -only-testing:OMRSheetCamTests/ReviewNotesTests \
             -only-testing:OMRSheetCamTests/Gate1StaffTokenMatchTests \
             -only-testing:OMRSheetCamTests/ModelWarmupTests \
             -only-testing:OMRSheetCamTests/PageRecognitionServiceTests \
