@@ -1,9 +1,9 @@
 import XCTest
 @testable import OMRSheetCam
 
-/// P9.1: the locked-feature upsell ships behind a feature flag that defaults OFF. With the flag OFF
-/// nothing is locked (today's behaviour, matching the paywall copy and review notes). With it ON, free
-/// users hit the paywall (reason `feature_<name>`) only for gated features; Pro and saved content never.
+/// P9.1: the locked-feature upsell is always on (product decision by Yisheng, no feature flag). Free
+/// users who try a gated feature (Transpose) get the soft, dismissible paywall with reason
+/// `feature_transpose`; Pro users and every other feature are never affected.
 @MainActor
 final class ProFeatureGateTests: XCTestCase {
     private final class FakePro: ProEntitlementSource {
@@ -12,22 +12,30 @@ final class ProFeatureGateTests: XCTestCase {
         func refreshEntitlements() async {}
     }
 
-    func testFlagDefaultsOff() {
-        let d = UserDefaults(suiteName: UUID().uuidString)!
-        XCTAssertFalse(ProFeatureGate.flagEnabled(defaults: d))
-        d.set(true, forKey: ProFeatureGate.flagKey)
-        XCTAssertTrue(ProFeatureGate.flagEnabled(defaults: d))
+    private func quota(pro: Bool) -> ScanQuota {
+        ScanQuota(storeKit: FakePro(pro: pro), promptPolicy: UpgradePromptPolicy(defaults: UserDefaults(suiteName: UUID().uuidString)!))
     }
 
-    func testFlagOffLocksNothing() {
+    func testTransposeIsLockedForFreeUsers() {
+        XCTAssertFalse(ProFeatureGate.allows(.transpose, isPro: false))
+    }
+
+    func testProUsersAreNeverLocked() {
         for f in ProFeature.allCases {
-            XCTAssertTrue(ProFeatureGate.allows(f, isPro: false, flagEnabled: false), "\(f)")
+            XCTAssertTrue(ProFeatureGate.allows(f, isPro: true), "\(f)")
         }
     }
 
-    func testFlagOnLocksGatedFeaturesForFreeUsersOnly() {
-        XCTAssertFalse(ProFeatureGate.allows(.transpose, isPro: false, flagEnabled: true))
-        XCTAssertTrue(ProFeatureGate.allows(.transpose, isPro: true, flagEnabled: true))
+    func testOnlyTransposeIsGated() {
+        XCTAssertEqual(ProFeatureGate.gated, [.transpose])
+        XCTAssertEqual(ProFeature.allCases, [.transpose])
+    }
+
+    func testNoFeatureFlagRemains() {
+        // The gate has no switch: nothing reads a UserDefaults flag, so a stale key cannot unlock it.
+        UserDefaults.standard.set(false, forKey: "omr.flag.lockedFeatures")
+        defer { UserDefaults.standard.removeObject(forKey: "omr.flag.lockedFeatures") }
+        XCTAssertFalse(ProFeatureGate.allows(.transpose, isPro: false))
     }
 
     func testPaywallReasonNamesTheFeature() {
@@ -36,14 +44,13 @@ final class ProFeatureGateTests: XCTestCase {
     }
 
     func testLockedTapOpensPaywallWithFeatureReasonAndIsNotCapped() {
-        let q = ScanQuota(storeKit: FakePro(pro: false), promptPolicy: UpgradePromptPolicy(defaults: UserDefaults(suiteName: UUID().uuidString)!))
+        let q = quota(pro: false)
         q.promptDismissed(.postScan) // silenced session: a user tap on a locked control still works
         XCTAssertTrue(q.requestPaywall(ProFeatureGate.paywallReason(for: .transpose)))
         XCTAssertEqual(q.paywallReason, .feature("transpose"))
     }
 
     func testProIsNeverPromptedForAFeature() {
-        let q = ScanQuota(storeKit: FakePro(pro: true), promptPolicy: UpgradePromptPolicy(defaults: UserDefaults(suiteName: UUID().uuidString)!))
-        XCTAssertFalse(q.requestPaywall(ProFeatureGate.paywallReason(for: .transpose)))
+        XCTAssertFalse(quota(pro: true).requestPaywall(ProFeatureGate.paywallReason(for: .transpose)))
     }
 }
