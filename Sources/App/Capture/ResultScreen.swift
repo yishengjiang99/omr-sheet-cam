@@ -7,6 +7,9 @@ import SwiftUI
 /// Library right away. Every step is recorded in `DiagnosticsLog`.
 struct ResultScreen: View {
     let photo: CapturedPhoto
+    /// "Retake" / "Retake photo": the owner decides where to go (camera photo -> live Camera).
+    /// nil (previews / tests) falls back to popping this screen.
+    var onRetake: (() -> Void)?
     var service: any RecognitionService = AppServices.recognition
     var openPlayer: (PlayerRoute) -> Void
 
@@ -64,7 +67,7 @@ struct ResultScreen: View {
         .toolbar(outcome == nil ? .hidden : .visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button { dismiss() } label: {
+                Button { retake() } label: {
                     HStack(spacing: 4) { Image(systemName: "chevron.left"); Text("Retake") }
                 }
                 .accessibilityIdentifier("result.retake")
@@ -137,7 +140,7 @@ struct ResultScreen: View {
                             .accessibilityIdentifier("result.tip")
                         }
                         if reason.isPhotoProblem {
-                            Button { dismiss() } label: { Label("Retake photo", systemImage: "camera") }
+                            Button { retake() } label: { Label("Retake photo", systemImage: "camera") }
                                 .accessibilityIdentifier("result.retakeFromError")
                         }
                         Button { retry() } label: { Label(reason.isPhotoProblem ? "Try this photo again" : "Try again", systemImage: "arrow.clockwise") }
@@ -195,6 +198,10 @@ struct ResultScreen: View {
         let img = photo.image
         if let cg = img.cgImage { return "\(cg.width)x\(cg.height)" }
         return "\(Int(img.size.width * img.scale))x\(Int(img.size.height * img.scale))"
+    }
+
+    private func retake() {
+        if let onRetake { onRetake() } else { dismiss() }
     }
 
     private func retry() {
