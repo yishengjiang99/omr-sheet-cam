@@ -112,11 +112,43 @@ final class PlaylistStoreTests: XCTestCase {
 
         try Data("not json".utf8).write(to: store.indexURL)
         let c = makeStore()
-        XCTAssertTrue(c.scans.isEmpty)
+        // F2.9: a corrupt index no longer empties the Library; scans are rebuilt from the .mid files.
+        XCTAssertEqual(c.scans.map(\.id), [a.id])
         XCTAssertEqual(c.samples.count, 2)
-        // A corrupt index is replaced on the next save.
+        XCTAssertNotNil(c.loadNotice, "an unreadable index must be surfaced, not silent")
         let d = try c.addScan(midi: midi, captureName: "d.jpg")
-        XCTAssertEqual(makeStore().scans, [d])
+        XCTAssertEqual(Set(makeStore().scans.map(\.id)), [a.id, d.id], "next save must not drop the recovered scans")
+    }
+
+    /// F2.9: unreadable index.json is backed up (never overwritten), the Library is rebuilt from the
+    /// saved .mid files, and the rebuilt index is persisted so a relaunch is clean.
+    @MainActor
+    func testCorruptIndexIsBackedUpAndRebuiltFromMIDIFiles() throws {
+        let store = makeStore()
+        let midi = try scanMIDI()
+        let a = try store.addScan(midi: midi, title: "Alpha", captureName: "alpha.jpg", date: Date(timeIntervalSince1970: 1_000))
+        let b = try store.addScan(midi: midi, title: "Beta", captureName: "beta.jpg", date: Date(timeIntervalSince1970: 2_000))
+        let garbage = Data("not json {".utf8)
+        try garbage.write(to: store.indexURL)
+
+        let recovered = makeStore()
+        XCTAssertEqual(Set(recovered.scans.map(\.id)), [a.id, b.id], "scans must be rebuilt from .mid files")
+        for e in recovered.scans { XCTAssertEqual(try recovered.midiData(for: e), midi) }
+        XCTAssertNotNil(recovered.loadNotice, "an unreadable index must be surfaced to the user")
+        recovered.dismissLoadNotice()
+        XCTAssertNil(recovered.loadNotice)
+        let names = try FileManager.default.contentsOfDirectory(atPath: dir.path)
+        let backups = names.filter { $0.hasPrefix("index.json.corrupt-") }
+        XCTAssertEqual(backups.count, 1, "damaged index must be kept as index.json.corrupt-<ts>; dir=\(names)")
+        if let backup = backups.first {
+            XCTAssertEqual(try Data(contentsOf: dir.appendingPathComponent(backup)), garbage)
+        }
+
+        let again = makeStore()
+        XCTAssertEqual(Set(again.scans.map(\.id)), [a.id, b.id], "rebuilt index persisted")
+        XCTAssertNil(again.loadNotice, "healthy relaunch shows no notice")
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.hasPrefix("index.json.corrupt-") }.count, 1,
+                       "a healthy relaunch must not create another backup")
     }
 
     @MainActor
