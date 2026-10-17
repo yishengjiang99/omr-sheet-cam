@@ -10,6 +10,12 @@ final class ProEntitlementTests: XCTestCase {
                       "ScanQuota.shared must use StoreKitManager.shared, not its own instance")
     }
 
+    /// P1.12: ScanQuota takes its manager by injection (no private instance).
+    func testScanQuotaUsesInjectedStoreKitManager() {
+        let injected = StoreKitManager()
+        XCTAssertTrue(ScanQuota(storeKit: injected).storeKit === injected)
+    }
+
     /// P1.12: no code outside StoreKitManager.swift may construct a StoreKitManager.
     func testNoStrayStoreKitManagerInstances() throws {
         let root = URL(fileURLWithPath: #filePath)

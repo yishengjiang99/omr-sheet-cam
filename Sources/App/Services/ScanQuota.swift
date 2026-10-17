@@ -8,7 +8,12 @@ final class ScanQuota: ObservableObject {
 
     private let countKey = "omr.freeScansUsed"
     private let dateKey = "omr.freeScansDate"
-    let storeKit = StoreKitManager()
+    /// Injected (default: the app-wide manager) so the gate and the UI share one StoreKitManager.
+    let storeKit: StoreKitManager
+
+    init(storeKit: StoreKitManager = .shared) {
+        self.storeKit = storeKit
+    }
 
     @Published var showPaywall = false
 
