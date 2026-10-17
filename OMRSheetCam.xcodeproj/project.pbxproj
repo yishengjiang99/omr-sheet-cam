@@ -79,6 +79,7 @@
 		8A0000000000000000000001 /* SegNetSelfTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B0000000000000000000001 /* SegNetSelfTest.swift */; };
 		8A0000000000000000000002 /* CoreMLCacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B0000000000000000000002 /* CoreMLCacheStore.swift */; };
 		8A0000000000000000000003 /* Build6PrepTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B0000000000000000000003 /* Build6PrepTests.swift */; };
+		FE0000000000000000000002 /* ReviewNotesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0000000000000000000001 /* ReviewNotesTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -165,6 +166,7 @@
 		8B0000000000000000000001 /* SegNetSelfTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegNetSelfTest.swift; sourceTree = "<group>"; };
 		8B0000000000000000000002 /* CoreMLCacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMLCacheStore.swift; sourceTree = "<group>"; };
 		8B0000000000000000000003 /* Build6PrepTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Build6PrepTests.swift; sourceTree = "<group>"; };
+		FE0000000000000000000001 /* ReviewNotesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewNotesTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -338,6 +340,7 @@
 		G10000000000000000000006 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				FE0000000000000000000001 /* ReviewNotesTests.swift */,
 				B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */,
 				B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */,
 				B1000000000000000000000A /* ModelWarmupTests.swift */,
@@ -600,6 +603,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE0000000000000000000002 /* ReviewNotesTests.swift in Sources */,
 				A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */,
 				A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */,
 				A1000000000000000000000A /* ModelWarmupTests.swift in Sources */,
