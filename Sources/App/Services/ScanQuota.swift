@@ -33,6 +33,9 @@ final class ScanQuota: ObservableObject {
     }
 
     @Published var showPaywall = false
+    /// TODO stub: legacy behaviour had no published remaining count.
+    @Published private(set) var remaining: Int = 0
+    func refreshRemaining() {}
     /// Why the paywall is (or was last) shown; passed to `PaywallView` for `reason` telemetry.
     @Published private(set) var paywallReason: PaywallReason = .quota
 
