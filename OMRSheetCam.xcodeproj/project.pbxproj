@@ -78,6 +78,7 @@
 		8A0000000000000000000001 /* SegNetSelfTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B0000000000000000000001 /* SegNetSelfTest.swift */; };
 		8A0000000000000000000002 /* CoreMLCacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B0000000000000000000002 /* CoreMLCacheStore.swift */; };
 		8A0000000000000000000003 /* Build6PrepTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B0000000000000000000003 /* Build6PrepTests.swift */; };
+		FD0000000000000000000002 /* BackgroundAudioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD0000000000000000000001 /* BackgroundAudioTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -163,6 +164,7 @@
 		8B0000000000000000000001 /* SegNetSelfTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegNetSelfTest.swift; sourceTree = "<group>"; };
 		8B0000000000000000000002 /* CoreMLCacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMLCacheStore.swift; sourceTree = "<group>"; };
 		8B0000000000000000000003 /* Build6PrepTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Build6PrepTests.swift; sourceTree = "<group>"; };
+		FD0000000000000000000001 /* BackgroundAudioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundAudioTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -336,6 +338,7 @@
 		G10000000000000000000006 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				FD0000000000000000000001 /* BackgroundAudioTests.swift */,
 				B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */,
 				B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */,
 				B1000000000000000000000A /* ModelWarmupTests.swift */,
@@ -597,6 +600,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FD0000000000000000000002 /* BackgroundAudioTests.swift in Sources */,
 				A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */,
 				A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */,
 				A1000000000000000000000A /* ModelWarmupTests.swift in Sources */,
@@ -681,6 +685,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Take photos of sheet music to read and play them.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AI Camera - Music Reader can open a photo of sheet music from your library to read and play it back on this device.";
+				INFOPLIST_KEY_UIBackgroundModes = audio;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -717,6 +722,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Take photos of sheet music to read and play them.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AI Camera - Music Reader can open a photo of sheet music from your library to read and play it back on this device.";
+				INFOPLIST_KEY_UIBackgroundModes = audio;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
