@@ -212,7 +212,26 @@ struct ResultScreen: View {
             jpeg = await saveCapture()
             input = jpeg
         }
+        // Cancel (view popped) while the capture was being saved: don't start a parse.
+        if Task.isCancelled { discardCancelledScan(); return }
         await recognize(jpeg)
+    }
+
+    /// Runs recognition; `nil` when the task was cancelled (Cancel / screen popped), in which case
+    /// the result is discarded: no outcome, analytics, Library entry or quota charge (F6.8).
+    static func recognizeUnlessCancelled(
+        service: any RecognitionService, imageData: Data, progress: @escaping RecognitionProgressHandler
+    ) async -> RecognitionOutcome? {
+        let result = await service.recognize(imageData: imageData, progress: progress)
+        return Task.isCancelled ? nil : result
+    }
+
+    /// A cancelled scan leaves nothing behind: delete the capture JPEG saved before recognition.
+    private func discardCancelledScan() {
+        DiagnosticsLog.shared.record(.info, .recognition, "\(captureName): cancelled, discarded capture",
+                                     payload: ["kind": "cancel", "capture": captureName])
+        CaptureStore.discard(savedURL)
+        savedURL = nil
     }
 
     /// Saves the upright JPEG to Documents/captures; returns its bytes (in-memory JPEG if saving failed).
@@ -246,7 +265,10 @@ struct ResultScreen: View {
         let t0 = DispatchTime.now()
         progress.reset()
         Analytics.shared.track("scan_start")
-        let result = await service.recognize(imageData: jpeg, progress: progress.handler)
+        guard let result = await Self.recognizeUnlessCancelled(service: service, imageData: jpeg, progress: progress.handler) else {
+            discardCancelledScan()
+            return
+        }
         let ms = Double(DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds) / 1_000_000
         switch result {
         case .recognized(let d):
@@ -259,6 +281,7 @@ struct ResultScreen: View {
         if case .failed = result, photoQuality == nil {
             let image = photo.image
             photoQuality = await Task.detached(priority: .userInitiated) { PhotoQuality.measure(image) }.value
+            if Task.isCancelled { discardCancelledScan(); return }
         }
         outcome = result
         Self.recordRecognition(result, capture: captureName, inputBytes: jpeg.count, pixels: pixelSize, ms: ms, quality: photoQuality)
