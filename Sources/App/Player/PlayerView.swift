@@ -58,6 +58,7 @@ struct PlayerScreen: View {
     @ObservedObject private var controller: PlaybackController
     @ObservedObject private var player: SF2MIDIPlayer
     @ObservedObject private var settings: AppSettings
+    @ObservedObject private var storeKit = StoreKitManager.shared
     private let route: PlayerRoute
     @State private var scrub: Double?
     @State private var showLibrary = false
@@ -304,15 +305,29 @@ struct PlayerScreen: View {
         .overlay(Capsule().stroke(Color.primary.opacity(0.08)))
     }
 
+    /// P9.1 (flag `omr.flag.lockedFeatures`, default OFF = never locked): gate at the action, not the screen.
+    private var transposeLocked: Bool {
+        !ProFeatureGate.allows(.transpose, isPro: storeKit.isPro, flagEnabled: ProFeatureGate.flagEnabled())
+    }
+
+    private func setTransposeGated(_ semitones: Int) {
+        guard !transposeLocked else {
+            // User tapped a locked control: open the paywall (reason feature_transpose); playback keeps playing.
+            ScanQuota.shared.requestPaywall(ProFeatureGate.paywallReason(for: .transpose))
+            return
+        }
+        controller.setTranspose(semitones)
+    }
+
     private var keyChip: some View {
         Menu {
-            Picker("Transpose", selection: Binding(get: { player.transpose }, set: { controller.setTranspose($0) })) {
+            Picker("Transpose", selection: Binding(get: { player.transpose }, set: { setTransposeGated($0) })) {
                 ForEach(PlaybackController.transposeChoices.reversed(), id: \.self) { t in
                     Text(PlaybackController.transposeName(t)).tag(t)
                 }
             }
         } label: {
-            chip(icon: "arrow.up.arrow.down", text: PlaybackController.keyLabel(player.transpose))
+            chip(icon: transposeLocked ? "lock.fill" : "arrow.up.arrow.down", text: PlaybackController.keyLabel(player.transpose))
         }
         .disabled(!controller.ready)
         .accessibilityLabel("Transpose")
