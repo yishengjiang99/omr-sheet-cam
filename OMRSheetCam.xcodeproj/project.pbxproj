@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		A50000000000000000000009 /* ProSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000009 /* ProSettings.swift */; };
 		A50000000000000000000008 /* ProSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000008 /* ProSettingsTests.swift */; };
+		A5000000000000000000000B /* PaywallState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6000000000000000000000B /* PaywallState.swift */; };
+		A5000000000000000000000A /* PaywallStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6000000000000000000000A /* PaywallStateTests.swift */; };
 		A50000000000000000000005 /* PurchaseOutcome.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000005 /* PurchaseOutcome.swift */; };
 		A50000000000000000000004 /* PurchaseOutcomeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000004 /* PurchaseOutcomeTests.swift */; };
 		A50000000000000000000007 /* PendingScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000007 /* PendingScan.swift */; };
@@ -117,6 +119,8 @@
 /* Begin PBXFileReference section */
 		A60000000000000000000009 /* ProSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProSettings.swift; sourceTree = "<group>"; };
 		A60000000000000000000008 /* ProSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProSettingsTests.swift; sourceTree = "<group>"; };
+		A6000000000000000000000B /* PaywallState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallState.swift; sourceTree = "<group>"; };
+		A6000000000000000000000A /* PaywallStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallStateTests.swift; sourceTree = "<group>"; };
 		A60000000000000000000005 /* PurchaseOutcome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseOutcome.swift; sourceTree = "<group>"; };
 		A60000000000000000000004 /* PurchaseOutcomeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseOutcomeTests.swift; sourceTree = "<group>"; };
 		A60000000000000000000007 /* PendingScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingScan.swift; sourceTree = "<group>"; };
@@ -336,6 +340,7 @@
 				E10000000000000000000003 /* StoreKitManager.swift */,
 				E10000000000000000000004 /* ScanQuota.swift */,
 				A60000000000000000000009 /* ProSettings.swift */,
+				A6000000000000000000000B /* PaywallState.swift */,
 				A60000000000000000000005 /* PurchaseOutcome.swift */,
 				A60000000000000000000007 /* PendingScan.swift */,
 				A60000000000000000000003 /* EntitlementLogic.swift */,
@@ -423,6 +428,7 @@
 				9D0000000000000000000001 /* PaywallScreenshotTests.swift */,
 				A60000000000000000000001 /* ProEntitlementTests.swift */,
 				A60000000000000000000008 /* ProSettingsTests.swift */,
+				A6000000000000000000000A /* PaywallStateTests.swift */,
 				A60000000000000000000004 /* PurchaseOutcomeTests.swift */,
 				A60000000000000000000006 /* PendingScanTests.swift */,
 				A60000000000000000000002 /* EntitlementLogicTests.swift */,
@@ -638,6 +644,7 @@
 				E20000000000000000000002 /* StoreKitManager.swift in Sources */,
 				E20000000000000000000003 /* ScanQuota.swift in Sources */,
 				A50000000000000000000009 /* ProSettings.swift in Sources */,
+				A5000000000000000000000B /* PaywallState.swift in Sources */,
 				A50000000000000000000005 /* PurchaseOutcome.swift in Sources */,
 				A50000000000000000000007 /* PendingScan.swift in Sources */,
 				A50000000000000000000003 /* EntitlementLogic.swift in Sources */,
@@ -707,6 +714,7 @@
 				9C0000000000000000000001 /* PaywallScreenshotTests.swift in Sources */,
 				A50000000000000000000001 /* ProEntitlementTests.swift in Sources */,
 				A50000000000000000000008 /* ProSettingsTests.swift in Sources */,
+				A5000000000000000000000A /* PaywallStateTests.swift in Sources */,
 				A50000000000000000000004 /* PurchaseOutcomeTests.swift in Sources */,
 				A50000000000000000000006 /* PendingScanTests.swift in Sources */,
 				A50000000000000000000002 /* EntitlementLogicTests.swift in Sources */,
