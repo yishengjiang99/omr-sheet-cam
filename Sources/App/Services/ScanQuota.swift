@@ -1,6 +1,10 @@
 import Foundation
 
 /// Free tier: 5 scans per day. Pro users have no limit.
+///
+/// A scan is only *charged* when recognition succeeds: `canScan()` is a read-only gate before the
+/// scan starts, `commit()` records the use once the scan was recognized. Failed, cancelled and
+/// reader-not-ready scans never call `commit()`, so they cost nothing (P1.4).
 @MainActor
 final class ScanQuota: ObservableObject {
     static let shared = ScanQuota(storeKit: StoreKitManager.shared)
@@ -11,8 +15,18 @@ final class ScanQuota: ObservableObject {
     /// Injected (`shared` uses the app-wide manager) so the gate and the UI share one StoreKitManager.
     let storeKit: any ProEntitlementSource
 
-    init(storeKit: any ProEntitlementSource) {
+    private let defaults: UserDefaults
+    private let track: @MainActor (String, [String: String]) -> Void
+
+    /// Tests inject `defaults` and `track`; the app uses `UserDefaults.standard` and `Analytics.shared`.
+    init(
+        storeKit: any ProEntitlementSource,
+        defaults: UserDefaults = .standard,
+        track: (@MainActor (String, [String: String]) -> Void)? = nil
+    ) {
         self.storeKit = storeKit
+        self.defaults = defaults
+        self.track = track ?? { Analytics.shared.track($0, props: $1) }
     }
 
     @Published var showPaywall = false
@@ -23,29 +37,38 @@ final class ScanQuota: ObservableObject {
         return f.string(from: Date())
     }
 
-    /// Returns true if the user may scan now. If false, caller should show paywall.
-    func checkAndConsume() -> Bool {
+    /// Read-only gate: true if the user may start a scan now. Does NOT consume quota. If false
+    /// (free limit reached), tracks the paywall trigger and sets `showPaywall`.
+    func canScan() -> Bool {
         if storeKit.isPro { return true }
-        let lastDate = UserDefaults.standard.string(forKey: dateKey)
-        if lastDate != today {
-            UserDefaults.standard.set(today, forKey: dateKey)
-            UserDefaults.standard.set(0, forKey: countKey)
-        }
-        let used = UserDefaults.standard.integer(forKey: countKey)
-        if used >= Self.freeDailyLimit {
-            Analytics.shared.track("free_quota_hit")
-            Analytics.shared.track("paywall_trigger", props: ["reason": "quota"])
+        rollDateIfNeeded()
+        if defaults.integer(forKey: countKey) >= Self.freeDailyLimit {
+            track("free_quota_hit", [:])
+            track("paywall_trigger", ["reason": "quota"])
             showPaywall = true
             return false
         }
-        UserDefaults.standard.set(used + 1, forKey: countKey)
         return true
+    }
+
+    /// Charges one free scan. Call exactly once per scan, only after recognition succeeded.
+    func commit() {
+        if storeKit.isPro { return }
+        rollDateIfNeeded()
+        defaults.set(defaults.integer(forKey: countKey) + 1, forKey: countKey)
+    }
+
+    private func rollDateIfNeeded() {
+        if defaults.string(forKey: dateKey) != today {
+            defaults.set(today, forKey: dateKey)
+            defaults.set(0, forKey: countKey)
+        }
     }
 
     var scansRemaining: Int {
         if storeKit.isPro { return Int.max }
-        let lastDate = UserDefaults.standard.string(forKey: dateKey)
+        let lastDate = defaults.string(forKey: dateKey)
         if lastDate != today { return Self.freeDailyLimit }
-        return max(0, Self.freeDailyLimit - UserDefaults.standard.integer(forKey: countKey))
+        return max(0, Self.freeDailyLimit - defaults.integer(forKey: countKey))
     }
 }
