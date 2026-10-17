@@ -15,6 +15,7 @@ final class ScanQuota: ObservableObject {
     /// Injected (`shared` uses the app-wide manager) so the gate and the UI share one StoreKitManager.
     let storeKit: any ProEntitlementSource
 
+    let promptPolicy: UpgradePromptPolicy
     private let defaults: UserDefaults
     private let track: @MainActor (String, [String: String]) -> Void
 
@@ -22,14 +23,40 @@ final class ScanQuota: ObservableObject {
     init(
         storeKit: any ProEntitlementSource,
         defaults: UserDefaults = .standard,
-        track: (@MainActor (String, [String: String]) -> Void)? = nil
+        track: (@MainActor (String, [String: String]) -> Void)? = nil,
+        promptPolicy: UpgradePromptPolicy = .shared
     ) {
         self.storeKit = storeKit
+        self.promptPolicy = promptPolicy
         self.defaults = defaults
         self.track = track ?? { Analytics.shared.track($0, props: $1) }
     }
 
     @Published var showPaywall = false
+    /// Why the paywall is (or was last) shown; passed to `PaywallView` for `reason` telemetry.
+    @Published private(set) var paywallReason: PaywallReason = .quota
+
+    /// The single way to open the paywall. Opening is always user-initiated (quota wall, Settings row,
+    /// nudge tap, or "See Pro" on a card/banner), so it is never capped; Pro never sees it.
+    /// The frequency cap applies earlier, to *showing* an unsolicited surface: see `shouldShowPrompt`.
+    /// Returns whether the paywall was presented.
+    @discardableResult
+    func requestPaywall(_ reason: PaywallReason) -> Bool {
+        guard !storeKit.isPro else { return false }
+        track("paywall_trigger", ["reason": reason.analyticsValue])
+        paywallReason = reason
+        showPaywall = true
+        return true
+    }
+
+    /// Ask before showing an unsolicited upsell surface (post-scan card, return banner).
+    func shouldShowPrompt(_ reason: PaywallReason, purchaseInProgress: Bool = false) -> Bool {
+        promptPolicy.decision(for: reason, isPro: storeKit.isPro, purchaseInProgress: purchaseInProgress).allowed
+    }
+
+    /// Call when an unsolicited surface appears / is dismissed, so the shared cap sees it.
+    func promptShown(_ reason: PaywallReason) { promptPolicy.recordShown(reason) }
+    func promptDismissed(_ reason: PaywallReason) { promptPolicy.recordDismissed(reason) }
 
     /// Stored day key: `yyyy-MM-dd` in the Gregorian calendar with the POSIX locale, so changing
     /// Region / Calendar (Buddhist, Japanese, Hijri...) can't change the string and reset the counter
@@ -58,8 +85,7 @@ final class ScanQuota: ObservableObject {
         rollDateIfNeeded()
         if defaults.integer(forKey: countKey) >= Self.freeDailyLimit {
             track("free_quota_hit", [:])
-            track("paywall_trigger", ["reason": "quota"])
-            showPaywall = true
+            requestPaywall(.quota)
             return false
         }
         return true

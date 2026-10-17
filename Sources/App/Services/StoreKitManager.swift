@@ -20,6 +20,12 @@ final class StoreKitManager: ObservableObject, ProEntitlementSource {
     /// Last purchase attempt: idle, pending (Ask to Buy / SCA, not an error) or a user-facing error.
     @Published private(set) var purchaseStatus: PurchaseStatus = .idle
     @Published private(set) var isPurchasing = false
+    /// A purchase is running or waiting for Ask to Buy approval: upsell surfaces stay quiet (P2.1).
+    var purchaseInFlight: Bool {
+        if isPurchasing { return true }
+        if case .pending = purchaseStatus { return true }
+        return false
+    }
 
     /// Pro state. Cached in UserDefaults as an offline fallback only; re-derived from
     /// `Transaction.currentEntitlements` on launch, foreground, every `Transaction.updates` event

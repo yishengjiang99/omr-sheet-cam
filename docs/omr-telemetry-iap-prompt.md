@@ -66,10 +66,10 @@ Track these events at the appropriate call sites:
 - `scan_success` — reading completes, MIDI generated
 - `scan_fail` — reading fails (include error type in props)
 - `playback_start` — user taps play
-- `paywall_view` — paywall shown
+- `paywall_trigger{reason}` / `paywall_view{reason}` — paywall requested / shown; `reason` is one of `quota|post_scan|nudge|settings|library|app_return|feature_<name>` (P2.1)
 - `purchase_start`, then exactly one of `purchase_success`, `purchase_cancel`, `purchase_pending`, `purchase_fail{reason: network|notAvailable|notAllowed|verification|unknown}`
 - `restore_start`, then one of `restore_success`, `restore_none`, `restore_cancel`, `restore_fail{reason}`
-- `paywall_dismiss{pro}` — paywall closed
+- `paywall_dismiss{pro, reason}` — paywall closed
 
 ### 1d. Admin panel: add app filter
 
