@@ -61,6 +61,8 @@ final class PlaylistStore: ObservableObject {
     @Published private(set) var scans: [PlaylistEntry] = []
     private let sampleSources: [PlaylistSample]
     private let log: DiagnosticsLog
+    /// Where scan photos live (`Documents/captures`); `delete` removes a scan's JPEG from here.
+    private let capturesDirectory: URL?
 
     /// Library order (also prev/next): your scans newest first (by date, then most recently
     /// added), then the samples.
@@ -71,8 +73,10 @@ final class PlaylistStore: ObservableObject {
         return newestFirst + samples
     }
 
-    init(directory: URL, samples: [PlaylistSample] = PlaylistSample.bundled, log: DiagnosticsLog = .shared) {
+    init(directory: URL, samples: [PlaylistSample] = PlaylistSample.bundled, log: DiagnosticsLog = .shared,
+         capturesDirectory: URL? = try? CaptureStore.defaultDirectory()) {
         self.directory = directory
+        self.capturesDirectory = capturesDirectory
         self.sampleSources = samples
         self.log = log
         reload()
@@ -218,7 +222,24 @@ final class PlaylistStore: ObservableObject {
             try? FileManager.default.removeItem(at: directory.appendingPathComponent(f))
             try? FileManager.default.removeItem(at: directory.appendingPathComponent(ScanLayout.sidecarName(forMIDI: f)))
         }
+        removeCaptureIfUnreferenced(removed)
         log.record(.info, .playback, "playlist: deleted \(removed.id)", payload: ["kind": "playlist_delete", "file": removed.id])
+    }
+
+    /// F2.7: the scan's photo goes with it (privacy: "Deleting a scan removes it"), unless another
+    /// scan still points at the same JPEG. Best effort; only a bare file name inside `captures/`.
+    private func removeCaptureIfUnreferenced(_ removed: PlaylistEntry) {
+        guard let name = removed.captureName, !name.isEmpty, let dir = capturesDirectory,
+              name == (name as NSString).lastPathComponent, name != ".", name != ".." else { return }
+        guard !scans.contains(where: { $0.captureName == name }) else { return }
+        let url = dir.appendingPathComponent(name)
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        do {
+            try FileManager.default.removeItem(at: url)
+            log.record(.info, .playback, "playlist: deleted capture \(name)", payload: ["kind": "playlist_delete_capture", "capture": name])
+        } catch {
+            log.record(error: error, category: .playback, context: "playlist capture delete", payload: ["capture": name])
+        }
     }
 
     func entry(id: String) -> PlaylistEntry? { entries.first { $0.id == id } }
