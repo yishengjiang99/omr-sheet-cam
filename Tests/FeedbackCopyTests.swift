@@ -32,4 +32,16 @@ final class FeedbackCopyTests: XCTestCase {
             XCTAssertTrue(l.localizedCaseInsensitiveContains("device"), "'\(l)' implies feedback was submitted; say it is stored on this device only")
         }
     }
+
+    func testFeedbackCopyConstants() {
+        typealias C = OMRCompareView.FeedbackCopy
+        for text in [C.sectionFooter, C.saveButton, C.savedToast, C.failedToast] {
+            XCTAssertTrue(text.localizedCaseInsensitiveContains("device"), text)
+            for banned in ["submitted", "sent to us", "thank", "Feedback saved"] {
+                XCTAssertFalse(text.localizedCaseInsensitiveContains(banned), "\(text) contains \(banned)")
+            }
+        }
+        XCTAssertTrue(C.sectionFooter.contains("Nothing is sent"))
+        XCTAssertEqual(C.sectionTitle, "Was the reading accurate?")
+    }
 }
