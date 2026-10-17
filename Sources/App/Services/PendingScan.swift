@@ -7,11 +7,12 @@ struct PendingScan<Item> {
 
     /// Gate rejected `item`: keep it for the paywall.
     mutating func hold(_ item: Item) {
+        self.item = item
     }
 
     /// Paywall closed. Returns the item to re-submit (only if Pro is now active); clears either way.
     mutating func take(isPro: Bool) -> Item? {
         defer { item = nil }
-        return nil
+        return isPro ? item : nil
     }
 }

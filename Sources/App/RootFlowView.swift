@@ -14,6 +14,8 @@ struct RootFlowView: View {
     @EnvironmentObject private var playback: PlaybackController
     @ObservedObject private var storeKit = StoreKitManager.shared
     @Environment(\.scenePhase) private var scenePhase
+    /// The photo that hit the paywall; re-submitted if the user turns Pro (P3.7).
+    @State private var pendingScan = PendingScan<CapturedPhoto>()
     @ObservedObject private var quota = ScanQuota.shared
     /// Set when "Try sample picture" can't load the sample (same message as the Camera screen).
     @State private var sampleError: String?
@@ -52,7 +54,7 @@ struct RootFlowView: View {
         }
         .tint(Theme.coral)
         .sheet(isPresented: $showSettings) { SettingsView().environmentObject(playback) }
-        .sheet(isPresented: $quota.showPaywall) {
+        .sheet(isPresented: $quota.showPaywall, onDismiss: resumePendingScan) {
             PaywallView().environmentObject(storeKit)
         }
         .alert("Couldn't open the sample", isPresented: Binding(get: { sampleError != nil }, set: { if !$0 { sampleError = nil } })) {
@@ -71,7 +73,10 @@ struct RootFlowView: View {
     private func handlePhoto(_ photo: CapturedPhoto) {
         Task { @MainActor in
             // Re-check Pro against the store first (P7.4), then consume quota.
-            guard await quota.admitScan() else { return }
+            guard await quota.admitScan() else {
+                pendingScan.hold(photo) // paywall is up: keep the photo for after a purchase
+                return
+            }
             // Leave camera if we came from it, then show result.
             path.removeAll { $0 == .camera }
             path.append(.result(photo))
@@ -85,6 +90,11 @@ struct RootFlowView: View {
         if let i = p.firstIndex(of: .result(photo)) { p.removeSubrange(i...) }
         if photo.source == .camera { p.append(.camera) }
         return p
+    }
+
+    /// Paywall closed: if the user is now Pro, continue with the photo that triggered it.
+    private func resumePendingScan() {
+        if let photo = pendingScan.take(isPro: storeKit.isPro) { handlePhoto(photo) }
     }
 
     /// Empty-library "Try sample picture": same Result/recognition flow as a camera or Photos pick.
