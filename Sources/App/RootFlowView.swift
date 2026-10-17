@@ -40,7 +40,9 @@ struct RootFlowView: View {
                     )
                     .toolbar(.hidden, for: .navigationBar)
                 case let .result(photo):
-                    ResultScreen(photo: photo, service: Self.recognition) { path.append(.player($0)) }
+                    ResultScreen(photo: photo, onRetake: { path = Self.pathAfterRetake(path, photo: photo) }, service: Self.recognition) {
+                        path.append(.player($0))
+                    }
                 case let .player(p):
                     PlayerDestination.view(for: p)
                 }
@@ -67,6 +69,15 @@ struct RootFlowView: View {
             path.removeAll { $0 == .camera }
             path.append(.result(photo))
         }
+    }
+
+    /// Retake from the Result screen: drop it (and anything above it); a camera photo returns to the
+    /// live Camera, Photos / sample picks return to the Library (F5.5).
+    static func pathAfterRetake(_ path: [Route], photo: CapturedPhoto) -> [Route] {
+        var p = path
+        if let i = p.firstIndex(of: .result(photo)) { p.removeSubrange(i...) }
+        if photo.source == .camera { p.append(.camera) }
+        return p
     }
 
     /// Empty-library "Try sample picture": same Result/recognition flow as a camera or Photos pick.
