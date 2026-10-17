@@ -3,15 +3,15 @@ import Foundation
 /// Free tier: 5 scans per day. Pro users have no limit.
 @MainActor
 final class ScanQuota: ObservableObject {
-    static let shared = ScanQuota()
+    static let shared = ScanQuota(storeKit: StoreKitManager.shared)
     static let freeDailyLimit = 5
 
     private let countKey = "omr.freeScansUsed"
     private let dateKey = "omr.freeScansDate"
-    /// Injected (default: the app-wide manager) so the gate and the UI share one StoreKitManager.
-    let storeKit: StoreKitManager
+    /// Injected (`shared` uses the app-wide manager) so the gate and the UI share one StoreKitManager.
+    let storeKit: any ProEntitlementSource
 
-    init(storeKit: StoreKitManager = .shared) {
+    init(storeKit: any ProEntitlementSource) {
         self.storeKit = storeKit
     }
 

@@ -9,7 +9,7 @@ enum IAPProductID {
 }
 
 @MainActor
-final class StoreKitManager: ObservableObject {
+final class StoreKitManager: ObservableObject, ProEntitlementSource {
     /// App-wide instance (one `Transaction.updates` listener, one entitlement refresh).
     static let shared = StoreKitManager()
 
