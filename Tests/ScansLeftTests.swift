@@ -54,11 +54,12 @@ final class ScansLeftTests: XCTestCase {
     func testRemainingTracksEachConsumedScan() {
         let q = ScanQuota(storeKit: FakePro(), promptPolicy: UpgradePromptPolicy(defaults: UserDefaults(suiteName: UUID().uuidString)!))
         XCTAssertEqual(q.remaining, 5)
-        XCTAssertTrue(q.checkAndConsume())
+        XCTAssertTrue(q.canScan())
+        q.commit()
         XCTAssertEqual(q.remaining, 4)
-        for _ in 0..<4 { XCTAssertTrue(q.checkAndConsume()) }
+        for _ in 0..<4 { XCTAssertTrue(q.canScan()); q.commit() }
         XCTAssertEqual(q.remaining, 0)
-        XCTAssertFalse(q.checkAndConsume())
+        XCTAssertFalse(q.canScan(), "gate is read-only and blocks at the limit")
         XCTAssertEqual(q.remaining, 0)
     }
 

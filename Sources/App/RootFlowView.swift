@@ -70,7 +70,10 @@ struct RootFlowView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             // Expiry, renewal or refund can happen while the app stays alive in the background.
-            if phase == .active { Task { await storeKit.refreshEntitlements() } }
+            if phase == .active {
+                quota.refreshRemaining() // day rollover
+                Task { await storeKit.refreshEntitlements() }
+            }
         }
     }
 
