@@ -18,6 +18,7 @@ struct LibraryScreen: View {
     var onPhoto: ((CapturedPhoto) -> Void)?
 
     @ObservedObject private var returnReminder = ReturnReminder.shared
+    @ObservedObject private var storeKit = StoreKitManager.shared
     @State private var query = ""
     @State private var deleteError: String?
     @State private var renaming: PlaylistEntry?
@@ -139,6 +140,15 @@ struct LibraryScreen: View {
                     }
                     .accessibilityLabel("Settings")
                     .accessibilityIdentifier("library.settings")
+                }
+            }
+            if LibraryProEntry.isVisible(isPro: storeKit.isPro, isHomeChrome: isHomeChrome) {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(LibraryProEntry.title) { ScanQuota.shared.requestPaywall(.library) }
+                        .font(.footnote.weight(.semibold))
+                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .background(Theme.coral.opacity(0.15), in: Capsule())
+                        .accessibilityIdentifier("library.goPro")
                 }
             }
             if onCamera != nil || onPhoto != nil {
