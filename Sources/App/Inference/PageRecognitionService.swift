@@ -214,6 +214,8 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
             guard !Task.isCancelled else { return .failed("cancelled") }
             let gate = progress.map { MonotonicProgress($0) }
             let outcome = await run(imageData, progress: gate)
+            // ORT cannot abort a running parse, so a cancel during it only discards the late result.
+            guard !Task.isCancelled else { return .failed("cancelled") }
             if case .recognized = outcome { gate?.report(ScanProgress(warmingUp: false, fraction: 1)) }
             return outcome
         }
@@ -236,6 +238,7 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
                 p["image"] = image
                 p["image_w"] = "\(page.width)"
                 p["image_h"] = "\(page.height)"
+                try Task.checkCancellation() // cancelled during decode: don't build a session or parse
                 p["decode_ms"] = fmt(decoded.ms)
                 p["exif_orientation"] = "\(page.orientation)"
                 p["source_format"] = page.source
@@ -269,6 +272,7 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
                     dropReason = nil
                 }
 
+                try Task.checkCancellation() // cancelled during warmup / session build: skip the parse
                 let onStage: PageParseProgressHandler? = progress.map { gate -> PageParseProgressHandler in
                     { p in gate.report(ScanProgress(warmingUp: false, fraction: p.fraction)) }
                 }
@@ -304,6 +308,9 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
                     }.joined(separator: " ")
                 }
                 outcome = PageRecognitionService.outcome(for: r, ms: parseMs)
+            } catch is CancellationError {
+                outcome = .failed("cancelled")
+                p["cancelled"] = "1"
             } catch {
                 outcome = .failed(String(describing: error))
                 p["error"] = String(describing: error)
@@ -339,7 +346,10 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
             var msg = String(format: "page parse %@: %.0f ms · %@ · staffs %@ · %d warning(s) · footprint %.0f → %.0f MB, peak %.0f MB (%@)",
                              outcome.name, totalMs, image, staffs, warnings, beforeMB, afterMB, peakMB, peakSource)
             let level: DiagnosticsEvent.Level
-            if case let .failed(e) = outcome {
+            if p["cancelled"] != nil {
+                level = .info
+                msg += " · cancelled by user"
+            } else if case let .failed(e) = outcome {
                 level = .error
                 msg += " · \(e)"
             } else {
