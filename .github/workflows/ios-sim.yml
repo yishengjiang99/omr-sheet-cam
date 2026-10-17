@@ -113,6 +113,7 @@ jobs:
             -only-testing:OMRSheetCamTests/ShareNamingTests \
             -only-testing:OMRSheetCamTests/StoreKitConfigTests \
             -only-testing:OMRSheetCamTests/UserFacingErrorTests \
+            -only-testing:OMRSheetCamTests/PurchaseOutcomeTests \
             -resultBundlePath "$RUNNER_TEMP/OMRSheetCam.xcresult" \
             CODE_SIGNING_ALLOWED=NO \
             | tee "$RUNNER_TEMP/xcodebuild.log"
