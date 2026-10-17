@@ -322,9 +322,10 @@ struct ResultScreen: View {
             feedback.noteCount = d.notes.count
             feedback.layoutSource = d.layoutSource
             saveToPlaylist(d)
-            decideUpgradeCard()
         }
         Self.commitQuotaIfRecognized(result, commit: commitQuota)
+        // After the charge (P1.4: commit on success) so `remaining` already counts this scan.
+        if case .recognized = result { decideUpgradeCard() }
     }
 
     /// Free-scan quota is charged only for a recognized scan: failures (incl. reader not ready) and
