@@ -101,6 +101,35 @@ final class PlaylistStoreTests: XCTestCase {
         XCTAssertEqual(store.entries.map(\.source), [.sample, .sample], "samples survive deleting every scan")
     }
 
+    /// F2.7: deleting a scan must also remove its captured JPEG (Documents/captures/<captureName>),
+    /// but must keep a JPEG that another scan still references and must not touch unrelated files.
+    @MainActor
+    func testDeleteRemovesCaptureJPEGButKeepsSharedAndUnrelatedOnes() throws {
+        let caps = try CaptureStore.defaultDirectory()
+        try FileManager.default.createDirectory(at: caps, withIntermediateDirectories: true)
+        let tag = UUID().uuidString.prefix(8)
+        let goneJPG = "f27-gone-\(tag).jpg", sharedJPG = "f27-shared-\(tag).jpg", otherJPG = "f27-other-\(tag).jpg"
+        for n in [goneJPG, sharedJPG, otherJPG] { try Data([0xFF, 0xD8, 0xFF, 0xD9]).write(to: caps.appendingPathComponent(n)) }
+        defer { for n in [goneJPG, sharedJPG, otherJPG] { try? FileManager.default.removeItem(at: caps.appendingPathComponent(n)) } }
+        func exists(_ n: String) -> Bool { FileManager.default.fileExists(atPath: caps.appendingPathComponent(n).path) }
+
+        let store = makeStore()
+        let midi = try scanMIDI()
+        let gone = try store.addScan(midi: midi, captureName: goneJPG)
+        let s1 = try store.addScan(midi: midi, title: "shared 1", captureName: sharedJPG)
+        let s2 = try store.addScan(midi: midi, title: "shared 2", captureName: sharedJPG)
+        XCTAssertNotEqual(s1.id, s2.id)
+
+        try store.delete(gone)
+        XCTAssertFalse(exists(goneJPG), "capture JPEG must be deleted with its scan")
+        XCTAssertTrue(exists(otherJPG), "unrelated captures untouched")
+
+        try store.delete(s1)
+        XCTAssertTrue(exists(sharedJPG), "JPEG still referenced by another scan must stay")
+        try store.delete(s2)
+        XCTAssertFalse(exists(sharedJPG), "last referencing scan removes the JPEG")
+    }
+
     @MainActor
     func testReloadToleratesMissingFilesAndCorruptIndex() throws {
         let store = makeStore()
