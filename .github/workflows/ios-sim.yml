@@ -83,6 +83,7 @@ jobs:
             -only-testing:OMRSheetCamTests/UpgradePromptPolicyTests \
             -only-testing:OMRSheetCamTests/ScansLeftTests \
             -only-testing:OMRSheetCamTests/PostScanCardTests \
+            -only-testing:OMRSheetCamTests/ReturnReminderTests \
             -only-testing:OMRSheetCamTests/PhotoLibraryImportTests \
             -only-testing:OMRSheetCamTests/AnalyticsTests \
             -only-testing:OMRSheetCamTests/BackgroundAudioTests \
