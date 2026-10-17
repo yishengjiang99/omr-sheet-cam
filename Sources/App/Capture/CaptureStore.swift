@@ -100,6 +100,27 @@ enum SamplePicture {
         return try Data(contentsOf: url)
     }
 
+    /// User-visible text when the sample can't be loaded (Camera and Library show the same message).
+    static let loadFailedMessage = "Could not load the sample picture"
+
+    /// Loads the sample for either entry point (Library or Camera "Try sample picture"): the photo on
+    /// success, else the message to show the user (the error is also written to the diagnostics log).
+    @MainActor
+    static func loadForUser(
+        context: String,
+        loader: () async throws -> CapturedPhoto = { try await SamplePicture.photo() },
+        log: DiagnosticsLog = .shared
+    ) async -> (photo: CapturedPhoto?, error: String?) {
+        do {
+            let photo = try await loader()
+            log.record(.info, .capture, "\(context): ode-to-joy.jpg")
+            return (photo, nil)
+        } catch {
+            log.record(error: error, category: .capture, context: context)
+            return (nil, loadFailedMessage)
+        }
+    }
+
     /// The sample as an upright `CapturedPhoto` (decoded off the main thread, like a Photos pick).
     static func photo(bundle: Bundle = .main) async throws -> CapturedPhoto {
         let data = try data(bundle: bundle)

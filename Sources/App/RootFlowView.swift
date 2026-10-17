@@ -15,6 +15,8 @@ struct RootFlowView: View {
     @ObservedObject private var storeKit = StoreKitManager.shared
     @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var quota = ScanQuota.shared
+    /// Set when "Try sample picture" can't load the sample (same message as the Camera screen).
+    @State private var sampleError: String?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -53,6 +55,11 @@ struct RootFlowView: View {
         .sheet(isPresented: $quota.showPaywall) {
             PaywallView().environmentObject(storeKit)
         }
+        .alert("Couldn't open the sample", isPresented: Binding(get: { sampleError != nil }, set: { if !$0 { sampleError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(sampleError ?? "")
+        }
         .environmentObject(storeKit)
         .onChange(of: scenePhase) { _, phase in
             // Expiry, renewal or refund can happen while the app stays alive in the background.
@@ -83,12 +90,11 @@ struct RootFlowView: View {
     /// Empty-library "Try sample picture": same Result/recognition flow as a camera or Photos pick.
     private func trySample() {
         Task { @MainActor in
-            do {
-                let photo = try await SamplePicture.photo()
-                DiagnosticsLog.shared.record(.info, .capture, "Try sample picture (library): ode-to-joy.jpg")
+            let result = await SamplePicture.loadForUser(context: "Try sample picture (library)")
+            if let photo = result.photo {
                 handlePhoto(photo)
-            } catch {
-                DiagnosticsLog.shared.record(error: error, category: .capture, context: "Try sample picture (library)")
+            } else {
+                sampleError = result.error
             }
         }
     }
