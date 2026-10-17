@@ -82,6 +82,7 @@
 		8A0000000000000000000003 /* Build6PrepTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B0000000000000000000003 /* Build6PrepTests.swift */; };
 		FE0000000000000000000002 /* ReviewNotesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0000000000000000000001 /* ReviewNotesTests.swift */; };
 		5C0000000000000000000002 /* StoreKitConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0000000000000000000001 /* StoreKitConfigTests.swift */; };
+		FA0000000000000000000002 /* UserFacingErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000001 /* UserFacingErrorTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -172,6 +173,7 @@
 		FE0000000000000000000001 /* ReviewNotesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewNotesTests.swift; sourceTree = "<group>"; };
 		5C0000000000000000000001 /* StoreKitConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitConfigTests.swift; sourceTree = "<group>"; };
 		5C0000000000000000000003 /* OMRSheetCam.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = OMRSheetCam.storekit; sourceTree = "<group>"; };
+		FA0000000000000000000001 /* UserFacingErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserFacingErrorTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -348,6 +350,7 @@
 			children = (
 				FE0000000000000000000001 /* ReviewNotesTests.swift */,
 				5C0000000000000000000001 /* StoreKitConfigTests.swift */,
+				FA0000000000000000000001 /* UserFacingErrorTests.swift */,
 				B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */,
 				B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */,
 				B1000000000000000000000A /* ModelWarmupTests.swift */,
@@ -613,6 +616,7 @@
 			files = (
 				FE0000000000000000000002 /* ReviewNotesTests.swift in Sources */,
 				5C0000000000000000000002 /* StoreKitConfigTests.swift in Sources */,
+				FA0000000000000000000002 /* UserFacingErrorTests.swift in Sources */,
 				A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */,
 				A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */,
 				A1000000000000000000000A /* ModelWarmupTests.swift in Sources */,
