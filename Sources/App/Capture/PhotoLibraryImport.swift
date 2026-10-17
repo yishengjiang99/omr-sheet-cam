@@ -7,6 +7,9 @@ import UIKit
 enum PhotoLibraryImport {
     enum LoadError: Error, LocalizedError {
         case noData
+        /// The picker's transferable failed (typically an iCloud-only photo) and the PHAsset download
+        /// fallback is unavailable because the app has no Photos authorization (F4.5).
+        case notDownloaded
         case unsupported
         case cancelled
         case underlying(Error)
@@ -14,6 +17,7 @@ enum PhotoLibraryImport {
         var errorDescription: String? {
             switch self {
             case .noData: return "Could not load that photo"
+            case .notDownloaded: return "Could not load that photo. If it is stored in iCloud, open it in Photos to download it, then try again."
             case .unsupported: return "Unsupported image"
             case .cancelled: return "Photo load cancelled"
             case .underlying(let e): return e.localizedDescription
@@ -31,6 +35,13 @@ enum PhotoLibraryImport {
         return image
     }
 
+    /// The PHAsset fallback only works with Photos access the user already granted. The app never
+    /// requests it (PhotosPicker needs none, and a new permission prompt is a privacy decision), so
+    /// without it the fallback must not be attempted: it would just return no asset.
+    static func canUseAssetFallback(_ status: PHAuthorizationStatus) -> Bool {
+        status == .authorized || status == .limited
+    }
+
     /// Photo bytes for a picker item. `loadTransferable(type: Data.self)` throws "does not support
     /// import" for iCloud-only assets, so fall back to PHAsset with network access.
     static func loadData(_ item: PhotosPickerItem) async throws -> Data? {
@@ -39,6 +50,10 @@ enum PhotoLibraryImport {
         } catch {
             DiagnosticsLog.shared.record(.info, .capture,
                 "Photos pick: transferable failed (\(error.localizedDescription)); trying PHAsset download")
+        }
+        guard canUseAssetFallback(PHPhotoLibrary.authorizationStatus(for: .readWrite)) else {
+            DiagnosticsLog.shared.record(.info, .capture, "Photos pick: PHAsset fallback skipped (no Photos authorization)")
+            throw LoadError.notDownloaded
         }
         guard let id = item.itemIdentifier,
               let asset = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject else {
