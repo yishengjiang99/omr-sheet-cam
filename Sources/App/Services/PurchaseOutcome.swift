@@ -51,35 +51,56 @@ struct RestoreResolution: Equatable, Sendable {
 enum PurchaseResolver {
     static let pendingMessage = "Waiting for approval. Pro unlocks automatically once the purchase is approved."
 
+    /// Plain-language text per failure class. Raw `localizedDescription` / Swift error text never reaches
+    /// the user (it goes to the diagnostics log instead).
     static func userMessage(for kind: PurchaseFailureKind) -> String {
-        "The operation couldn't be completed."
+        switch kind {
+        case .cancelled: return "Purchase cancelled."
+        case .network: return "Couldn't reach the App Store. Check your connection and try again."
+        case .notAvailable: return "This subscription isn't available in your country or region right now."
+        case .notAllowed: return "Purchases are turned off on this device. Check Screen Time or device restrictions."
+        case .verification: return "We couldn't verify this purchase. If you were charged, tap Restore purchases."
+        case .unknown: return "Something went wrong. Please try again, or tap Restore purchases if you were charged."
+        }
     }
 
+    /// One resolution per attempt: UI status, the single terminal analytics event, and the return value.
     static func resolve(_ outcome: PurchaseOutcome, productID: String) -> PurchaseResolution {
+        func make(_ status: PurchaseStatus, _ event: String, _ extra: [String: String] = [:], ok: Bool = false) -> PurchaseResolution {
+            PurchaseResolution(status: status, event: event, props: ["product": productID].merging(extra) { $1 }, succeeded: ok)
+        }
         switch outcome {
         case .success:
-            return PurchaseResolution(status: .idle, event: "purchase_success", props: ["product": productID], succeeded: true)
-        case .cancelled:
-            return PurchaseResolution(status: .idle, event: nil, props: [:], succeeded: false)
+            return make(.idle, "purchase_success", ok: true)
+        case .cancelled, .failed(.cancelled):
+            return make(.idle, "purchase_cancel")
         case .pending:
-            return PurchaseResolution(
-                status: .error("Purchase is pending approval."), event: "purchase_fail",
-                props: ["reason": "pending"], succeeded: false)
-        case .unverified, .failed:
-            return PurchaseResolution(
-                status: .error(userMessage(for: .unknown)), event: "purchase_fail",
-                props: ["reason": "error"], succeeded: false)
+            return make(.pending, "purchase_pending")
+        case .unverified:
+            return make(.error(userMessage(for: .verification)), "purchase_fail", ["reason": PurchaseFailureKind.verification.rawValue])
+        case .failed(let kind):
+            return make(.error(userMessage(for: kind)), "purchase_fail", ["reason": kind.rawValue])
         case .unknown:
-            return PurchaseResolution(status: .idle, event: nil, props: [:], succeeded: false)
+            return make(.error(userMessage(for: .unknown)), "purchase_fail", ["reason": PurchaseFailureKind.unknown.rawValue])
         }
     }
 
     static func resolve(_ outcome: RestoreOutcome) -> RestoreResolution {
-        RestoreResolution(errorMessage: nil, event: nil, props: [:])
+        switch outcome {
+        case .restored:
+            return RestoreResolution(errorMessage: nil, event: "restore_success", props: [:])
+        case .nothingToRestore:
+            return RestoreResolution(errorMessage: nil, event: "restore_none", props: [:])
+        case .cancelled, .failed(.cancelled):
+            return RestoreResolution(errorMessage: nil, event: "restore_cancel", props: [:])
+        case .failed(let kind):
+            return RestoreResolution(errorMessage: userMessage(for: kind), event: "restore_fail", props: ["reason": kind.rawValue])
+        }
     }
 
-    /// Status after an entitlement refresh: a pending purchase that got approved clears itself.
+    /// Status after an entitlement refresh: once Pro is active, a pending (Ask to Buy approved) or old
+    /// error state clears itself.
     static func status(afterEntitlementRefresh status: PurchaseStatus, isPro: Bool) -> PurchaseStatus {
-        status
+        isPro ? .idle : status
     }
 }
