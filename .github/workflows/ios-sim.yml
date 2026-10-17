@@ -83,6 +83,8 @@ jobs:
             -project OMRSheetCam.xcodeproj \
             -scheme OMRSheetCam \
             -destination "${{ steps.sim.outputs.destination }}" \
+            -only-testing:OMRSheetCamTests/StoreKitConfigTests \
+            -only-testing:OMRSheetCamTests/PaywallScreenshotTests \
             -only-testing:OMRSheetCamTests/ReviewNotesTests \
             -only-testing:OMRSheetCamTests/Gate1StaffTokenMatchTests \
             -only-testing:OMRSheetCamTests/ModelWarmupTests \
@@ -93,7 +95,24 @@ jobs:
             -only-testing:OMRSheetCamTests/Build16Tests \
             -only-testing:OMRSheetCamTests/ProEntitlementTests \
             -only-testing:OMRSheetCamTests/PhotoLibraryImportTests \
+            -only-testing:OMRSheetCamTests/AnalyticsTests \
+            -only-testing:OMRSheetCamTests/BackgroundAudioTests \
             -only-testing:OMRSheetCamTests/EntitlementLogicTests \
+            -only-testing:OMRSheetCamTests/FeedbackCopyTests \
+            -only-testing:OMRSheetCamTests/PaywallScreenshotTests \
+            -only-testing:OMRSheetCamTests/PaywallStateTests \
+            -only-testing:OMRSheetCamTests/PendingScanTests \
+            -only-testing:OMRSheetCamTests/PlaybackDeleteTests \
+            -only-testing:OMRSheetCamTests/ProSettingsTests \
+            -only-testing:OMRSheetCamTests/PurchaseOutcomeTests \
+            -only-testing:OMRSheetCamTests/RetakeRouteTests \
+            -only-testing:OMRSheetCamTests/SamplePictureTests \
+            -only-testing:OMRSheetCamTests/ScanCancelTests \
+            -only-testing:OMRSheetCamTests/ScanQuotaDayKeyTests \
+            -only-testing:OMRSheetCamTests/ScanQuotaTests \
+            -only-testing:OMRSheetCamTests/ShareNamingTests \
+            -only-testing:OMRSheetCamTests/StoreKitConfigTests \
+            -only-testing:OMRSheetCamTests/UserFacingErrorTests \
             -resultBundlePath "$RUNNER_TEMP/OMRSheetCam.xcresult" \
             CODE_SIGNING_ALLOWED=NO \
             | tee "$RUNNER_TEMP/xcodebuild.log"

@@ -203,6 +203,45 @@ final class PageRecognitionServiceTests: XCTestCase {
         XCTAssertEqual(fake.calls, 1, "cancelled queued task must not run a parse")
     }
 
+    /// F6.8: Cancel during the (non-abortable) parse must discard the late result, and the next scan
+    /// only waits for the remaining parse time (no extra queueing behind a zombie).
+    func testCancelDuringParseDiscardsResultAndNextScanRuns() async throws {
+        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
+        let fake = FakeParser(result: Self.goodResult(), delay: 0.3)
+        let service = makeService(factory: { fake }, log: log)
+        let png = Self.pngData()
+        let t1 = Task { await service.recognize(imageData: png) }
+        for _ in 0..<200 where fake.calls == 0 {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertEqual(fake.calls, 1, "t1 must be inside the parse")
+        t1.cancel()
+        let started = Date()
+        let t2 = Task { await service.recognize(imageData: png) }
+        let o1 = await t1.value
+        let o2 = await t2.value
+        XCTAssertEqual(o1, .failed("cancelled"), "a result that arrives after Cancel must be discarded")
+        XCTAssertEqual(o2.name, "recognized", "the next scan is not blocked forever / poisoned by the cancelled one")
+        XCTAssertLessThan(Date().timeIntervalSince(started), 0.3 + 0.3 + 0.5, "next scan waits at most for the in-flight parse + its own")
+        XCTAssertEqual(fake.calls, 2)
+    }
+
+    /// F6.8: Cancel while the session is still being built / warmed up must not start the parse.
+    func testCancelBeforeParseStartsSkipsParse() async throws {
+        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
+        let fake = FakeParser(result: Self.goodResult(), delay: 0.05)
+        let service = makeService(factory: { try? await Task.sleep(nanoseconds: 300_000_000); return fake }, log: log)
+        let t1 = Task { await service.recognize(imageData: Self.pngData()) }
+        try await Task.sleep(nanoseconds: 80_000_000) // t1 is inside the (slow) session build
+        t1.cancel()
+        let o1 = await t1.value
+        XCTAssertEqual(o1, .failed("cancelled"))
+        XCTAssertEqual(fake.calls, 0, "cancelled before the parse: no parse may run")
+        let e = try XCTUnwrap(pageEvents(log).last)
+        XCTAssertEqual(e.payload?["cancelled"], "1")
+        XCTAssertEqual(e.level, .info, "a user cancel is not an error")
+    }
+
     func testMemoryWarningDropsSessionAndNextParseRebuilds() async throws {
         let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
         let center = NotificationCenter()
