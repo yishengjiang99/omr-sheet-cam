@@ -39,6 +39,8 @@ final class PlaybackController: ObservableObject {
             self.player.program = i.program
             self.log("instrument", ["to": i.name])
         }.store(in: &bag)
+        // F11.2: a scan deleted from the Library (swipe, menu, anywhere) must not keep playing.
+        store.$scans.dropFirst().sink { [weak self] scans in self?.libraryScansChanged(scans) }.store(in: &bag)
         player.onFinished = { [weak self] in
             guard let self else { return }
             self.log("finished", [:])
@@ -243,6 +245,28 @@ final class PlaybackController: ObservableObject {
     func stop() {
         if player.isPlaying { log("stop", [:]) }
         player.stop()
+    }
+
+    /// Stops playback and unloads the current item so the mini-player goes away (`current == nil`).
+    func close(reason: String) {
+        if current != nil { log("close", ["reason": reason]) }
+        loadTask?.cancel()
+        loadTask = nil
+        player.stop()
+        current = nil
+        ready = false
+        status = ""
+        layout = nil
+        sheetImage = nil
+        pendingLoopStart = nil
+        loopNoteIDs = [:]
+        player.notePositions = []
+    }
+
+    /// `store.$scans` fires before the property changes, so use the new value, not `store.scans`.
+    private func libraryScansChanged(_ scans: [PlaylistEntry]) {
+        guard let id = entryID, !id.hasPrefix("sample:"), !scans.contains(where: { $0.id == id }) else { return }
+        close(reason: "deleted")
     }
 
     private func play(auto: Bool) {
