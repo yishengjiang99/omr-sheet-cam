@@ -95,13 +95,22 @@ final class PlaylistStore: ObservableObject {
         scans = loadIndex()
     }
 
+    /// Set when `index.json` could not be read and the Library was rebuilt (F2.9); shown by the
+    /// Library as a dismissible notice. Never set for a missing index (first launch).
+    @Published private(set) var loadNotice: String?
+    func dismissLoadNotice() { loadNotice = nil }
+
     private func loadIndex() -> [PlaylistEntry] {
-        guard let data = try? Data(contentsOf: indexURL) else { return [] }
+        loadNotice = nil
+        guard FileManager.default.fileExists(atPath: indexURL.path) else { return [] }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        guard let all = try? decoder.decode([PlaylistEntry].self, from: data) else {
-            log.record(.warn, .playback, "playlist index.json unreadable (\(data.count) B); starting empty", payload: ["kind": "playlist"])
-            return []
+        let all: [PlaylistEntry]
+        do {
+            let data = try Data(contentsOf: indexURL)
+            all = try decoder.decode([PlaylistEntry].self, from: data)
+        } catch {
+            return recoverFromUnreadableIndex(error)
         }
         let present = all.filter { e in
             e.source == .scan && e.fileName.map { FileManager.default.fileExists(atPath: directory.appendingPathComponent($0).path) } == true
@@ -112,12 +121,57 @@ final class PlaylistStore: ObservableObject {
         return present
     }
 
-    private func saveIndex() throws {
+    /// F2.9: keep the damaged file as `index.json.corrupt-<timestamp>` (so the next save can't destroy
+    /// it), rebuild the entries from the saved `.mid` files, persist the rebuilt index and flag a notice.
+    private func recoverFromUnreadableIndex(_ error: Error) -> [PlaylistEntry] {
+        let fm = FileManager.default
+        let backup = directory.appendingPathComponent("index.json.corrupt-\(CaptureStore.timestamp(Date()))")
+        var backedUp = true
+        do { try fm.moveItem(at: indexURL, to: backup) } catch {
+            backedUp = false
+            log.record(error: error, category: .playback, context: "playlist index backup", payload: ["backup": backup.lastPathComponent])
+        }
+        let rebuilt = rebuildEntriesFromMIDIFiles()
+        if backedUp { try? writeIndex(rebuilt) }
+        log.record(.warn, .playback, "playlist index.json unreadable (\(error)); backed up as \(backedUp ? backup.lastPathComponent : "NOT backed up"), rebuilt \(rebuilt.count) scan(s)",
+                   payload: ["kind": "playlist_index_recovered", "rebuilt": "\(rebuilt.count)", "backup": backedUp ? backup.lastPathComponent : ""])
+        let n = rebuilt.count
+        loadNotice = "Your library list couldn't be read, so it was rebuilt from your saved music files "
+            + "(\(n) scan\(n == 1 ? "" : "s") recovered; titles were reset). The damaged list was kept as \(backedUp ? backup.lastPathComponent : "a backup")."
+        return rebuilt
+    }
+
+    /// Scans `<directory>/*.mid` (oldest first): date = file creation/modification, default title,
+    /// capture = `<stem>.jpg` when it still exists in `captures/`. Unplayable files are skipped.
+    private func rebuildEntriesFromMIDIFiles() -> [PlaylistEntry] {
+        let fm = FileManager.default
+        let urls = (try? fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.creationDateKey, .contentModificationDateKey])) ?? []
+        var out: [PlaylistEntry] = []
+        for url in urls where url.pathExtension.lowercased() == "mid" {
+            let name = url.lastPathComponent
+            guard let data = try? Data(contentsOf: url), let song = try? SMFSong(data: data) else { continue }
+            let values = try? url.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey])
+            let raw = values?.creationDate ?? values?.contentModificationDate ?? Date()
+            let date = Date(timeIntervalSince1970: raw.timeIntervalSince1970.rounded(.down))
+            let stem = (name as NSString).deletingPathExtension
+            let jpg = "\(stem).jpg"
+            let hasCapture = capturesDirectoryForRebuild.map { fm.fileExists(atPath: $0.appendingPathComponent(jpg).path) } ?? false
+            out.append(PlaylistEntry(id: name, title: Self.defaultTitle(date), date: date, source: .scan,
+                                     duration: song.durationSec, fileName: name, captureName: hasCapture ? jpg : nil))
+        }
+        return out.sorted { ($0.date, $0.id) < ($1.date, $1.id) }
+    }
+
+    private var capturesDirectoryForRebuild: URL? { try? CaptureStore.defaultDirectory() }
+
+    private func saveIndex() throws { try writeIndex(scans) }
+
+    private func writeIndex(_ entries: [PlaylistEntry]) throws {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        try encoder.encode(scans).write(to: indexURL, options: .atomic)
+        try encoder.encode(entries).write(to: indexURL, options: .atomic)
     }
 
     // MARK: Mutations
