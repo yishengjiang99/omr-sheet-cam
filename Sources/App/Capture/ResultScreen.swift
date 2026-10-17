@@ -47,12 +47,12 @@ struct ResultScreen: View {
         return []
     }
 
-    /// "Found 4 staves · 52 notes · about 0:24".
     /// F7.7: same share item as Library / Player, so the file is named after the (edited) title.
     static func shareItem(for entry: PlaylistEntry?, store: PlaylistStore = .shared) -> MIDIExport? {
         entry.flatMap { store.export(for: $0) }
     }
 
+    /// "Found 4 staves · 52 notes · about 0:24".
     static func summary(_ d: RecognitionDetails, duration: Double?) -> String {
         var parts = ["Found \(d.staffCount) stave\(d.staffCount == 1 ? "" : "s")", "\(d.notes.count) note\(d.notes.count == 1 ? "" : "s")"]
         if let duration, duration > 0 { parts.append("about \(PlayerView.clock(duration))") }
