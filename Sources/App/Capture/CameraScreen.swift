@@ -235,7 +235,7 @@ struct CameraScreen: View {
                 DiagnosticsLog.shared.record(.info, .capture, "Try sample picture: ode-to-joy.jpg")
                 onPhoto(photo)
             } catch {
-                self.error = "Could not load the sample picture"
+                self.error = SamplePicture.loadFailedMessage
                 DiagnosticsLog.shared.record(error: error, category: .capture, context: "Try sample picture")
             }
         }
