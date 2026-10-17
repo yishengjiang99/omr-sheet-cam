@@ -115,6 +115,7 @@ final class PlaylistStoreTests: XCTestCase {
         // F2.9: a corrupt index no longer empties the Library; scans are rebuilt from the .mid files.
         XCTAssertEqual(c.scans.map(\.id), [a.id])
         XCTAssertEqual(c.samples.count, 2)
+        XCTAssertNotNil(c.loadNotice, "an unreadable index must be surfaced, not silent")
         let d = try c.addScan(midi: midi, captureName: "d.jpg")
         XCTAssertEqual(Set(makeStore().scans.map(\.id)), [a.id, d.id], "next save must not drop the recovered scans")
     }
@@ -133,6 +134,9 @@ final class PlaylistStoreTests: XCTestCase {
         let recovered = makeStore()
         XCTAssertEqual(Set(recovered.scans.map(\.id)), [a.id, b.id], "scans must be rebuilt from .mid files")
         for e in recovered.scans { XCTAssertEqual(try recovered.midiData(for: e), midi) }
+        XCTAssertNotNil(recovered.loadNotice, "an unreadable index must be surfaced to the user")
+        recovered.dismissLoadNotice()
+        XCTAssertNil(recovered.loadNotice)
         let names = try FileManager.default.contentsOfDirectory(atPath: dir.path)
         let backups = names.filter { $0.hasPrefix("index.json.corrupt-") }
         XCTAssertEqual(backups.count, 1, "damaged index must be kept as index.json.corrupt-<ts>; dir=\(names)")
@@ -142,6 +146,7 @@ final class PlaylistStoreTests: XCTestCase {
 
         let again = makeStore()
         XCTAssertEqual(Set(again.scans.map(\.id)), [a.id, b.id], "rebuilt index persisted")
+        XCTAssertNil(again.loadNotice, "healthy relaunch shows no notice")
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.hasPrefix("index.json.corrupt-") }.count, 1,
                        "a healthy relaunch must not create another backup")
     }

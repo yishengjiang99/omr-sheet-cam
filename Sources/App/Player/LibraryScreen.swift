@@ -52,6 +52,20 @@ struct LibraryScreen: View {
 
     var body: some View {
         List {
+            if let notice = store.loadNotice {
+                Section {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                        Text(notice).font(.footnote)
+                        Spacer(minLength: 4)
+                        Button("Dismiss") { store.dismissLoadNotice() }
+                            .font(.footnote.weight(.semibold))
+                            .buttonStyle(.borderless)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("library.loadNotice")
+                }
+            }
             if isHomeChrome, query.isEmpty {
                 Section {
                     HowItWorksArt()
