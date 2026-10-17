@@ -93,6 +93,7 @@ jobs:
             -only-testing:OMRSheetCamTests/ProEntitlementTests \
             -only-testing:OMRSheetCamTests/EntitlementLogicTests \
             -only-testing:OMRSheetCamTests/PurchaseOutcomeTests \
+            -only-testing:OMRSheetCamTests/PaywallStateTests \
             -resultBundlePath "$RUNNER_TEMP/OMRSheetCam.xcresult" \
             CODE_SIGNING_ALLOWED=NO \
             | tee "$RUNNER_TEMP/xcodebuild.log"
