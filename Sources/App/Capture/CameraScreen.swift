@@ -219,7 +219,7 @@ struct CameraScreen: View {
             switch result {
             case let .success(image): onPhoto(CapturedPhoto(image: image, source: .camera))
             case let .failure(e):
-                error = "Capture failed: \(e)"
+                error = UserFacingError.message(for: e, action: .capture)
                 DiagnosticsLog.shared.record(error: e, category: .capture, context: "photo capture")
             }
         }
