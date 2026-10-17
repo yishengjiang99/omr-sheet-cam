@@ -12,7 +12,7 @@ struct RootFlowView: View {
     @State private var path: [Route] = Self.initialPath()
     @State private var showSettings = Self.initialSettings()
     @EnvironmentObject private var playback: PlaybackController
-    @StateObject private var storeKit = StoreKitManager()
+    @ObservedObject private var storeKit = StoreKitManager.shared
     @ObservedObject private var quota = ScanQuota.shared
 
     var body: some View {

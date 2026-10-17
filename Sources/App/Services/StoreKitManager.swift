@@ -10,6 +10,9 @@ enum IAPProductID {
 
 @MainActor
 final class StoreKitManager: ObservableObject {
+    /// App-wide instance (one `Transaction.updates` listener, one entitlement refresh).
+    static let shared = StoreKitManager()
+
     @Published private(set) var products: [Product] = []
     @Published private(set) var purchasedProductIDs: Set<String> = []
     @Published private(set) var isLoading = false
@@ -21,8 +24,12 @@ final class StoreKitManager: ObservableObject {
     private let proTxKey = "omr.proTransactionId"
 
     init() {
+        // Hold self weakly between updates (unwrapping it once for the whole loop kept it alive forever).
         updatesTask = Task { [weak self] in
-            await self?.listenForTransactions()
+            for await update in Transaction.updates {
+                guard let self else { return }
+                await self.handle(update)
+            }
         }
         Task { await refreshEntitlements() }
     }
@@ -102,22 +109,20 @@ final class StoreKitManager: ObservableObject {
         }
     }
 
-    private func listenForTransactions() async {
-        for await update in Transaction.updates {
-            do {
-                let transaction = try checkVerified(update)
-                guard IAPProductID.all.contains(transaction.productID) else { continue }
-                if transaction.revocationDate == nil {
-                    grantPro(transactionId: String(transaction.id))
-                    purchasedProductIDs.insert(transaction.productID)
-                } else {
-                    revokePro()
-                    purchasedProductIDs.remove(transaction.productID)
-                }
-                await transaction.finish()
-            } catch {
-                // Ignore unverified updates
+    private func handle(_ update: VerificationResult<Transaction>) async {
+        do {
+            let transaction = try checkVerified(update)
+            guard IAPProductID.all.contains(transaction.productID) else { return }
+            if transaction.revocationDate == nil {
+                grantPro(transactionId: String(transaction.id))
+                purchasedProductIDs.insert(transaction.productID)
+            } else {
+                revokePro()
+                purchasedProductIDs.remove(transaction.productID)
             }
+            await transaction.finish()
+        } catch {
+            // Ignore unverified updates
         }
     }
 

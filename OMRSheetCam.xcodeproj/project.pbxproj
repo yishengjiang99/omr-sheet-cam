@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A50000000000000000000001 /* ProEntitlementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000001 /* ProEntitlementTests.swift */; };
 		9C0000000000000000000001 /* PaywallScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D0000000000000000000001 /* PaywallScreenshotTests.swift */; };
 		5F000000000000000000000A /* ScreenshotDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000009 /* ScreenshotDemo.swift */; };
 		5F0000000000000000000006 /* PlaylistStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000005 /* PlaylistStore.swift */; };
@@ -91,6 +92,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A60000000000000000000001 /* ProEntitlementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests.swift; sourceTree = "<group>"; };
 		9D0000000000000000000001 /* PaywallScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallScreenshotTests.swift; sourceTree = "<group>"; };
 		5E0000000000000000000009 /* ScreenshotDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotDemo.swift; sourceTree = "<group>"; };
 		5E0000000000000000000005 /* PlaylistStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistStore.swift; sourceTree = "<group>"; };
@@ -352,6 +354,7 @@
 				6E000000000000000000000A /* RedesignTests.swift */,
 				8B0000000000000000000003 /* Build6PrepTests.swift */,
 				9D0000000000000000000001 /* PaywallScreenshotTests.swift */,
+				A60000000000000000000001 /* ProEntitlementTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -612,6 +615,7 @@
 				6F000000000000000000000A /* RedesignTests.swift in Sources */,
 				8A0000000000000000000003 /* Build6PrepTests.swift in Sources */,
 				9C0000000000000000000001 /* PaywallScreenshotTests.swift in Sources */,
+				A50000000000000000000001 /* ProEntitlementTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
