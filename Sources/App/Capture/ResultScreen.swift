@@ -8,6 +8,8 @@ import SwiftUI
 struct ResultScreen: View {
     let photo: CapturedPhoto
     var service: any RecognitionService = AppServices.recognition
+    /// Charges one free scan; called only when recognition succeeded (P1.4).
+    var commitQuota: @MainActor () -> Void = { ScanQuota.shared.commit() }
     var openPlayer: (PlayerRoute) -> Void
 
     @State private var savedURL: URL?
@@ -268,6 +270,14 @@ struct ResultScreen: View {
             feedback.layoutSource = d.layoutSource
             saveToPlaylist(d)
         }
+        Self.commitQuotaIfRecognized(result, commit: commitQuota)
+    }
+
+    /// Free-scan quota is charged only for a recognized scan: failures (incl. reader not ready) and
+    /// `.comingSoon` cost nothing.
+    @MainActor
+    static func commitQuotaIfRecognized(_ outcome: RecognitionOutcome, commit: @MainActor () -> Void) {
+        if case .recognized = outcome { commit() }
     }
 
     /// Every successful scan goes into the playlist (Application Support/playlist). Idempotent.

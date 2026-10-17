@@ -54,8 +54,9 @@ struct RootFlowView: View {
     }
 
     /// Camera capture, Photos import, and Try sample: same Result/recognition path (quota gated).
+    /// The gate only checks; the scan is charged by `ResultScreen` when recognition succeeds.
     private func handlePhoto(_ photo: CapturedPhoto) {
-        if quota.checkAndConsume() {
+        if quota.canScan() {
             // Leave camera if we came from it, then show result.
             path.removeAll { $0 == .camera }
             path.append(.result(photo))
