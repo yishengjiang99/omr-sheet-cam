@@ -31,6 +31,6 @@ enum ProSettings {
 enum ProConfirmation {
     /// Toast when Pro turns on (purchase, restore, or an approved Ask to Buy); `nil` otherwise.
     static func message(wasPro: Bool, isPro: Bool) -> String? {
-        nil
+        !wasPro && isPro ? "You're Pro. Unlimited scans are unlocked." : nil
     }
 }

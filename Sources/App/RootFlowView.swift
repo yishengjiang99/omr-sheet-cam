@@ -14,6 +14,7 @@ struct RootFlowView: View {
     @EnvironmentObject private var playback: PlaybackController
     @ObservedObject private var storeKit = StoreKitManager.shared
     @Environment(\.scenePhase) private var scenePhase
+    @State private var proToast: String?
     @ObservedObject private var quota = ScanQuota.shared
 
     var body: some View {
@@ -52,6 +53,10 @@ struct RootFlowView: View {
             PaywallView().environmentObject(storeKit)
         }
         .environmentObject(storeKit)
+        .toast($proToast)
+        .onChange(of: storeKit.isPro) { wasPro, isPro in
+            proToast = ProConfirmation.message(wasPro: wasPro, isPro: isPro)
+        }
         .onChange(of: scenePhase) { _, phase in
             // Expiry, renewal or refund can happen while the app stays alive in the background.
             if phase == .active { Task { await storeKit.refreshEntitlements() } }

@@ -10,7 +10,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - Apple ORT SPM pinned `exact: "1.24.2"`
 
 ## Now (in progress)
-- [ ] IAP audit Stream A (PR per bug, branch `fix/p*`): P1.12 single StoreKitManager (PR #6) → P7.4+P7.6 entitlement refresh (PR open) → P5.1/P4.2/P10.2 purchase results (PR #58) → P6.1 Settings Pro/Restore/Manage (PR open) → P2.5/P6.3 paywall retry + restore feedback → P6.1/P1.10 Settings Pro/Restore/Manage — OMR iOS
+- [ ] IAP audit Stream A (PR per bug, branch `fix/p*`): P1.12 single StoreKitManager (PR #6) → P7.4+P7.6 entitlement refresh (PR open) → P5.1/P4.2/P10.2 purchase results (PR #58) → P6.1 Settings Pro/Restore/Manage (PR #60) → P1.10 Pro confirmation toast (PR open; count on Library/Camera is Stream D #44) → P2.5/P6.3 paywall retry + restore feedback → P6.1/P1.10 Settings Pro/Restore/Manage — OMR iOS
 - [ ] Full-page OMR perf later: Core ML encoder offline experiment + fixed-batch-8 SegNet (commits 5–6); optional page locator / stateful decoder (7–8) — OMR iOS
 - [ ] v1.0 build **30** + Music Reader Pro subscriptions (group version + monthly/yearly versions) in App Review (reviewSubmission 61ac442b, WAITING_FOR_REVIEW since 2026-10-09 3:05 AM PT). Check with read-only **ASC status** only; do not cancel/resubmit while waiting — submit run 37915292596
 - [ ] Real-device page parse verdict on latest TestFlight (after recognition-always-on / Library-home fix): 3–5 real sheet photos → parse time + peak `phys_footprint` from Copy as prompt; pass/fail per photo — OMR iOS + User
