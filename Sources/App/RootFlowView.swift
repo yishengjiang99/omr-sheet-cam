@@ -16,6 +16,7 @@ struct RootFlowView: View {
     @Environment(\.scenePhase) private var scenePhase
     /// The photo that hit the paywall; re-submitted if the user turns Pro (P3.7).
     @State private var pendingScan = PendingScan<CapturedPhoto>()
+    @State private var proToast: String?
     @ObservedObject private var quota = ScanQuota.shared
     /// Set when "Try sample picture" can't load the sample (same message as the Camera screen).
     @State private var sampleError: String?
@@ -63,6 +64,10 @@ struct RootFlowView: View {
             Text(sampleError ?? "")
         }
         .environmentObject(storeKit)
+        .toast($proToast)
+        .onChange(of: storeKit.isPro) { wasPro, isPro in
+            proToast = ProConfirmation.message(wasPro: wasPro, isPro: isPro)
+        }
         .onChange(of: scenePhase) { _, phase in
             // Expiry, renewal or refund can happen while the app stays alive in the background.
             if phase == .active { Task { await storeKit.refreshEntitlements() } }
