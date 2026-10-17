@@ -72,7 +72,7 @@ struct RootFlowView: View {
     /// Camera capture, Photos import, and Try sample: same Result/recognition path (quota gated).
     private func handlePhoto(_ photo: CapturedPhoto) {
         Task { @MainActor in
-            // Re-check Pro against the store first (P7.4), then consume quota.
+            // Re-check Pro against the store first (P7.4), then check quota (charged on success, P1.4).
             guard await quota.admitScan() else {
                 pendingScan.hold(photo) // paywall is up: keep the photo for after a purchase
                 return
