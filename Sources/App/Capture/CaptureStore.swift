@@ -33,6 +33,13 @@ enum CaptureStore {
         var description: String { "could not JPEG-encode the image" }
     }
 
+    /// Deletes a capture that nothing references (e.g. the scan was cancelled before it produced a
+    /// Library entry). Best effort; a missing file is fine.
+    static func discard(_ url: URL?) {
+        guard let url else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
+
     /// Saves an upright JPEG to `<directory>/<timestamp>.jpg` (default Documents/captures).
     @discardableResult
     static func save(
