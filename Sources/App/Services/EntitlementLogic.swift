@@ -24,7 +24,7 @@ enum EntitlementLogic {
     /// Entitlements that currently grant Pro. (Expiry is decided by StoreKit: `currentEntitlements`
     /// only lists active subscriptions, including billing grace period.)
     static func activeEntitlements(_ snapshots: [EntitlementSnapshot], validIDs: Set<String>) -> [EntitlementSnapshot] {
-        snapshots.filter { validIDs.contains($0.productID) && $0.revocationDate == nil }
+        snapshots.filter { validIDs.contains($0.productID) && $0.revocationDate == nil && !$0.isUpgraded }
     }
 
     /// Pro derived from the full list of current entitlements.
@@ -32,18 +32,23 @@ enum EntitlementLogic {
         !activeEntitlements(entitlements, validIDs: validIDs).isEmpty
     }
 
-    /// Pro after `Transaction.updates` delivered `update`; `entitlements` is the current list.
+    /// Pro after `Transaction.updates` delivered `update`. The update only says "something changed":
+    /// the answer is always recomputed from `entitlements` (the full current list), never patched per
+    /// transaction (one refund must not lock out another valid entitlement; a replayed expired
+    /// transaction must not grant Pro).
     static func proAfterUpdate(
         current: Bool, update: EntitlementSnapshot, entitlements: [EntitlementSnapshot], validIDs: Set<String>
     ) -> Bool {
         guard validIDs.contains(update.productID) else { return current }
-        return update.revocationDate == nil
+        return isPro(entitlements: entitlements, validIDs: validIDs)
     }
 }
 
 extension ScanQuota {
-    /// Scan gate: consume one free scan if allowed. Returns true if the scan may proceed.
+    /// Scan gate: re-check Pro against the store first (expiry, refund or renewal while the app was
+    /// alive), then consume one free scan if allowed. Returns true if the scan may proceed.
     func admitScan() async -> Bool {
-        checkAndConsume()
+        await storeKit.refreshEntitlements()
+        return checkAndConsume()
     }
 }
