@@ -1,6 +1,15 @@
 import SwiftUI
 import StoreKit
 
+/// Paywall copy. Must match the real gating: `ScanQuota.freeDailyLimit` scans/day for free users and
+/// every `ProFeatureGate.gated` feature (Transpose) locked. Everything else (recognition, player,
+/// instruments, tempo, A-B loop, share) is free.
+@MainActor
+enum PaywallCopy {
+    static let intro = "Free: \(ScanQuota.freeDailyLimit) page scans a day. Music Reader Pro unlocks unlimited scans and Transpose."
+    static let proRows = ["Unlimited scans", "Transpose to any key (±12 semitones)", "Everything in Free"]
+}
+
 struct PaywallView: View {
     @EnvironmentObject private var storeKit: StoreKitManager
     @Environment(\.dismiss) private var dismiss
@@ -17,7 +26,7 @@ struct PaywallView: View {
                         .font(.largeTitle.bold())
                         .multilineTextAlignment(.center)
 
-                    Text("Free: 5 page scans a day. Music Reader Pro unlocks unlimited scans.")
+                    Text(PaywallCopy.intro)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -166,16 +175,14 @@ struct PaywallView: View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Free").font(.subheadline.bold()).foregroundStyle(.secondary)
-                featureRow("5 scans / day", pro: false)
+                featureRow("\(ScanQuota.freeDailyLimit) scans / day", pro: false)
                 featureRow("On-device reading & playback", pro: false)
                 featureRow("All instruments", pro: false)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             VStack(alignment: .leading, spacing: 8) {
                 Text("Pro").font(.subheadline.bold())
-                featureRow("Unlimited scans", pro: true)
-                featureRow("Same player & instruments", pro: true)
-                featureRow("Same on-device recognition", pro: true)
+                ForEach(PaywallCopy.proRows, id: \.self) { featureRow($0, pro: true) }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

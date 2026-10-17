@@ -21,8 +21,10 @@ the build currently in App Review is called out under **Binary gates** (do not c
 - First-party anonymous telemetry → `https://photo.grepawk.com/api/telemetry` (`Analytics`)
 - No account / sign-in; photos never uploaded
 
-Honest Pro scope in listing: **unlimited scans**. Instruments and recognition are not Pro-gated
-in code (paywall UI matches that). Do not claim "priority processing".
+Honest Pro scope in listing: **unlimited scans + Transpose** (`ProFeatureGate.gated == [.transpose]`, P9.1;
+`ScanQuota.freeDailyLimit == 5`). Instruments, tempo, A–B loop, recognition, Library and Share MIDI are
+not Pro-gated in code (paywall UI matches that, see `PaywallCopy`). Do not claim "priority processing".
+When a new feature is gated, update `PaywallCopy`, this block, `metadata/en-US/*` and review notes together.
 
 ## Binary gates (vs App Review build 15; submit tip with build 24)
 
@@ -42,8 +44,8 @@ advertise IAP/telemetry/highlighting that build 15 lacks. Prefer sync when submi
 - Name: `AI Camera - Music Reader`
 - Subtitle: `Scan sheet music, hear it play`
 - Keywords: `OMR,piano,score,notation,notes,MIDI,sightreading,practice,tempo,choir,teacher,student,synth,library`
-- Promotional text: `Point your camera at printed sheet music and hear it play. Free: 5 scans/day; Pro for unlimited. On-device with iPhone GPU acceleration — no account.`
-- What's New: `On-device OMR with iPhone GPU acceleration. Free: 5 pages/day; Pro unlocks unlimited scans. Tempo, 11 instruments, library, and practice tools.`
+- Promotional text: `Point your camera at printed sheet music and hear it play. Free: 5 scans/day; Pro: unlimited + Transpose. On-device with iPhone GPU acceleration — no account.`
+- What's New: `On-device OMR with iPhone GPU acceleration. Free: 5 pages/day; Pro unlocks unlimited scans and Transpose (shift a piece up or down 12 semitones). Playback continues in the background with lock-screen controls. Tempo, 11 instruments, library, and practice tools.`
 - Description: `metadata/en-US/description.txt`
 
 Keyword notes: name/subtitle words (ai, camera, music, reader, scan, sheet, hear, it, play) are not
@@ -78,7 +80,7 @@ OMR,piano,score,notation,notes,MIDI,sightreading,practice,tempo,choir,teacher,st
 
 ### Post-ship promotional text
 ```
-Point your camera at printed sheet music and hear it play. Free: 5 scans/day; Pro for unlimited. On-device with iPhone GPU acceleration — no account.
+Point your camera at printed sheet music and hear it play. Free: 5 scans/day; Pro: unlimited + Transpose. On-device with iPhone GPU acceleration — no account.
 ```
 
 ### Post-ship description
@@ -91,8 +93,8 @@ HOW IT WORKS
 3. Tap Play to hear it — follow highlighted notes on the scan, change tempo, or pick an instrument.
 
 FREE AND PRO
-• Free: 5 page scans per day
-• Music Reader Pro (auto-renewable): unlimited scans via monthly or yearly subscription (prices shown in the app)
+• Free: 5 page scans per day; scanning, playback, all instruments, tempo, A–B loop and sharing are free
+• Music Reader Pro (auto-renewable): unlimited scans and Transpose (shift a piece up or down 12 semitones) via monthly or yearly subscription (prices shown in the app)
 • Payment charged to your Apple ID; renews unless canceled at least 24 hours before period end
 • Manage or cancel in Settings → Apple ID → Subscriptions
 • Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
@@ -102,7 +104,8 @@ A PLAYER MADE FOR PRACTICE
 • Tempo from 0.5x to 2x: slow a tricky passage down or speed it up
 • Choose the sound: piano, electric piano, harpsichord, music box, vibraphone, organ, guitar, violin, strings, choir, or flute
 • Play, pause, seek, A–B loop, and mute or solo hands
-• Live level meter; playback keeps going while you browse
+• Transpose up or down 12 semitones to fit your voice or instrument (Pro)
+• Live level meter; playback keeps going while you browse, and in the background with lock-screen controls
 • Share MIDI from your library
 
 YOUR LIBRARY
