@@ -32,6 +32,8 @@ struct PaywallView: View {
 
                     comparison
 
+                    purchaseStatusView
+
                     if let err = storeKit.purchaseError {
                         Text(err)
                             .font(.caption)
@@ -59,6 +61,31 @@ struct PaywallView: View {
                 }
             }
             .task { await storeKit.loadProducts() }
+            // Ask to Buy approved (arrives via Transaction.updates) or restore found Pro: close the paywall.
+            .onChange(of: storeKit.isPro) { _, pro in if pro { dismiss() } }
+            .onDisappear { Analytics.shared.track("paywall_dismiss", props: ["pro": storeKit.isPro ? "true" : "false"]) }
+        }
+    }
+
+    @ViewBuilder
+    private var purchaseStatusView: some View {
+        switch storeKit.purchaseStatus {
+        case .idle:
+            EmptyView()
+        case .pending:
+            Label(PurchaseResolver.pendingMessage, systemImage: "clock")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color.secondary.opacity(0.12)))
+                .accessibilityIdentifier("paywall.pending")
+        case .error(let message):
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(.red)
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color.red.opacity(0.1)))
+                .accessibilityIdentifier("paywall.error")
         }
     }
 
