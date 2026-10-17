@@ -1,3 +1,4 @@
+import StoreKit
 import XCTest
 @testable import OMRSheetCam
 
@@ -34,5 +35,17 @@ final class ProEntitlementTests: XCTestCase {
         }
         XCTAssertGreaterThan(scanned, 20, "source scan found too few files under \(root.path)")
         XCTAssertEqual(offenders, [], "StoreKitManager() constructed outside StoreKitManager.swift: \(offenders)")
+    }
+
+    /// P4.2: real StoreKit error values map to the coarse failure kind (message + analytics reason).
+    func testClassifyStoreKitErrors() {
+        XCTAssertEqual(PurchaseFailureKind.classify(StoreKitError.userCancelled), .cancelled)
+        XCTAssertEqual(PurchaseFailureKind.classify(StoreKitError.networkError(URLError(.notConnectedToInternet))), .network)
+        XCTAssertEqual(PurchaseFailureKind.classify(StoreKitError.notAvailableInStorefront), .notAvailable)
+        XCTAssertEqual(PurchaseFailureKind.classify(Product.PurchaseError.purchaseNotAllowed), .notAllowed)
+        XCTAssertEqual(PurchaseFailureKind.classify(Product.PurchaseError.productUnavailable), .notAvailable)
+        XCTAssertEqual(PurchaseFailureKind.classify(VerificationResult<Transaction>.VerificationError.invalidSignature), .verification)
+        XCTAssertEqual(PurchaseFailureKind.classify(URLError(.timedOut)), .network)
+        XCTAssertEqual(PurchaseFailureKind.classify(NSError(domain: "x", code: 1)), .unknown)
     }
 }

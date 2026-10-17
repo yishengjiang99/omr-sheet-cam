@@ -170,3 +170,10 @@ extension EntitlementSnapshot {
             isUpgraded: t.isUpgraded)
     }
 }
+
+extension PurchaseFailureKind {
+    /// Map a thrown StoreKit / URL error to a coarse kind.
+    static func classify(_ error: Error) -> PurchaseFailureKind {
+        .unknown
+    }
+}
