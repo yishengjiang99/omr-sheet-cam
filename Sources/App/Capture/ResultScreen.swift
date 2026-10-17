@@ -47,6 +47,11 @@ struct ResultScreen: View {
         return []
     }
 
+    /// F7.7: same share item as Library / Player, so the file is named after the (edited) title.
+    static func shareItem(for entry: PlaylistEntry?, store: PlaylistStore = .shared) -> MIDIExport? {
+        entry.flatMap { store.export(for: $0) }
+    }
+
     /// "Found 4 staves · 52 notes · about 0:24".
     static func summary(_ d: RecognitionDetails, duration: Double?) -> String {
         var parts = ["Found \(d.staffCount) stave\(d.staffCount == 1 ? "" : "s")", "\(d.notes.count) note\(d.notes.count == 1 ? "" : "s")"]
@@ -75,8 +80,8 @@ struct ResultScreen: View {
                 .accessibilityIdentifier("result.retake")
             }
             ToolbarItem(placement: .topBarTrailing) {
-                if let url = playlistEntry?.fileName.map({ PlaylistStore.shared.directory.appendingPathComponent($0) }) {
-                    ShareLink(item: url) { Image(systemName: "square.and.arrow.up") }
+                if let export = Self.shareItem(for: playlistEntry) {
+                    ShareLink(item: export, preview: SharePreview(export.title)) { Image(systemName: "square.and.arrow.up") }
                         .accessibilityLabel("Share MIDI")
                 }
             }
