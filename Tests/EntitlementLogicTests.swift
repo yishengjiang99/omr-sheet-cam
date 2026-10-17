@@ -115,13 +115,16 @@ final class EntitlementLogicTests: XCTestCase {
         XCTAssertEqual(UserDefaults.standard.integer(forKey: "omr.freeScansUsed"), ScanQuota.freeDailyLimit)
     }
 
-    func testGateFreeUserConsumesQuotaThenBlocks() async {
+    func testGateFreeUserIsChargedOnlyByCommitThenBlocks() async {
         resetQuota(used: ScanQuota.freeDailyLimit - 1)
         let quota = ScanQuota(storeKit: FakeEntitlements(isPro: false, proAfterRefresh: false))
         let first = await quota.admitScan()
-        let second = await quota.admitScan()
+        let again = await quota.admitScan()
         XCTAssertTrue(first)
-        XCTAssertFalse(second)
+        XCTAssertTrue(again, "admitScan is a read-only gate (P1.4): not charged until commit()")
+        quota.commit() // recognition succeeded
+        let blocked = await quota.admitScan()
+        XCTAssertFalse(blocked)
         XCTAssertTrue(quota.showPaywall)
     }
 }

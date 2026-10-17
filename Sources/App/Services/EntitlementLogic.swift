@@ -46,9 +46,10 @@ enum EntitlementLogic {
 
 extension ScanQuota {
     /// Scan gate: re-check Pro against the store first (expiry, refund or renewal while the app was
-    /// alive), then consume one free scan if allowed. Returns true if the scan may proceed.
+    /// alive), then check (without charging) that a scan is allowed. Returns true if the scan may
+    /// proceed. The free scan is charged by `ScanQuota.commit()` only after recognition succeeds (P1.4).
     func admitScan() async -> Bool {
         await storeKit.refreshEntitlements()
-        return checkAndConsume()
+        return canScan()
     }
 }
