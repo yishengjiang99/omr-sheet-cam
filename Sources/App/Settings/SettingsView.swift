@@ -5,7 +5,7 @@ import SwiftUI
 /// source code & license). Tapping Version 5 times reveals the Developer section (event log,
 /// copy diagnostics as prompt, model self-test, compare test staff), persisted in UserDefaults.
 struct SettingsView: View {
-    enum Section: String, CaseIterable { case playback, about, developer }
+    enum Section: String, CaseIterable { case pro, playback, about, developer }
     enum AboutRow: String, CaseIterable { case version, rate, privacy, sourceCode }
     enum DeveloperRow: String, CaseIterable {
         case eventLog, copyPrompt, selfTest, segnetSelfTest, compareStaff, turnOff
@@ -15,7 +15,7 @@ struct SettingsView: View {
 
     /// Sections the sheet shows (Developer only once unlocked). The view renders exactly these.
     static func sections(developerEnabled: Bool) -> [Section] {
-        developerEnabled ? Section.allCases : [.playback, .about]
+        developerEnabled ? Section.allCases : [.pro, .playback, .about]
     }
 
     static let aboutRows = AboutRow.allCases
@@ -50,6 +50,10 @@ struct SettingsView: View {
 
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var developer = DeveloperMode.shared
+    @ObservedObject private var storeKit = StoreKitManager.shared
+    @State private var isRestoring = false
+    @State private var showPaywall = false
+    @State private var showManageSubscription = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.requestReview) private var requestReview
     @State private var toast: String?
@@ -59,6 +63,7 @@ struct SettingsView: View {
             List {
                 ForEach(Self.sections(developerEnabled: developer.isEnabled), id: \.self) { section in
                     switch section {
+                    case .pro: proSection
                     case .playback: playback
                     case .about: about
                     case .developer: developerSection
@@ -71,8 +76,58 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.fontWeight(.semibold) }
             }
             .toast($toast)
+            .sheet(isPresented: $showPaywall) { PaywallView().environmentObject(storeKit) }
+            .manageSubscriptionsSheet(isPresented: $showManageSubscription)
         }
         .tint(Theme.coral)
+    }
+
+    /// Music Reader Pro: plan status, Upgrade / Manage subscription, Restore purchases (also on the paywall).
+    private var proSection: some View {
+        SwiftUI.Section("Music Reader Pro") {
+            ForEach(ProSettings.rows(isPro: storeKit.isPro), id: \.self) { row in
+                switch row {
+                case .status:
+                    SettingsLabel(
+                        ProSettings.statusText(
+                            isPro: storeKit.isPro, scansRemaining: ScanQuota.shared.scansRemaining,
+                            dailyLimit: ScanQuota.freeDailyLimit),
+                        icon: storeKit.isPro ? "checkmark.seal.fill" : "music.note.list", color: Theme.coral)
+                        .accessibilityIdentifier("settings.proStatus")
+                case .upgrade:
+                    Button { showPaywall = true } label: {
+                        SettingsLabel("Upgrade to Pro", icon: "sparkles", color: .orange)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("settings.upgrade")
+                case .manage:
+                    Button { showManageSubscription = true } label: {
+                        SettingsLabel("Manage subscription", icon: "creditcard", color: .blue)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("settings.manageSubscription")
+                case .restore:
+                    Button {
+                        guard !isRestoring else { return }
+                        isRestoring = true
+                        Task {
+                            let outcome = await storeKit.restore()
+                            isRestoring = false
+                            toast = ProSettings.restoreToast(outcome)
+                        }
+                    } label: {
+                        HStack {
+                            SettingsLabel("Restore purchases", icon: "arrow.clockwise", color: .green)
+                            Spacer()
+                            if isRestoring { ProgressView() }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isRestoring)
+                    .accessibilityIdentifier("settings.restore")
+                }
+            }
+        }
     }
 
     private var playback: some View {
