@@ -7,6 +7,9 @@ endpoint for App Privacy (iris probes failed previously). Enter these in the ASC
 Sources of truth: `Sources/App/Resources/PrivacyInfo.xcprivacy`, `docs/asc/web/privacy.html`,
 and `Sources/App/Services/Analytics.swift` / `StoreKitManager.swift`.
 
+> **See `app-privacy-checklist.md` (2026-10-17):** the "Linked to identity?" column below says No but
+> `PrivacyInfo.xcprivacy` says Linked=true; owner must pick one before publishing in ASC (checklist recommends Yes).
+
 ## Status vs live product page
 
 As of 2026-10-06 the listing/docs previously claimed **"Data Not Collected"**. That is

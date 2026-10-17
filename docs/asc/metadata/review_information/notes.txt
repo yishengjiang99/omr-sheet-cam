@@ -1,8 +1,18 @@
-In-app purchase: this version adds an optional auto-renewable subscription, Music Reader Pro (group "Music Reader Pro"): com.ragnus.vp.pro.monthly ($4.99/month) and com.ragnus.vp.pro.yearly ($29.99/year). Pro removes the free limit of 5 page scans per day; everything else (on-device recognition, player, instruments) is the same for free users. No account or login is required.
+In-app purchase: this version adds an optional auto-renewable subscription, Music Reader Pro (group "Music Reader Pro"): com.ragnus.vp.pro.monthly ($4.99/month) and com.ragnus.vp.pro.yearly ($29.99/year). No account or login is required.
 
-How to reach the paywall (no camera, photo or sheet music needed): the free tier allows 5 page scans per day; the 6th scan of the day opens the "Music Reader Pro" paywall with the Yearly and Monthly plans, Subscribe buttons, Restore purchases, and Terms of Use / Privacy Policy links.
-1. Fresh install, Library home screen: tap "Try sample picture". This button is shown only while the Library is empty, so it is there for the first scan only.
+What is free and what is Pro (matches the in-app paywall):
+- Free: 5 page scans per day, plus everything else: on-device recognition, the player, all instruments, tempo, A-B loop, hand mute/solo, Library, Share MIDI.
+- Pro: unlimited page scans, and Transpose (shift a piece up or down 12 semitones). Saved scans, playback and sharing are never locked.
+
+How to reach the paywall (no camera, photo or sheet music needed): the 6th scan of the day opens the "Music Reader Pro" paywall with the Yearly and Monthly plans, Subscribe buttons, Restore purchases, and Terms of Use / Privacy Policy links.
+1. Fresh install, Library home screen: tap "Try sample picture". This button is shown on the Library home only while the Library is empty, so it is there for the first scan only.
 2. For every further scan: go back (top-left) to the Library home screen, tap "Camera", then tap "Try sample picture" at the bottom of the Camera screen (it scans a bundled sample page, no photo is taken). Repeat. Alternatively tap "Photos" on the Library home screen and import any image.
 3. The 6th scan of the day shows the paywall.
 
-Purchases work in the sandbox environment with a sandbox Apple ID (Subscribe completes and unlocks unlimited scans; Restore purchases restores it). All music recognition runs on the device.
+Other ways to reach the paywall: Library home toolbar "Go Pro" (free users); Settings (gear icon, top of Library) > "Upgrade to Pro"; and the Transpose control in the Player: open any saved scan, tap the key chip (lock icon, labeled "Key 0") and choose a key; for a free user this opens the paywall instead of changing the key.
+
+How to test purchases and Restore: use a sandbox Apple ID (Settings > App Store > Sandbox Account on the test device). On the paywall tap Subscribe on Yearly or Monthly and confirm; the paywall closes, scans become unlimited and Transpose unlocks (Settings > Music Reader Pro shows "Music Reader Pro: active"). To test Restore: delete and reinstall the app (or use a second device with the same sandbox Apple ID), then tap "Restore purchases" on the paywall or in Settings > Music Reader Pro; Pro is restored and a "Pro restored" confirmation appears. If no active subscription exists for that Apple ID the app says "No active subscription found for this Apple ID". Manage subscription is in Settings for Pro users.
+
+Background audio (UIBackgroundModes: audio): the app plays the recognized sheet music as audio (a built-in SoundFont synthesizer). Music keeps playing when the user locks the device or switches apps, and the app shows Now Playing info and lock-screen / Control Center controls (play, pause, previous, next, seek), the same as a music player, so a musician can practice or listen away from the screen. The mode is used only while playback is active; the app records no audio and uses no microphone. To test: open any scan (or the sample), tap Play, lock the device or go to the Home screen: audio continues and the lock screen shows the title with play/pause and scrub controls.
+
+All music recognition runs on the device; photos and scores are never uploaded. The app sends only anonymous usage events (no photos, MIDI, email or location) and no data is used for tracking; see the Privacy Policy.

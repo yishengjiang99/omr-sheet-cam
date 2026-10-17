@@ -6,8 +6,8 @@ HOW IT WORKS
 3. Tap Play to hear it — follow highlighted notes on the scan, change tempo, or pick an instrument.
 
 FREE AND PRO
-• Free: 5 page scans per day
-• Music Reader Pro (auto-renewable): unlimited scans via monthly or yearly subscription (prices shown in the app)
+• Free: 5 page scans per day; scanning, playback, all instruments, tempo, A–B loop and sharing are free
+• Music Reader Pro (auto-renewable): unlimited scans and Transpose (shift a piece up or down 12 semitones) via monthly or yearly subscription (prices shown in the app)
 • Payment charged to your Apple ID; renews unless canceled at least 24 hours before period end
 • Manage or cancel in Settings → Apple ID → Subscriptions
 • Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
@@ -17,7 +17,8 @@ A PLAYER MADE FOR PRACTICE
 • Tempo from 0.5x to 2x: slow a tricky passage down or speed it up
 • Choose the sound: piano, electric piano, harpsichord, music box, vibraphone, organ, guitar, violin, strings, choir, or flute
 • Play, pause, seek, A–B loop, and mute or solo hands
-• Live level meter; playback keeps going while you browse
+• Transpose up or down 12 semitones to fit your voice or instrument (Pro)
+• Live level meter; playback keeps going while you browse, and in the background with lock-screen controls
 • Share MIDI from your library
 
 YOUR LIBRARY

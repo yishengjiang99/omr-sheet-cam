@@ -53,4 +53,13 @@ final class ProFeatureGateTests: XCTestCase {
     func testProIsNeverPromptedForAFeature() {
         XCTAssertFalse(quota(pro: true).requestPaywall(ProFeatureGate.paywallReason(for: .transpose)))
     }
+
+    /// Paywall copy must list every gated feature as Pro, and quote the real free limit.
+    func testPaywallCopyListsTransposeAsProAndMatchesFreeLimit() {
+        XCTAssertTrue(ProFeatureGate.gated.contains(.transpose))
+        XCTAssertTrue(PaywallCopy.intro.contains("Transpose"))
+        XCTAssertTrue(PaywallCopy.proRows.contains { $0.localizedCaseInsensitiveContains("Transpose") })
+        XCTAssertTrue(PaywallCopy.intro.contains("\(ScanQuota.freeDailyLimit) page scans"))
+        XCTAssertTrue(PaywallCopy.proRows.contains("Unlimited scans"))
+    }
 }
