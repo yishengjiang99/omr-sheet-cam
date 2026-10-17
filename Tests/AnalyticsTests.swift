@@ -69,4 +69,26 @@ final class AnalyticsTests: XCTestCase {
             XCTAssertNil(sent[k], "prop \(k) must not be sent")
         }
     }
+
+    func testCleanKeepsLegitKeysAndDropsPIIKeys() {
+        let kept = Analytics.clean(props: ["platform": "ios", "plan": "monthly", "product": "p", "reason": "quota", "app_version": "1.0",
+                                           "latency_ms": "5", "translate": "x", "relation": "x", "template": "x", "ms": "9", "notes": "4"])
+        XCTAssertEqual(Set(kept.keys), ["platform", "plan", "product", "reason", "app_version", "latency_ms", "translate", "relation", "template", "ms", "notes"])
+        let dropped = Analytics.clean(props: ["email": "a", "Email": "a", "user_email": "a", "phone": "1", "lat": "1", "lng": "1", "gps": "1",
+                                              "gpsLat": "1", "userLat": "1", "device-token": "t", "password": "p", "photo": "x", "image": "x",
+                                              "base64": "x", "image_data": "x", "longitude": "1"])
+        XCTAssertTrue(dropped.isEmpty, "should have dropped everything, kept \(dropped.keys.sorted())")
+    }
+
+    func testCleanDropsBulkyValuesAndCapsLength() {
+        XCTAssertNil(Analytics.clean(props: ["note": "data:image/png;base64,AAAA"])["note"])
+        XCTAssertNil(Analytics.clean(props: ["note": String(repeating: "x", count: 201)])["note"])
+        XCTAssertEqual(Analytics.clean(props: ["note": String(repeating: "x", count: 200)])["note"]?.count, 200)
+    }
+
+    func testKeyWordSplitting() {
+        XCTAssertEqual(Analytics.keyWords("platform"), ["platform"])
+        XCTAssertEqual(Analytics.keyWords("gpsLat"), ["gps", "lat"])
+        XCTAssertEqual(Analytics.keyWords("user_email-id.v2"), ["user", "email", "id", "v2"])
+    }
 }
