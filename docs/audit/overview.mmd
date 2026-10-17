@@ -1,0 +1,28 @@
+flowchart TD
+  L(["F1 Launch"]) --> LIB["F2 Library home"]
+  LIB -->|Camera| CAM["F3 Camera and permission"]
+  LIB -->|Photos| PH["F4 Photos import"]
+  LIB -->|Try sample, empty library only| SMP["F4 Sample picture"]
+  CAM -->|shutter or Photos or Try sample| GATE
+  PH --> GATE
+  SMP --> GATE
+  GATE{"F5 handlePhoto: quota check"}
+  GATE -->|Pro or under 5 per day| RD["F6 Reading and progress"]
+  GATE -->|6th scan of day| PW["P2 Paywall"]
+  PW -->|Subscribe| BUY["P3 to P5 Purchase, cancel, pending"]
+  PW -->|Restore| RES["P6 Restore"]
+  BUY -->|success| PRO["P9 Pro unlocked"]
+  RES -->|found| PRO
+  PW -->|Close| LIB
+  PRO -.->|user must rescan| LIB
+  RD -->|success| RS["F7 Result and auto-save to Library"]
+  RD -->|failure| FL["F9 Failure tips and retry"]
+  RD -->|Cancel| LIB
+  FL -->|Try again| RD
+  FL -->|Retake| LIB
+  RS --> RV["F8 Overlay, mark wrong, feedback"]
+  RS -->|Play| PL["F10 Player"]
+  LIB -->|tap row| PL
+  PL --> SH["F12 Share MIDI"]
+  LIB --> ST["F13 Settings sheet"]
+  CAM --> ST
