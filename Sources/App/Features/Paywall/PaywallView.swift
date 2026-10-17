@@ -4,6 +4,8 @@ import StoreKit
 struct PaywallView: View {
     @EnvironmentObject private var storeKit: StoreKitManager
     @Environment(\.dismiss) private var dismiss
+    @State private var isRestoring = false
+    @State private var restoreFeedback: RestoreFeedback?
 
     var body: some View {
         NavigationStack {
@@ -18,35 +20,63 @@ struct PaywallView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
 
-                    if let yearly = storeKit.yearlyProduct {
-                        planCard(product: yearly, title: "Yearly", primary: true)
+                    let display = PaywallState.display(storeKit.loadState, hasProducts: !storeKit.products.isEmpty)
+                    if display.showsSpinner {
+                        ProgressView().padding()
+                            .accessibilityIdentifier("paywall.loading")
                     }
-                    if let monthly = storeKit.monthlyProduct {
-                        planCard(product: monthly, title: "Monthly", primary: false)
+                    if display.showsProducts {
+                        if let yearly = storeKit.yearlyProduct {
+                            planCard(product: yearly, title: "Yearly", primary: true)
+                        }
+                        if let monthly = storeKit.monthlyProduct {
+                            planCard(product: monthly, title: "Monthly", primary: false)
+                        }
                     }
-                    if storeKit.products.isEmpty && !storeKit.isLoading {
-                        Text("Could not load products. Check your connection and try again.")
+                    ForEach(display.messages, id: \.self) { message in
+                        Text(message)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .accessibilityIdentifier("paywall.loadError")
+                    }
+                    if display.showsRetry {
+                        Button("Try again") { Task { await storeKit.loadProducts() } }
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("paywall.retry")
                     }
 
                     comparison
 
                     purchaseStatusView
 
-                    if let err = storeKit.purchaseError {
-                        Text(err)
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                            .padding()
-                            .background(RoundedRectangle(cornerRadius: 8).fill(Color.red.opacity(0.1)))
-                    }
-
-                    Button("Restore purchases") {
-                        Task { await storeKit.restore() }
+                    Button {
+                        Task {
+                            isRestoring = true
+                            restoreFeedback = nil
+                            let feedback = RestoreFeedback.resolve(await storeKit.restore())
+                            isRestoring = false
+                            restoreFeedback = feedback
+                            if feedback.dismissPaywall { dismiss() }
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            if isRestoring { ProgressView() }
+                            Text("Restore purchases")
+                        }
                     }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .disabled(isRestoring)
+                    .accessibilityIdentifier("paywall.restore")
+
+                    if let text = restoreFeedback?.text {
+                        Text(text)
+                            .font(.caption)
+                            .foregroundStyle(restoreFeedback?.isError == true ? Color.red : Color.secondary)
+                            .multilineTextAlignment(.center)
+                            .accessibilityIdentifier("paywall.restoreResult")
+                    }
 
                     legal
                 }

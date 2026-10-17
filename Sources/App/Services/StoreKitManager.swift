@@ -15,9 +15,8 @@ final class StoreKitManager: ObservableObject, ProEntitlementSource {
 
     @Published private(set) var products: [Product] = []
     @Published private(set) var purchasedProductIDs: Set<String> = []
-    @Published private(set) var isLoading = false
-    /// Load / restore failures (user-facing text only).
-    @Published var purchaseError: String?
+    /// Product-load state (spinner / products / one message + Retry on the paywall).
+    @Published private(set) var loadState: PaywallLoadState = .idle
     /// Last purchase attempt: idle, pending (Ask to Buy / SCA, not an error) or a user-facing error.
     @Published private(set) var purchaseStatus: PurchaseStatus = .idle
     @Published private(set) var isPurchasing = false
@@ -57,9 +56,8 @@ final class StoreKitManager: ObservableObject, ProEntitlementSource {
     }
 
     func loadProducts() async {
-        isLoading = true
-        purchaseError = nil
-        defer { isLoading = false }
+        if loadState == .loading { return }
+        loadState = .loading
         do {
             let loaded = try await Product.products(for: IAPProductID.all)
             products = loaded.sorted { lhs, rhs in
@@ -67,14 +65,15 @@ final class StoreKitManager: ObservableObject, ProEntitlementSource {
                 if rhs.id == IAPProductID.yearly { return false }
                 return lhs.price < rhs.price
             }
+            loadState = .loaded
         } catch {
-            purchaseError = "Could not load products: \(error.localizedDescription)"
+            DiagnosticsLog.shared.record(error: error, category: .app, context: "load products failed")
+            loadState = .failed(PaywallState.loadFailureMessage(for: PurchaseFailureKind.classify(error)))
         }
     }
 
     func purchase(_ product: Product) async -> Bool {
         isPurchasing = true
-        purchaseError = nil
         purchaseStatus = .idle
         defer { isPurchasing = false }
         Analytics.shared.track("purchase_start", props: ["product": product.id])
@@ -112,9 +111,6 @@ final class StoreKitManager: ObservableObject, ProEntitlementSource {
     /// Restore purchases (App Store sync + entitlement refresh). The UI shows the returned outcome.
     @discardableResult
     func restore() async -> RestoreOutcome {
-        isLoading = true
-        purchaseError = nil
-        defer { isLoading = false }
         Analytics.shared.track("restore_start")
         let outcome: RestoreOutcome
         do {
@@ -126,7 +122,6 @@ final class StoreKitManager: ObservableObject, ProEntitlementSource {
             outcome = .failed(PurchaseFailureKind.classify(error))
         }
         let resolution = PurchaseResolver.resolve(outcome)
-        purchaseError = resolution.errorMessage
         if let event = resolution.event { Analytics.shared.track(event, props: resolution.props) }
         return outcome
     }
