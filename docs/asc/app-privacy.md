@@ -25,7 +25,7 @@ for this doc change. When you next submit a newer build, publish the answers bel
 
 | Category | Data type | Who / what |
 |---|---|---|
-| Usage Data | **Product Interaction** | First-party telemetry (`app_open`, `scan_*`, `paywall_*`, `purchase_*`, `restore_*`) → `photo.grepawk.com/api/telemetry` |
+| Usage Data | **Product Interaction** | First-party telemetry (`app_open`, `scan_*`, `paywall_*`, `upgrade_card_*`, `purchase_*`, `restore_*`) → `photo.grepawk.com/api/telemetry` |
 | Identifiers | **Device ID** | Anonymous UUID (`telemetry.anonId` in UserDefaults), sent with events |
 | Purchases | **Purchase History** | StoreKit 2 Pro subscription entitlement; product id on purchase funnel events |
 

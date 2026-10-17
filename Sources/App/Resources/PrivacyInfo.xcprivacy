@@ -21,7 +21,7 @@
 	<array/>
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
-		<!-- In-house funnel events (app_open, scan_*, paywall_*, purchase_*, restore_*) -->
+		<!-- In-house funnel events (app_open, scan_*, paywall_*, upgrade_card_*, purchase_*, restore_*) -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeProductInteraction</string>

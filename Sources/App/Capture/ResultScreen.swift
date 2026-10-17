@@ -33,6 +33,10 @@ struct ResultScreen: View {
     @State private var photoQuality: PhotoQuality?
     /// Real pipeline progress for the Reading screen (main actor).
     @StateObject private var progress = RecognitionProgress()
+    /// Soft post-scan upgrade card (P2.2): decided once per successful scan, hidden for the session on dismiss.
+    @State private var upgradeCardMessage: String?
+    @ObservedObject private var quota = ScanQuota.shared
+    @ObservedObject private var storeKit = StoreKitManager.shared
     @Environment(\.dismiss) private var dismiss
 
     /// "Recognition coming soon" row: plain text, no glyph (nil = no icon; any value must be a valid SF Symbol).
@@ -114,6 +118,20 @@ struct ResultScreen: View {
                         .foregroundStyle(.secondary)
                         .symbolRenderingMode(.multicolor)
                     if let playlistError { Text(playlistError).font(.footnote).foregroundStyle(.red) }
+                    if let upgradeCardMessage, !storeKit.isPro {
+                        UpgradeCard(
+                            message: upgradeCardMessage,
+                            onSeePro: {
+                                self.upgradeCardMessage = nil
+                                quota.requestPaywall(.postScan)
+                            },
+                            onDismiss: {
+                                self.upgradeCardMessage = nil
+                                quota.promptDismissed(.postScan)
+                                Analytics.shared.track("upgrade_card_dismiss", props: ["reason": PaywallReason.postScan.analyticsValue])
+                            }
+                        )
+                    }
                 }
                 OMRCompareView(
                     image: photo.image, details: details, captureName: captureName,
@@ -306,6 +324,8 @@ struct ResultScreen: View {
             saveToPlaylist(d)
         }
         Self.commitQuotaIfRecognized(result, commit: commitQuota)
+        // After the charge (P1.4: commit on success) so `remaining` already counts this scan.
+        if case .recognized = result { decideUpgradeCard() }
     }
 
     /// Free-scan quota is charged only for a recognized scan: failures (incl. reader not ready) and
@@ -313,6 +333,17 @@ struct ResultScreen: View {
     @MainActor
     static func commitQuotaIfRecognized(_ outcome: RecognitionOutcome, commit: @MainActor () -> Void) {
         if case .recognized = outcome { commit() }
+    }
+
+    /// P2.2: once per successful scan, ask the shared policy (never first session, capped, never Pro).
+    private func decideUpgradeCard() {
+        let lifetime = PostScanCard.recordSuccess()
+        let remaining = quota.remaining
+        let allowed = quota.shouldShowPrompt(.postScan, purchaseInProgress: storeKit.purchaseInFlight)
+        guard PostScanCard.shouldShow(remaining: remaining, isPro: storeKit.isPro, lifetimeSuccesses: lifetime, policyAllows: allowed) else { return }
+        quota.promptShown(.postScan)
+        upgradeCardMessage = PostScanCard.message(remaining: remaining)
+        Analytics.shared.track("upgrade_card_view", props: ["reason": PaywallReason.postScan.analyticsValue])
     }
 
     /// Every successful scan goes into the playlist (Application Support/playlist). Idempotent.
