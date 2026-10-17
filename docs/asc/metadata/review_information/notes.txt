@@ -1,5 +1,8 @@
 In-app purchase: this version adds an optional auto-renewable subscription, Music Reader Pro (group "Music Reader Pro"): com.ragnus.vp.pro.monthly ($4.99/month) and com.ragnus.vp.pro.yearly ($29.99/year). Pro removes the free limit of 5 page scans per day; everything else (on-device recognition, player, instruments) is the same for free users. No account or login is required.
 
-How to reach the paywall: on the Library home screen tap "Try sample picture" (or scan / import any sheet-music photo), go back and repeat. The free tier allows 5 scans per day; the 6th scan of the day opens the "Music Reader Pro" paywall with the Yearly and Monthly plans, Subscribe buttons, Restore purchases, and Terms of Use / Privacy Policy links.
+How to reach the paywall (no camera, photo or sheet music needed): the free tier allows 5 page scans per day; the 6th scan of the day opens the "Music Reader Pro" paywall with the Yearly and Monthly plans, Subscribe buttons, Restore purchases, and Terms of Use / Privacy Policy links.
+1. Fresh install, Library home screen: tap "Try sample picture". This button is shown only while the Library is empty, so it is there for the first scan only.
+2. For every further scan: go back (top-left) to the Library home screen, tap "Camera", then tap "Try sample picture" at the bottom of the Camera screen (it scans a bundled sample page, no photo is taken). Repeat. Alternatively tap "Photos" on the Library home screen and import any image.
+3. The 6th scan of the day shows the paywall.
 
 Purchases work in the sandbox environment with a sandbox Apple ID (Subscribe completes and unlocks unlimited scans; Restore purchases restores it). All music recognition runs on the device.
