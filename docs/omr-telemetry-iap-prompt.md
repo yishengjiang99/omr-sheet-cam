@@ -67,7 +67,9 @@ Track these events at the appropriate call sites:
 - `scan_fail` — reading fails (include error type in props)
 - `playback_start` — user taps play
 - `paywall_view` — paywall shown
-- `purchase_start`, `purchase_success`, `purchase_fail`
+- `purchase_start`, then exactly one of `purchase_success`, `purchase_cancel`, `purchase_pending`, `purchase_fail{reason: network|notAvailable|notAllowed|verification|unknown}`
+- `restore_start`, then one of `restore_success`, `restore_none`, `restore_cancel`, `restore_fail{reason}`
+- `paywall_dismiss{pro}` — paywall closed
 
 ### 1d. Admin panel: add app filter
 

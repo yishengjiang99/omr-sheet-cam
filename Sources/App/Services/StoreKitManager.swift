@@ -16,7 +16,10 @@ final class StoreKitManager: ObservableObject, ProEntitlementSource {
     @Published private(set) var products: [Product] = []
     @Published private(set) var purchasedProductIDs: Set<String> = []
     @Published private(set) var isLoading = false
+    /// Load / restore failures (user-facing text only).
     @Published var purchaseError: String?
+    /// Last purchase attempt: idle, pending (Ask to Buy / SCA, not an error) or a user-facing error.
+    @Published private(set) var purchaseStatus: PurchaseStatus = .idle
     @Published private(set) var isPurchasing = false
 
     /// Pro state. Cached in UserDefaults as an offline fallback only; re-derived from
@@ -72,43 +75,60 @@ final class StoreKitManager: ObservableObject, ProEntitlementSource {
     func purchase(_ product: Product) async -> Bool {
         isPurchasing = true
         purchaseError = nil
+        purchaseStatus = .idle
         defer { isPurchasing = false }
         Analytics.shared.track("purchase_start", props: ["product": product.id])
+        let outcome: PurchaseOutcome
         do {
-            let result = try await product.purchase()
-            switch result {
+            switch try await product.purchase() {
             case .success(let verification):
-                let transaction = try checkVerified(verification)
-                await transaction.finish()
-                await refresh(extra: [EntitlementSnapshot(transaction)])
-                Analytics.shared.track("purchase_success", props: ["product": product.id])
-                return true
+                switch verification {
+                case .verified(let transaction):
+                    await transaction.finish()
+                    await refresh(extra: [EntitlementSnapshot(transaction)])
+                    outcome = .success
+                case .unverified(_, let error):
+                    // Left unfinished and never grants Pro; the user is pointed to Restore.
+                    DiagnosticsLog.shared.record(error: error, category: .app, context: "purchase unverified")
+                    outcome = .unverified
+                }
             case .userCancelled:
-                return false
+                outcome = .cancelled
             case .pending:
-                purchaseError = "Purchase is pending approval."
-                Analytics.shared.track("purchase_fail", props: ["reason": "pending"])
-                return false
+                outcome = .pending
             @unknown default:
-                return false
+                outcome = .unknown
             }
         } catch {
-            purchaseError = error.localizedDescription
-            Analytics.shared.track("purchase_fail", props: ["reason": "error"])
-            return false
+            DiagnosticsLog.shared.record(error: error, category: .app, context: "purchase failed")
+            outcome = .failed(PurchaseFailureKind.classify(error))
         }
+        let resolution = PurchaseResolver.resolve(outcome, productID: product.id)
+        purchaseStatus = resolution.status
+        if let event = resolution.event { Analytics.shared.track(event, props: resolution.props) }
+        return resolution.succeeded
     }
 
-    func restore() async {
+    /// Restore purchases (App Store sync + entitlement refresh). The UI shows the returned outcome.
+    @discardableResult
+    func restore() async -> RestoreOutcome {
         isLoading = true
         purchaseError = nil
         defer { isLoading = false }
+        Analytics.shared.track("restore_start")
+        let outcome: RestoreOutcome
         do {
             try await AppStore.sync()
             await refreshEntitlements()
+            outcome = isPro ? .restored : .nothingToRestore
         } catch {
-            purchaseError = "Restore failed: \(error.localizedDescription)"
+            DiagnosticsLog.shared.record(error: error, category: .app, context: "restore failed")
+            outcome = .failed(PurchaseFailureKind.classify(error))
         }
+        let resolution = PurchaseResolver.resolve(outcome)
+        purchaseError = resolution.errorMessage
+        if let event = resolution.event { Analytics.shared.track(event, props: resolution.props) }
+        return outcome
     }
 
     private func handle(_ update: VerificationResult<Transaction>) async {
@@ -144,6 +164,7 @@ final class StoreKitManager: ObservableObject, ProEntitlementSource {
             pro = EntitlementLogic.isPro(entitlements: snapshots, validIDs: IAPProductID.all)
         }
         isPro = pro
+        purchaseStatus = PurchaseResolver.status(afterEntitlementRefresh: purchaseStatus, isPro: pro)
         let defaults = UserDefaults.standard
         defaults.set(pro, forKey: Self.proKey)
         if pro, let latest = active.map(\.transactionID).max() {
@@ -174,6 +195,23 @@ extension EntitlementSnapshot {
 extension PurchaseFailureKind {
     /// Map a thrown StoreKit / URL error to a coarse kind.
     static func classify(_ error: Error) -> PurchaseFailureKind {
-        .unknown
+        if let e = error as? StoreKitError {
+            switch e {
+            case .userCancelled: return .cancelled
+            case .networkError: return .network
+            case .notAvailableInStorefront: return .notAvailable
+            default: return .unknown
+            }
+        }
+        if let e = error as? Product.PurchaseError {
+            switch e {
+            case .purchaseNotAllowed: return .notAllowed
+            case .productUnavailable: return .notAvailable
+            default: return .unknown
+            }
+        }
+        if error is VerificationResult<Transaction>.VerificationError { return .verification }
+        if error is URLError { return .network }
+        return .unknown
     }
 }
