@@ -165,6 +165,7 @@
 		8B0000000000000000000002 /* CoreMLCacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMLCacheStore.swift; sourceTree = "<group>"; };
 		8B0000000000000000000003 /* Build6PrepTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Build6PrepTests.swift; sourceTree = "<group>"; };
 		5C0000000000000000000001 /* StoreKitConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitConfigTests.swift; sourceTree = "<group>"; };
+		5C0000000000000000000003 /* OMRSheetCam.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = OMRSheetCam.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -242,6 +243,7 @@
 			isa = PBXGroup;
 			children = (
 				G10000000000000000000002 /* Sources */,
+				5C0000000000000000000003 /* OMRSheetCam.storekit */,
 				G10000000000000000000006 /* Tests */,
 				G10000000000000000000007 /* Products */,
 			);
