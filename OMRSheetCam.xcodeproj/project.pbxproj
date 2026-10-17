@@ -91,6 +91,7 @@
 		FB0000000000000000000002 /* UserFacingError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000000000000000000001 /* UserFacingError.swift */; };
 		F90000000000000000000002 /* FeedbackCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F90000000000000000000001 /* FeedbackCopyTests.swift */; };
 		FC0000000000000000000002 /* PlaybackDeleteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000001 /* PlaybackDeleteTests.swift */; };
+		FD0000000000000000000002 /* BackgroundAudioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD0000000000000000000001 /* BackgroundAudioTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -190,6 +191,7 @@
 		FB0000000000000000000001 /* UserFacingError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserFacingError.swift; sourceTree = "<group>"; };
 		F90000000000000000000001 /* FeedbackCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackCopyTests.swift; sourceTree = "<group>"; };
 		FC0000000000000000000001 /* PlaybackDeleteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackDeleteTests.swift; sourceTree = "<group>"; };
+		FD0000000000000000000001 /* BackgroundAudioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundAudioTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -371,6 +373,7 @@
 				FA0000000000000000000001 /* UserFacingErrorTests.swift */,
 				F90000000000000000000001 /* FeedbackCopyTests.swift */,
 				FC0000000000000000000001 /* PlaybackDeleteTests.swift */,
+				FD0000000000000000000001 /* BackgroundAudioTests.swift */,
 				B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */,
 				B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */,
 				B1000000000000000000000A /* ModelWarmupTests.swift */,
@@ -645,6 +648,7 @@
 				FA0000000000000000000002 /* UserFacingErrorTests.swift in Sources */,
 				F90000000000000000000002 /* FeedbackCopyTests.swift in Sources */,
 				FC0000000000000000000002 /* PlaybackDeleteTests.swift in Sources */,
+				FD0000000000000000000002 /* BackgroundAudioTests.swift in Sources */,
 				A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */,
 				A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */,
 				A1000000000000000000000A /* ModelWarmupTests.swift in Sources */,
@@ -735,6 +739,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Take photos of sheet music to read and play them.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AI Camera - Music Reader can open a photo of sheet music from your library to read and play it back on this device.";
+				INFOPLIST_FILE = Sources/App/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -771,6 +776,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Take photos of sheet music to read and play them.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "AI Camera - Music Reader can open a photo of sheet music from your library to read and play it back on this device.";
+				INFOPLIST_FILE = Sources/App/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
