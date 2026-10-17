@@ -234,7 +234,7 @@ struct ResultScreen: View {
             log.record(.info, .capture, "saved captures/\(url.lastPathComponent) (\(pixelSize), \(data.count / 1024) KB, \(source))",
                        payload: ["capture": url.lastPathComponent, "bytes": "\(data.count)", "pixels": pixelSize, "source": source])
         case let .failure(e):
-            saveError = "Save failed: \(e)"
+            saveError = UserFacingError.message(for: e, action: .saveCapture)
             jpeg = image.jpegData(compressionQuality: 0.9) ?? Data()
             log.record(error: e, category: .capture, context: "capture save failed", payload: ["pixels": pixelSize, "source": source])
         }
@@ -284,7 +284,7 @@ struct ResultScreen: View {
             playlistError = nil
             return e
         } catch {
-            playlistError = "Could not save to playlist: \(error)"
+            playlistError = UserFacingError.message(for: error, action: .saveToLibrary)
             DiagnosticsLog.shared.record(error: error, category: .playback, context: "playlist save", payload: ["capture": captureName])
             return nil
         }
@@ -366,7 +366,7 @@ struct ResultScreen: View {
             openPlayer(PlayerRoute(entry: e))
             sampleError = nil
         } catch {
-            sampleError = "Sample unavailable: \(error)"
+            sampleError = UserFacingError.message(for: error, action: .sample)
             DiagnosticsLog.shared.record(error: error, category: .playback, context: "Play sample")
         }
     }
