@@ -11,6 +11,8 @@
 		A50000000000000000000008 /* ProSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000008 /* ProSettingsTests.swift */; };
 		A5000000000000000000000B /* PaywallState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6000000000000000000000B /* PaywallState.swift */; };
 		A5000000000000000000000A /* PaywallStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6000000000000000000000A /* PaywallStateTests.swift */; };
+		DD0000000000000000000012 /* LibraryProEntryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0000000000000000000012 /* LibraryProEntryTests.swift */; };
+		DD0000000000000000000011 /* LibraryProEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0000000000000000000011 /* LibraryProEntry.swift */; };
 		DD0000000000000000000010 /* ReturnReminderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0000000000000000000010 /* ReturnReminderTests.swift */; };
 		DD0000000000000000000009 /* ReturnReminder.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0000000000000000000009 /* ReturnReminder.swift */; };
 		DD0000000000000000000008 /* UpgradeCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0000000000000000000008 /* UpgradeCard.swift */; };
@@ -131,6 +133,8 @@
 		A60000000000000000000008 /* ProSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProSettingsTests.swift; sourceTree = "<group>"; };
 		A6000000000000000000000B /* PaywallState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallState.swift; sourceTree = "<group>"; };
 		A6000000000000000000000A /* PaywallStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallStateTests.swift; sourceTree = "<group>"; };
+		DE0000000000000000000012 /* LibraryProEntryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryProEntryTests.swift; sourceTree = "<group>"; };
+		DE0000000000000000000011 /* LibraryProEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryProEntry.swift; sourceTree = "<group>"; };
 		DE0000000000000000000010 /* ReturnReminderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReturnReminderTests.swift; sourceTree = "<group>"; };
 		DE0000000000000000000009 /* ReturnReminder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReturnReminder.swift; sourceTree = "<group>"; };
 		DE0000000000000000000008 /* UpgradeCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpgradeCard.swift; sourceTree = "<group>"; };
@@ -361,6 +365,7 @@
 				E10000000000000000000004 /* ScanQuota.swift */,
 				A60000000000000000000009 /* ProSettings.swift */,
 				A6000000000000000000000B /* PaywallState.swift */,
+				DE0000000000000000000011 /* LibraryProEntry.swift */,
 				DE0000000000000000000009 /* ReturnReminder.swift */,
 				DE0000000000000000000006 /* PostScanCard.swift */,
 				DE0000000000000000000003 /* ScansLeft.swift */,
@@ -455,6 +460,7 @@
 				A60000000000000000000001 /* ProEntitlementTests.swift */,
 				A60000000000000000000008 /* ProSettingsTests.swift */,
 				A6000000000000000000000A /* PaywallStateTests.swift */,
+				DE0000000000000000000012 /* LibraryProEntryTests.swift */,
 				DE0000000000000000000010 /* ReturnReminderTests.swift */,
 				DE0000000000000000000007 /* PostScanCardTests.swift */,
 				DE0000000000000000000004 /* ScansLeftTests.swift */,
@@ -675,6 +681,7 @@
 				E20000000000000000000003 /* ScanQuota.swift in Sources */,
 				A50000000000000000000009 /* ProSettings.swift in Sources */,
 				A5000000000000000000000B /* PaywallState.swift in Sources */,
+				DD0000000000000000000011 /* LibraryProEntry.swift in Sources */,
 				DD0000000000000000000009 /* ReturnReminder.swift in Sources */,
 				DD0000000000000000000008 /* UpgradeCard.swift in Sources */,
 				DD0000000000000000000006 /* PostScanCard.swift in Sources */,
@@ -751,6 +758,7 @@
 				A50000000000000000000001 /* ProEntitlementTests.swift in Sources */,
 				A50000000000000000000008 /* ProSettingsTests.swift in Sources */,
 				A5000000000000000000000A /* PaywallStateTests.swift in Sources */,
+				DD0000000000000000000012 /* LibraryProEntryTests.swift in Sources */,
 				DD0000000000000000000010 /* ReturnReminderTests.swift in Sources */,
 				DD0000000000000000000007 /* PostScanCardTests.swift in Sources */,
 				DD0000000000000000000004 /* ScansLeftTests.swift in Sources */,
