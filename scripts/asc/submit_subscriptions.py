@@ -61,7 +61,7 @@ def add_item(sub_id, rel_name, rel_type, rel_id):
 
 def draft_version(versions):
     for v in sorted(versions, key=lambda v: -(v["attributes"].get("version") or 0)):
-        if v["attributes"].get("state") in ("PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW"):
+        if v["attributes"].get("state") in ("PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW", "DEVELOPER_REJECTED", "REJECTED"):  # DEVELOPER_REJECTED = state after cancelling a review submission
             return v
     return None
 
