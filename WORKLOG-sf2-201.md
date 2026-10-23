@@ -11,3 +11,10 @@
   - SpecPlanTests: the default plan is now the spec plan.
   - PracticeFeatureTests.testSeekIntoAHeldNoteSoundsIt: the voice count is now taken 256 frames after the seek, because the 2.01 release ends the short E4 inside the old 2048-frame window.
 - Local `swift test --package-path Packages/SF2Player` (Linux): 33 tests, 0 failures. The iOS simulator and app tests were not run locally.
+
+## 2026-10-22 (merge)
+- gbk #38 merged (main 4a3da62); sf2player-swift #1 + #2 merged (main f7d144c). Pin -> f7d144c78b34b1a21770aa1eb747087d586f13d3.
+- f7d144c adds `.spec` track CC7/10/11 through channel controller state. SF2Player plans use the power-on defaults
+  (100/64/127), which never override in-stream CCs, so audio is unchanged: parity refs regenerated against gbk main
+  4a3da62 differ only in `gbkCommit` (PCM metrics identical, bit-exact).
+- Local `swift test --package-path Packages/SF2Player` with SF2PLAYER_SF2 set: 33 tests, 0 failures, 0 skipped.
