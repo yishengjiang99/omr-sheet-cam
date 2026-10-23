@@ -1,6 +1,6 @@
 # WORKLOG: sf2-201-pin (SF2Engine → SoundFont 2.01, .gbk = .spec)
 
-- The sf2player-swift pin moves from 53b4503 to 5e07519 (branch sf2-201-gbk-sync, PR sf2player-swift#2). At this pin `.gbk` is an alias of `.spec`, and the engine now has a non-normative master bus: -3 dB gain, compressor, lookahead limiter at -0.3 dBFS, and a safety clip.
+- The sf2player-swift pin moves from 53b4503 to 24e105f (branch sf2-201-gbk-sync, PR sf2player-swift#2). At this pin `.gbk` is an alias of `.spec`, and the engine now has a non-normative master bus: -3 dB gain, compressor, lookahead limiter at -0.3 dBFS, and a safety clip.
 - Because `.gbk == .spec`, `SF2SequenceBuilder.plan` always builds the spec plan. That plan has per-channel presets, CC and bend events, drums on ch 10, and a makeup gain of x2.
 - The parity references were regenerated with `scripts/sf2-parity/render-gbk.mjs` against gbk eee3c44 (branch sf2-201-compliance, PR gbk#38). The script's `buildPlan` now mirrors `specPlan`. Result on Linux: both songs are bit-exact (bitExactPCM=true).
 - How the expected values changed:
