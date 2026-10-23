@@ -10,7 +10,8 @@
 // defaults: per-track preset = first program event (resolvePresetIndex: exact bank, then bank 0,
 // then any bank; fallback preset 0), setPreset events for every program event, track CC
 // 100/64/127, orchestra pan heuristic, gain 1, maxVoices max(96, 24*tracks), length
-// ceil((durationSec + 3) * sr). Master dynamics are NOT applied (post-mix effect, not the synth).
+// ceil((durationSec + 3) * sr). The app's post-mix master dynamics are not applied. The engine's own master bus
+// (gain -3 dB, compressor, limiter; non-normative) is applied, as in Swift.
 // Metrics written to <out>/<name>.gbk.json are recomputed by the Swift tests with the same code
 // (Packages/SF2Player/Tests/SF2PlayerTests/ParityMetrics.swift); keep both in sync.
 import { register } from "tsx/esm/api";
@@ -81,32 +82,56 @@ function resolveOrchestraPan(...labels) {
   return null;
 }
 
+// Mirrors SF2SequenceBuilder.specPlan, the only plan now that SF2Fidelity.gbk is an alias of .spec
+// (sf2player-swift sf2-201-gbk-sync; gbk sf2-201-compliance re-ported the 2.01 engine):
+//   - per-channel presets at frame 0, from each channel's first program in the track; channel 10 (index 9) uses bank 128
+//   - track regions come from the main channel (the first note-on's)
+//   - setPreset events carry their channel
+//   - track gain is specMakeupGain (2.0); cc7 100, cc10 64, cc11 127; orchestra pan
+// CC / pitch-bend events are not mirrored: gbk's parseMidiBuffer drops them, and the parity fixtures have none.
+const SPEC_MAKEUP_GAIN = 2.0;
+const DRUM_CHANNEL = 9;
 function buildPlan(sf2, song) {
   const presets = sf2.pdta.phdr.slice(0, -1);
+  const ok = (p) => p.preset <= 127 && p.bank <= 128;
   const resolvePresetIndex = (program, bank) => {
-    const exact = presets.findIndex((p) => p.preset === program && p.bank === bank);
-    const bank0 = presets.findIndex((p) => p.preset === program && p.bank === 0);
-    const any = presets.findIndex((p) => p.preset === program);
+    const exact = presets.findIndex((p) => ok(p) && p.preset === program && p.bank === bank);
     if (exact >= 0) return exact;
+    const bank0 = presets.findIndex((p) => ok(p) && p.preset === program && p.bank === 0);
     if (bank0 >= 0) return bank0;
-    if (any >= 0) return any;
-    return null;
+    const any = presets.findIndex((p) => ok(p) && p.preset === program);
+    return any >= 0 ? any : null;
   };
   const fallback = 0;
+  const preset = (program, bank, channel) => {
+    if (channel === DRUM_CHANNEL) return resolvePresetIndex(program, 128) ?? resolvePresetIndex(0, 128) ?? fallback;
+    return resolvePresetIndex(program, bank) ?? fallback;
+  };
   const cache = new Map();
   const regionsFor = (i) => {
-    if (!cache.has(i)) cache.set(i, sf2.buildRegionsForPreset(i, { decodeToFloat32: true, normalize: true, includeStereoLinks: true }));
+    if (!cache.has(i)) cache.set(i, sf2.soundFont.regionList(i));
     return cache.get(i);
   };
   const tracks = [];
   const events = [];
   for (const track of song.tracks) {
-    const programEvent = track.playEvents.find((e) => e.type === "program");
-    const defaultPreset = programEvent ? resolvePresetIndex(programEvent.program ?? 0, programEvent.bank ?? 0) : null;
-    const presetIndex = defaultPreset ?? fallback;
-    const presetName = presets[presetIndex] ? presets[presetIndex].presetName || "(unnamed)" : undefined;
+    const channels = [];
+    const first = new Map();
+    for (const ev of track.playEvents) {
+      if (!channels.includes(ev.channel)) channels.push(ev.channel);
+      if (ev.type === "program" && !first.has(ev.channel)) first.set(ev.channel, [ev.program ?? 0, ev.bank ?? 0]);
+    }
+    const mainChannel = track.playEvents.find((e) => e.type === "noteOn")?.channel ?? channels[0] ?? 0;
+    const [mp, mb] = first.get(mainChannel) ?? [0, 0];
+    const mainIndex = preset(mp, mb, mainChannel);
+    const presetName = presets[mainIndex] ? presets[mainIndex].presetName || "(unnamed)" : undefined;
     const pan = resolveOrchestraPan(track.instrumentName, track.name, presetName);
-    tracks.push({ trackIndex: track.index, regions: regionsFor(presetIndex), cc7Volume: 100, cc10Pan: 64, cc11Expression: 127, pan: pan ?? 0, gain: 1 });
+    tracks.push({ trackIndex: track.index, regions: regionsFor(mainIndex), cc7Volume: 100, cc10Pan: 64, cc11Expression: 127, pan: pan ?? 0, gain: SPEC_MAKEUP_GAIN });
+    for (const ch of channels) {
+      const [p, b] = first.get(ch) ?? [0, 0];
+      const idx = preset(p, b, ch);
+      events.push({ frame: 0, seq: -1, type: "setPreset", trackIndex: track.index, channel: ch, regions: regionsFor(idx), presetIndex: idx });
+    }
     for (const ev of track.playEvents) {
       const frame = Math.max(0, Math.round(ev.sec * SAMPLE_RATE));
       if (ev.type === "noteOn") {
@@ -114,8 +139,8 @@ function buildPlan(sf2, song) {
       } else if (ev.type === "noteOff") {
         events.push({ frame, seq: ev.seq ?? 0, type: "noteOff", trackIndex: track.index, channel: ev.channel, note: ev.note });
       } else if (ev.type === "program") {
-        const p = resolvePresetIndex(ev.program ?? 0, ev.bank ?? 0) ?? fallback;
-        events.push({ frame, seq: ev.seq ?? 0, type: "setPreset", trackIndex: track.index, regions: regionsFor(p), presetIndex: p });
+        const p = preset(ev.program ?? 0, ev.bank ?? 0, ev.channel);
+        events.push({ frame, seq: ev.seq ?? 0, type: "setPreset", trackIndex: track.index, channel: ev.channel, regions: regionsFor(p), presetIndex: p });
       }
     }
   }
