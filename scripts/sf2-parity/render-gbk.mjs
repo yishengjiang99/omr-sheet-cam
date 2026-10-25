@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Renders the SF2Player parity references with gbk's own TypeScript synth
 // (yishengjiang99/gbk: sf2-parser.ts, src/midi-timer.worker.ts parseMidiBuffer,
-// src/sf2-renderer.ts renderOfflineSequenceToAudioBuffer).
+// src/sf2-renderer.ts Sf2SynthEngine; renderOfflineSequenceToAudioBuffer inlined below).
 //
 //   cd scripts/sf2-parity && npm ci
 //   node render-gbk.mjs [--gbk /workspace/gbk] [--sf2 path/GeneralUser-GS.sf2] [--out ../../fixtures/sf2]
@@ -39,7 +39,21 @@ const EXCERPT_NOTES = 3;
 
 const { parseSF2 } = await import(path.join(GBK, "sf2-parser.ts"));
 const { parseMidiBuffer } = await import(path.join(GBK, "src/midi-timer.worker.ts"));
-const { renderOfflineSequenceToAudioBuffer } = await import(path.join(GBK, "src/sf2-renderer.ts"));
+const { Sf2SynthEngine, sortEvents } = await import(path.join(GBK, "src/sf2-renderer.ts"));
+// gbk removed renderOfflineSequenceToAudioBuffer (fc322db); this is its body (default engine settings).
+function renderOfflineSequenceToAudioBuffer({ audioBuffer, tracks, events, maxVoices = 64 }) {
+  const length = audioBuffer.length, left = audioBuffer.getChannelData(0), right = audioBuffer.getChannelData(1);
+  const engine = new Sf2SynthEngine(audioBuffer.sampleRate, { maxVoices });
+  engine.setTrackStates(tracks);
+  let cursor = 0;
+  for (const e of sortEvents(events)) {
+    const frame = Math.max(0, Math.min(length, (e.frame ?? 0) | 0));
+    if (frame > cursor) { engine.renderRange(left.subarray(cursor, frame), right.subarray(cursor, frame)); cursor = frame; }
+    engine.dispatchEvent(e);
+  }
+  if (cursor < length) engine.renderRange(left.subarray(cursor), right.subarray(cursor));
+  return audioBuffer;
+}
 
 const sha256 = (buf) => createHash("sha256").update(buf).digest("hex");
 const gbkCommit = execSync("git rev-parse HEAD", { cwd: GBK }).toString().trim();
