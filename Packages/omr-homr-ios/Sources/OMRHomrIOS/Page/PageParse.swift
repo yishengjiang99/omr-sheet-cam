@@ -558,10 +558,7 @@ extension PagePipeline {
         var base = 0
         var staffOffset = 0
         for (v, stream) in voices.enumerated() {
-            // Grand-staff voices restart the lower hand at each row's start tick so the two
-            // hands sound simultaneously; single-staff voices just run rows back to back.
-            var ev = SymbolMIDIMapping.pageVoiceEvents(from: stream, tpq: tpq,
-                                                       grandstaff: grandstaffVoices.contains(v))
+            var ev = SymbolMIDIMapping.pageVoiceEvents(from: stream, tpq: tpq)
             for i in ev.indices {
                 ev[i].symbolIndex += base
                 ev[i].event.staff += staffOffset

@@ -96,7 +96,8 @@ public enum SymbolMIDIMapping: Sendable {
     /// Chord handling mirrors upstream `_group_into_chords`: a `chord` rhythm marker means the
     /// **next** note *or rest* shares onset with the previous event (no invented pitches). A
     /// chord-tied rest must not stack its duration after a note — that created artificial
-    /// measure-length gaps on pickups / incomplete bars when the other hand rests.
+    /// measure-length gaps on pickups / incomplete bars when the other hand rests. Each staff
+    /// keeps its own cursor, so one hand's long notes never delay the other hand.
     /// Barlines, clefs, key/time signatures are no-ops for the cursor (no pad-to-bar).
     ///
     /// Returned in token (emission) order. For the canonical sorted list shared with
@@ -180,7 +181,11 @@ public enum SymbolMIDIMapping: Sendable {
         startTick: Int = 0,
         resetCursorOnClef: Bool = true
     ) -> (events: [SourcedNoteEvent], endTick: Int) {
-        var onset = startTick
+        var onset = startTick       // furthest end seen: where the next row / segment may start
+        // Per-staff cursor (0 upper, 1 lower): an un-chorded token starts where the previous token ON ITS
+        // STAFF ended. A single shared cursor made the upper hand wait for the lower hand's longer notes
+        // (a 16th after a dotted eighth started a half-note chord's length late).
+        var staffEnd = [startTick, startTick]
         var chordAnchor = startTick
         var shareNextOnset = false
         var events: [SourcedNoteEvent] = []
@@ -194,14 +199,12 @@ public enum SymbolMIDIMapping: Sendable {
                 // Chord-tied rest (other hand/voice): share the anchor onset — do not stack
                 // duration after the note. That stacking turned pickup + bass rest into a
                 // full-measure silence gap (Die Letzte Kompanie anacrusis).
-                if shareNextOnset {
-                    let restEnd = chordAnchor + dur
-                    if restEnd > onset { onset = restEnd }
-                    shareNextOnset = false
-                } else {
-                    chordAnchor = onset
-                    onset += dur
-                }
+                let st = staffIndex(positionToken: sym.position)
+                let restStart = shareNextOnset ? chordAnchor : staffEnd[st]
+                shareNextOnset = false
+                chordAnchor = restStart
+                staffEnd[st] = restStart + dur
+                if staffEnd[st] > onset { onset = staffEnd[st] }
                 continue
             }
             if sym.rhythm.hasPrefix("clef_") {
@@ -210,6 +213,7 @@ public enum SymbolMIDIMapping: Sendable {
                 // (upper position) mid-piece must not rewind time.
                 if resetCursorOnClef && !events.isEmpty && SymbolCleanup.isLower(sym.position) {
                     onset = startTick
+                    staffEnd = [startTick, startTick]
                     chordAnchor = startTick
                 }
                 shareNextOnset = false
@@ -230,18 +234,12 @@ public enum SymbolMIDIMapping: Sendable {
                 shareNextOnset = false
                 continue
             }
-            let tick: Int
-            if shareNextOnset {
-                tick = chordAnchor
-                shareNextOnset = false
-                // Longer chord member (or note after a shorter rest) must extend the cursor.
-                let memberEnd = chordAnchor + dur
-                if memberEnd > onset { onset = memberEnd }
-            } else {
-                tick = onset
-                chordAnchor = onset
-                onset += dur
-            }
+            let st = staffIndex(positionToken: sym.position)
+            let tick = shareNextOnset ? chordAnchor : staffEnd[st]
+            shareNextOnset = false
+            chordAnchor = tick
+            staffEnd[st] = tick + dur
+            if staffEnd[st] > onset { onset = staffEnd[st] }
             events.append(
                 SourcedNoteEvent(
                     symbolIndex: symbolIndex,
@@ -258,17 +256,13 @@ public enum SymbolMIDIMapping: Sendable {
     }
 
     /// Page-path voice stream → note events. Rows (split on `newline`) run sequentially; within a
-    /// grand-staff row, the lower staff restarts at the row's start tick so the two hands sound
-    /// simultaneously instead of one after the other. The next row starts after the longer hand,
-    /// so a short-decoded hand can't drag later systems out of alignment.
-    ///
-    /// The hand split is by position tag (first upper → lower transition), not by clef token: the
-    /// page cleanup drops repeated clefs, and a mid-piece clef change inside one hand must not
-    /// move time.
+    /// row each staff keeps its own cursor from the row's start tick (`walkEvents`), so the hands
+    /// sound together whether the stream interleaves them or runs one after the other. The next
+    /// row starts after the longer hand, so a short-decoded hand can't drag later systems out of
+    /// alignment.
     static func pageVoiceEvents(
         from symbols: [EncodedSymbol],
-        tpq: Int = Int(SMFWriter.ticksPerQuarter),
-        grandstaff: Bool
+        tpq: Int = Int(SMFWriter.ticksPerQuarter)
     ) -> [SourcedNoteEvent] {
         var events: [SourcedNoteEvent] = []
         var rowTick = 0
@@ -280,20 +274,9 @@ public enum SymbolMIDIMapping: Sendable {
             let count = row.count
             guard count > 0 else { return }
             let before = events.count
-            if grandstaff, let split = row.firstIndex(where: { SymbolCleanup.isLower($0.position) }) {
-                let upper = walkEvents(from: Array(row[..<split]), tpq: tpq, startTick: rowTick,
-                                       resetCursorOnClef: false)
-                var lower = walkEvents(from: Array(row[split...]), tpq: tpq, startTick: rowTick,
-                                       resetCursorOnClef: false)
-                for i in lower.events.indices { lower.events[i].symbolIndex += split }
-                events.append(contentsOf: upper.events)
-                events.append(contentsOf: lower.events)
-                rowTick = max(upper.endTick, lower.endTick)
-            } else {
-                let walked = walkEvents(from: row, tpq: tpq, startTick: rowTick, resetCursorOnClef: false)
-                events.append(contentsOf: walked.events)
-                rowTick = walked.endTick
-            }
+            let walked = walkEvents(from: row, tpq: tpq, startTick: rowTick, resetCursorOnClef: false)
+            events.append(contentsOf: walked.events)
+            rowTick = walked.endTick
             for i in before..<events.count { events[i].symbolIndex += base }
         }
 
