@@ -110,6 +110,9 @@ jobs:
           TEST_RUNNER_OMR_MODELS_DIR: ${{ github.workspace }}/models
         run: |
           set -o pipefail
+          # Hide the app project so xcodebuild opens Package.swift (scheme OMRScan-Package).
+          mv OMRSheetCam.xcodeproj "$RUNNER_TEMP/"
+          trap 'mv "$RUNNER_TEMP/OMRSheetCam.xcodeproj" .' EXIT
           xcodebuild test \
             -scheme OMRScan-Package \
             -destination "${{ steps.sim.outputs.destination }}" \
