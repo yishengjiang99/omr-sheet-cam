@@ -1,5 +1,6 @@
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// P11.1: the App Review notes must be executable against the app as shipped. The Library's
 /// "Try sample picture" only shows while the Library is empty (first scan); the Camera screen

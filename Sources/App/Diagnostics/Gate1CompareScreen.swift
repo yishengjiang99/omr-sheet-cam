@@ -1,6 +1,7 @@
 import OMRHomrIOS
 import SwiftUI
 import UIKit
+import OMRScanKit
 
 /// Diagnostics → "Compare Gate-1 staff": bundled `gate1/staff.png` + its tokens through the same
 /// compare / feedback UI as the Result screen, so the flow is testable before full-page parse.

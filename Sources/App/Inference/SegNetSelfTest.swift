@@ -1,6 +1,7 @@
 import Foundation
 import OMRHomrIOS
 import SwiftUI
+import OMRScanKit
 
 /// Settings → Developer → "SegNet self-test": the bundled C-scale oracle page (`selftest/c_major_scale_page.png`
 /// = `fixtures/mono.c_major_scale/input.png`, the ios-sim page test's image) → ImageIO gray8 →

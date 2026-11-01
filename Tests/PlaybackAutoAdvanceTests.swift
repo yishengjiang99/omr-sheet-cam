@@ -1,5 +1,6 @@
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// Auto-advance only happens in playlist mode: a just-scanned sheet plays once
 /// and stops; playback started from the Library keeps going at track end.

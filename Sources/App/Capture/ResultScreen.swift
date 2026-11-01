@@ -1,4 +1,6 @@
 import SwiftUI
+import OMRScanKit
+import OMRScanUI
 
 /// Captured / picked page (redesign 02-reading → 03-result): saves it to Documents/captures and
 /// shows the Reading progress screen while `AppServices.recognition` runs, then "Ready to play" (or "Couldn't read this page" with Try again):
@@ -254,8 +256,7 @@ struct ResultScreen: View {
     static func recognizeUnlessCancelled(
         service: any RecognitionService, imageData: Data, progress: @escaping RecognitionProgressHandler
     ) async -> RecognitionOutcome? {
-        let result = await service.recognize(imageData: imageData, progress: progress)
-        return Task.isCancelled ? nil : result
+        await service.recognizeUnlessCancelled(imageData: imageData, progress: progress)
     }
 
     /// A cancelled scan leaves nothing behind: delete the capture JPEG saved before recognition.

@@ -1,6 +1,8 @@
 import PhotosUI
 import SF2Player
 import SwiftUI
+import OMRScanKit
+import OMRScanUI
 
 /// Library / playlist — app home: how-it-works art, Camera + Photos to start a scan, then
 /// "Your scans" / "Samples". Tap a row to play. Mini-player at the bottom while something is loaded.

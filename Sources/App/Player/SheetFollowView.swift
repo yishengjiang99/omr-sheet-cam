@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import OMRScanKit
 
 /// Player "Sheet" mode: the scan photo with a box on every recognized note (`ScanLayout`).
 /// Notes sounding now (`activeIDs`, from `SF2MIDIPlayer.activeNoteIDs`) are filled coral.

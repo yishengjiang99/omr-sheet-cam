@@ -1,4 +1,5 @@
 import SwiftUI
+import OMRScanKit
 
 /// Event log: newest first, level + category filters, Clear, Copy as prompt.
 struct LogScreen: View {

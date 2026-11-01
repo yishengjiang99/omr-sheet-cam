@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// The in-app "Run Gate-1" path (same `Gate1Runner` the button calls): warmed sessions from
 /// `ModelWarmup` (`OMR_MODELS_DIR` in ios-sim CI, else bundled models) + fixtures bundled in

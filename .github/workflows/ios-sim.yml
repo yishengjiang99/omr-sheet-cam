@@ -73,9 +73,6 @@ jobs:
             -only-testing:OMRSheetCamTests/PaywallScreenshotTests \
             -only-testing:OMRSheetCamTests/ReviewNotesTests \
             -only-testing:OMRSheetCamTests/Gate1StaffTokenMatchTests \
-            -only-testing:OMRSheetCamTests/ModelWarmupTests \
-            -only-testing:OMRSheetCamTests/PageRecognitionServiceTests \
-            -only-testing:OMRSheetCamTests/Gray8ImageTests \
             -only-testing:OMRSheetCamTests/PlaylistStoreTests \
             -only-testing:OMRSheetCamTests/SF2PlayerAppTests \
             -only-testing:OMRSheetCamTests/Build16Tests \
@@ -86,7 +83,6 @@ jobs:
             -only-testing:OMRSheetCamTests/ReturnReminderTests \
             -only-testing:OMRSheetCamTests/LibraryProEntryTests \
             -only-testing:OMRSheetCamTests/ProFeatureGateTests \
-            -only-testing:OMRSheetCamTests/PhotoLibraryImportTests \
             -only-testing:OMRSheetCamTests/AnalyticsTests \
             -only-testing:OMRSheetCamTests/BackgroundAudioTests \
             -only-testing:OMRSheetCamTests/EntitlementLogicTests \
@@ -99,7 +95,6 @@ jobs:
             -only-testing:OMRSheetCamTests/PurchaseOutcomeTests \
             -only-testing:OMRSheetCamTests/RetakeRouteTests \
             -only-testing:OMRSheetCamTests/SamplePictureTests \
-            -only-testing:OMRSheetCamTests/ScanCancelTests \
             -only-testing:OMRSheetCamTests/ScanQuotaDayKeyTests \
             -only-testing:OMRSheetCamTests/ScanQuotaTests \
             -only-testing:OMRSheetCamTests/ShareNamingTests \
@@ -108,6 +103,22 @@ jobs:
             -resultBundlePath "$RUNNER_TEMP/OMRSheetCam.xcresult" \
             CODE_SIGNING_ALLOWED=NO \
             | tee "$RUNNER_TEMP/xcodebuild.log"
+
+      - name: OMRScanKit + OMRScanUI tests (root package, simulator)
+        if: always()
+        env:
+          TEST_RUNNER_OMR_MODELS_DIR: ${{ github.workspace }}/models
+        run: |
+          set -o pipefail
+          # Hide the app project so xcodebuild opens Package.swift (scheme OMRScan-Package).
+          mv OMRSheetCam.xcodeproj "$RUNNER_TEMP/"
+          trap 'mv "$RUNNER_TEMP/OMRSheetCam.xcodeproj" .' EXIT
+          xcodebuild test \
+            -scheme OMRScan-Package \
+            -destination "${{ steps.sim.outputs.destination }}" \
+            -resultBundlePath "$RUNNER_TEMP/OMRScan.xcresult" \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee "$RUNNER_TEMP/omrscan.log"
 
       - name: OMRHomrIOS CoreML cache tests (macOS, real CoreML EP, ORT 1.24.2)
         if: always()
@@ -131,7 +142,7 @@ jobs:
       - name: Gate-1 + warmup + page parse summary
         if: always()
         run: |
-          grep -E "Build16Tests|PlaylistStoreTests|Gate1StaffTokenMatchTests|Gate-1|ModelWarmupTests|Warmup:|PageRecognitionServiceTests|Gray8ImageTests|PageParse|OraclePages:|Gray8 parity|SegNetDiag|\[warmup\]|\[sf2\]|SF2PlayerAppTests|Build6PrepTests|SegNetSelfTest|coreml cache|Bundled ONNX|models not bundled" "$RUNNER_TEMP/xcodebuild.log" || echo "no Gate-1 / warmup lines"
+          grep -E "Build16Tests|PlaylistStoreTests|Gate1StaffTokenMatchTests|Gate-1|ModelWarmupTests|Warmup:|PageRecognitionServiceTests|Gray8ImageTests|PageParse|OraclePages:|Gray8 parity|SegNetDiag|\[warmup\]|\[sf2\]|SF2PlayerAppTests|Build6PrepTests|SegNetSelfTest|coreml cache|Bundled ONNX|models not bundled" "$RUNNER_TEMP/xcodebuild.log" "$RUNNER_TEMP/omrscan.log" || echo "no Gate-1 / warmup lines"
           if grep -F "should not be called on the main thread" "$RUNNER_TEMP/xcodebuild.log"; then
             echo "::warning::CoreML main-thread warning present"
           else
@@ -152,4 +163,6 @@ jobs:
           path: |
             ${{ runner.temp }}/OMRSheetCam.xcresult
             ${{ runner.temp }}/xcodebuild.log
+            ${{ runner.temp }}/OMRScan.xcresult
+            ${{ runner.temp }}/omrscan.log
           if-no-files-found: ignore

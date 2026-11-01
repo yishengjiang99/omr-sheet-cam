@@ -1,0 +1,25 @@
+/* Defaults for OMRScanUI. A host overrides any key by shipping the same key in an `OMRScan` strings table in its main bundle (or by setting `ScanStrings.hostBundle`). */
+"reading.title.warming" = "Warming up";
+"reading.title.reading" = "Reading music";
+"reading.cancel" = "Cancel";
+"reading.privacy" = "Read on your iPhone. No internet needed.";
+"reading.subtitle.reading" = "This usually takes a few seconds";
+"reading.subtitle.rewarm.eta" = "About %d seconds left · reloading the music models";
+"reading.subtitle.rewarm" = "Reloading the music models on your iPhone";
+"reading.subtitle.warm.eta" = "About %d seconds left · one-time setup";
+"reading.subtitle.warm" = "One-time setup — loading the music models on your iPhone";
+"flow.title" = "Scan sheet music";
+"flow.intro" = "Turn printed sheet music into a MIDI file.";
+"flow.camera" = "Scan with camera";
+"flow.photos" = "Choose photos";
+"flow.file" = "Import PDF or image";
+"flow.done" = "Added %d track(s) · %d notes";
+"flow.retry" = "Try again";
+"flow.openSettings" = "Open Settings";
+"flow.error.cameraDenied" = "Camera access is off. Allow it in Settings, or import a photo or PDF instead.";
+"flow.error.noCamera" = "This device has no document camera; import a photo or PDF.";
+"flow.error.unreadable" = "Couldn't read that file: %@";
+"flow.error.nothing" = "No notes were recognized. Try a sharper, well-lit photo of printed sheet music.";
+"flow.error.unavailable" = "Sheet recognition isn't available: %@";
+"flow.error.failed" = "Recognition failed: %@";
+"flow.error.gated" = "This scan isn't available right now.";

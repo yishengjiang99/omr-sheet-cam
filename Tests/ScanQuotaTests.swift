@@ -1,5 +1,6 @@
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// P1.4: the free daily scan is charged only when recognition succeeds (`canScan()` is a read-only
 /// gate, `commit()` records the use). Failed / cancelled / reader-not-ready scans never commit.

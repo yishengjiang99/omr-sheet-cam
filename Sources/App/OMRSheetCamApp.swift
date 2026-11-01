@@ -1,4 +1,5 @@
 import SwiftUI
+import OMRScanKit
 
 @main
 struct OMRSheetCamApp: App {

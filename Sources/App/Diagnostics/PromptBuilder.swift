@@ -1,4 +1,5 @@
 import Foundation
+import OMRScanKit
 
 /// "Copy as prompt": concise Markdown summary of the diagnostics log for pasting into an AI chat.
 ///

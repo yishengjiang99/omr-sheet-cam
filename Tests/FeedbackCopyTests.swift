@@ -1,5 +1,6 @@
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// F8.7: the "Was the reading accurate?" feedback is only written to the on-device diagnostics log
 /// (`DiagnosticsLog` events.jsonl); nothing is uploaded. The UI must not imply it was submitted.

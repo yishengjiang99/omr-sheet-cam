@@ -1,0 +1,23 @@
+{
+  "originHash" : "646ed22ecb2fedc06e56078db6559604850bd596ec42f6cf6413b74e33893b83",
+  "pins" : [
+    {
+      "identity" : "onnxruntime-swift-package-manager",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/microsoft/onnxruntime-swift-package-manager",
+      "state" : {
+        "revision" : "b7fb7f7dea8a2469e6335d95a61b8f36d0dc83b2",
+        "version" : "1.24.2"
+      }
+    },
+    {
+      "identity" : "sf2player-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/yishengjiang99/sf2player-swift.git",
+      "state" : {
+        "revision" : "6ce4941247d1dcd178da5c71b9279a9cf91fc007"
+      }
+    }
+  ],
+  "version" : 3
+}

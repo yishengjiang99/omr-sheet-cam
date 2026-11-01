@@ -1,5 +1,6 @@
 import Foundation
 import SF2Player
+import OMRScanKit
 
 /// F10.3: maps thrown errors to short plain-language text for the UI. Raw `\(error)` (enum case
 /// names, NSError dumps, file paths) stays in `DiagnosticsLog` / the Details disclosure.

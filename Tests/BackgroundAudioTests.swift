@@ -1,6 +1,7 @@
 import MediaPlayer
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// F10.10: a music player must keep playing with the screen locked (UIBackgroundModes = audio) and
 /// expose lock-screen controls (MPNowPlayingInfoCenter + MPRemoteCommandCenter).

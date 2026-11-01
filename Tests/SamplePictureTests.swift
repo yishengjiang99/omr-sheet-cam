@@ -1,6 +1,7 @@
 import UIKit
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// F4.7: the Library's "Try sample picture" surfaces a load failure (same message as the Camera
 /// screen) instead of only writing to the diagnostics log.

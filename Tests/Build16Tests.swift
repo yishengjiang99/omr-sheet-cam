@@ -3,6 +3,7 @@ import SwiftUI
 import UIKit
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// Build 16 work: public-domain sample, Dark Mode surfaces, failed-scan reasons, share/transpose,
 /// note highlighting, A–B loop and per-hand mute.

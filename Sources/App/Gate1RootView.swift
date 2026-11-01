@@ -1,6 +1,7 @@
 import SwiftUI
 import OMRHomrIOS
 import os
+import OMRScanKit
 
 /// Gate-1 debug surface only — status, warmup, MIDI smoke.
 /// No capture camera UI, no geometry overlays, no App Store polish.

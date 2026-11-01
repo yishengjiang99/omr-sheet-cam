@@ -1,5 +1,6 @@
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// F11.2: deleting the scan that is loaded/playing must stop playback and clear the mini-player
 /// (`PlaybackController.current == nil`), not leave a ghost item whose prev/next are dead.
