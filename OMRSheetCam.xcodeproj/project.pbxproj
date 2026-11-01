@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CA00000000000000000000F4 /* Gray8ImageAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00000000000000000000F4 /* Gray8ImageAppTests.swift */; };
+		CA00000000000000000000F3 /* PageRecognitionAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00000000000000000000F3 /* PageRecognitionAppTests.swift */; };
+		CA00000000000000000000F2 /* AppServicesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00000000000000000000F2 /* AppServicesTests.swift */; };
 		A50000000000000000000009 /* ProSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000009 /* ProSettings.swift */; };
 		A50000000000000000000008 /* ProSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60000000000000000000008 /* ProSettingsTests.swift */; };
 		A5000000000000000000000B /* PaywallState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6000000000000000000000B /* PaywallState.swift */; };
@@ -42,8 +45,6 @@
 		5F0000000000000000000008 /* LevelMeterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000007 /* LevelMeterView.swift */; };
 		5F0000000000000000000009 /* PlaylistStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000008 /* PlaylistStoreTests.swift */; };
 		7F0000000000000000000002 /* Build16Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E0000000000000000000001 /* Build16Tests.swift */; };
-		FB4500000000000000000A02 /* PhotoLibraryImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB4500000000000000000A01 /* PhotoLibraryImportTests.swift */; };
-		FB6800000000000000000A02 /* ScanCancelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB6800000000000000000A01 /* ScanCancelTests.swift */; };
 		FB0400000000000000000A02 /* ScanQuotaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0400000000000000000A01 /* ScanQuotaTests.swift */; };
 		FB5500000000000000000A02 /* RetakeRouteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB5500000000000000000A01 /* RetakeRouteTests.swift */; };
 		FB4700000000000000000A02 /* SamplePictureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB4700000000000000000A01 /* SamplePictureTests.swift */; };
@@ -54,23 +55,15 @@
 		5F000000000000000000000B /* ode-to-joy.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 5E000000000000000000000A /* ode-to-joy.jpg */; };
 		5F0000000000000000000004 /* SF2PlayerAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0000000000000000000004 /* SF2PlayerAppTests.swift */; };
 		5F0000000000000000000005 /* SF2Player in Frameworks */ = {isa = PBXBuildFile; productRef = 5D0000000000000000000002 /* SF2Player */; };
-		CA0000000000000000000001 /* CaptureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000001 /* CaptureStore.swift */; };
-		PLI200000000000000000001 /* PhotoLibraryImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = PLI100000000000000000001 /* PhotoLibraryImport.swift */; };
 		E20000000000000000000001 /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000002 /* Analytics.swift */; };
 		E20000000000000000000002 /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000003 /* StoreKitManager.swift */; };
 		E20000000000000000000003 /* ScanQuota.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000004 /* ScanQuota.swift */; };
 		E20000000000000000000004 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000005 /* PaywallView.swift */; };
 		E20000000000000000000005 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000006 /* PrivacyInfo.xcprivacy */; };
-		CA0000000000000000000002 /* RecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000002 /* RecognitionService.swift */; };
-		7F0000000000000000000003 /* ScanFailure.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E0000000000000000000002 /* ScanFailure.swift */; };
-		CA0000000000000000000003 /* CameraController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000003 /* CameraController.swift */; };
-		CA0000000000000000000004 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000004 /* CameraPreviewView.swift */; };
-		CA0000000000000000000005 /* CameraScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000005 /* CameraScreen.swift */; };
 		CA0000000000000000000006 /* ResultScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000006 /* ResultScreen.swift */; };
+		CA00000000000000000000F1 /* AppServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00000000000000000000F1 /* AppServices.swift */; };
 		CA0000000000000000000007 /* PlayerRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000007 /* PlayerRoute.swift */; };
 		CA0000000000000000000008 /* RootFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000008 /* RootFlowView.swift */; };
-		CA0000000000000000000009 /* CaptureHelpersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000009 /* CaptureHelpersTests.swift */; };
-		CA000000000000000000000A /* DiagnosticsLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB000000000000000000000A /* DiagnosticsLog.swift */; };
 		CA000000000000000000000B /* PromptBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB000000000000000000000B /* PromptBuilder.swift */; };
 		CA000000000000000000000C /* PromptCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB000000000000000000000C /* PromptCopy.swift */; };
 		CA000000000000000000000D /* LogScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB000000000000000000000D /* LogScreen.swift */; };
@@ -81,33 +74,26 @@
 		A10000000000000000000001 /* OMRSheetCamApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* OMRSheetCamApp.swift */; };
 		A10000000000000000000002 /* Gate1RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* Gate1RootView.swift */; };
 		A10000000000000000000003 /* SimpleMIDIPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* SimpleMIDIPlayer.swift */; };
-		A10000000000000000000004 /* ModelWarmup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* ModelWarmup.swift */; };
 		A10000000000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* Assets.xcassets */; };
 		A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */; };
 		A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */; };
-		A1000000000000000000000A /* ModelWarmupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000A /* ModelWarmupTests.swift */; };
 		A1000000000000000000000B /* Gate1Runner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000B /* Gate1Runner.swift */; };
 		A1000000000000000000000C /* Gate1RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000C /* Gate1RunnerTests.swift */; };
 		A10000000000000000000008 /* OMRHomrIOS in Frameworks */ = {isa = PBXBuildFile; productRef = P10000000000000000000002 /* OMRHomrIOS */; };
+		A20000000000000000000001 /* OMRScanKit in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000002 /* OMRScanKit */; };
+		A20000000000000000000003 /* OMRScanUI in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000003 /* OMRScanUI */; };
 		4F06444BBF09D87CE872BDB8 /* MIDINoteExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149722DE288FA9C01620E0D8 /* MIDINoteExtractor.swift */; };
 		21EBA7280EC15355707ED56C /* PlaybackSmokeFixtureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */; };
-		7A0000000000000000000001 /* Gray8Image.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000001 /* Gray8Image.swift */; };
-		7A0000000000000000000002 /* MemoryStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000002 /* MemoryStats.swift */; };
-		7A0000000000000000000003 /* PageRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000003 /* PageRecognitionService.swift */; };
-		7A0000000000000000000004 /* Gray8ImageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000004 /* Gray8ImageTests.swift */; };
-		7A0000000000000000000005 /* PageRecognitionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000005 /* PageRecognitionServiceTests.swift */; };
 		6F0000000000000000000001 /* PlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E0000000000000000000001 /* PlaybackController.swift */; };
 		6F0000000000000000000002 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E0000000000000000000002 /* Theme.swift */; };
 		6F0000000000000000000003 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E0000000000000000000003 /* AppSettings.swift */; };
 		6F0000000000000000000004 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E0000000000000000000004 /* SettingsView.swift */; };
-		6F0000000000000000000005 /* ReadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E0000000000000000000005 /* ReadingView.swift */; };
 		6F0000000000000000000006 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 6E0000000000000000000006 /* LICENSE */; };
 		6F0000000000000000000007 /* NOTICE in Resources */ = {isa = PBXBuildFile; fileRef = 6E0000000000000000000007 /* NOTICE */; };
 		6F0000000000000000000008 /* ONNXRuntime-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = 6E0000000000000000000008 /* ONNXRuntime-LICENSE.txt */; };
 		6F0000000000000000000009 /* ONNXRuntime-ThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = 6E0000000000000000000009 /* ONNXRuntime-ThirdPartyNotices.txt */; };
 		6F000000000000000000000A /* RedesignTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E000000000000000000000A /* RedesignTests.swift */; };
 		8A0000000000000000000001 /* SegNetSelfTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B0000000000000000000001 /* SegNetSelfTest.swift */; };
-		8A0000000000000000000002 /* CoreMLCacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B0000000000000000000002 /* CoreMLCacheStore.swift */; };
 		8A0000000000000000000003 /* Build6PrepTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B0000000000000000000003 /* Build6PrepTests.swift */; };
 		FE0000000000000000000002 /* ReviewNotesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0000000000000000000001 /* ReviewNotesTests.swift */; };
 		5C0000000000000000000002 /* StoreKitConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0000000000000000000001 /* StoreKitConfigTests.swift */; };
@@ -166,8 +152,6 @@
 		5E0000000000000000000007 /* LevelMeterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelMeterView.swift; sourceTree = "<group>"; };
 		5E0000000000000000000008 /* PlaylistStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistStoreTests.swift; sourceTree = "<group>"; };
 		7E0000000000000000000001 /* Build16Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Build16Tests.swift; sourceTree = "<group>"; };
-		FB4500000000000000000A01 /* PhotoLibraryImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibraryImportTests.swift; sourceTree = "<group>"; };
-		FB6800000000000000000A01 /* ScanCancelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanCancelTests.swift; sourceTree = "<group>"; };
 		FB0400000000000000000A01 /* ScanQuotaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanQuotaTests.swift; sourceTree = "<group>"; };
 		FB5500000000000000000A01 /* RetakeRouteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetakeRouteTests.swift; sourceTree = "<group>"; };
 		FB4700000000000000000A01 /* SamplePictureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SamplePictureTests.swift; sourceTree = "<group>"; };
@@ -177,14 +161,11 @@
 		5E0000000000000000000003 /* ode-to-joy.mid */ = {isa = PBXFileReference; lastKnownFileType = audio.midi; name = "ode-to-joy.mid"; path = "fixtures/samples/ode-to-joy.mid"; sourceTree = SOURCE_ROOT; };
 		5E000000000000000000000A /* ode-to-joy.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = "ode-to-joy.jpg"; path = "fixtures/samples/ode-to-joy.jpg"; sourceTree = SOURCE_ROOT; };
 		5E0000000000000000000004 /* SF2PlayerAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SF2PlayerAppTests.swift; sourceTree = "<group>"; };
-		CB0000000000000000000001 /* CaptureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStore.swift; sourceTree = "<group>"; };
-		PLI100000000000000000001 /* PhotoLibraryImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibraryImport.swift; sourceTree = "<group>"; };
-		CB0000000000000000000002 /* RecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecognitionService.swift; sourceTree = "<group>"; };
-		7E0000000000000000000002 /* ScanFailure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFailure.swift; sourceTree = "<group>"; };
-		CB0000000000000000000003 /* CameraController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraController.swift; sourceTree = "<group>"; };
-		CB0000000000000000000004 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
-		CB0000000000000000000005 /* CameraScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraScreen.swift; sourceTree = "<group>"; };
+		CB00000000000000000000F2 /* AppServicesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppServicesTests.swift; sourceTree = "<group>"; };
+		CB00000000000000000000F3 /* PageRecognitionAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageRecognitionAppTests.swift; sourceTree = "<group>"; };
+		CB00000000000000000000F4 /* Gray8ImageAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gray8ImageAppTests.swift; sourceTree = "<group>"; };
 		CB0000000000000000000006 /* ResultScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultScreen.swift; sourceTree = "<group>"; };
+		CB00000000000000000000F1 /* AppServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppServices.swift; sourceTree = "<group>"; };
 		CB0000000000000000000007 /* PlayerRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerRoute.swift; sourceTree = "<group>"; };
 		CB0000000000000000000008 /* RootFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootFlowView.swift; sourceTree = "<group>"; };
 		E10000000000000000000002 /* Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Analytics.swift; sourceTree = "<group>"; };
@@ -192,8 +173,6 @@
 		E10000000000000000000004 /* ScanQuota.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanQuota.swift; sourceTree = "<group>"; };
 		E10000000000000000000005 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		E10000000000000000000006 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		CB0000000000000000000009 /* CaptureHelpersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureHelpersTests.swift; sourceTree = "<group>"; };
-		CB000000000000000000000A /* DiagnosticsLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLog.swift; sourceTree = "<group>"; };
 		CB000000000000000000000B /* PromptBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptBuilder.swift; sourceTree = "<group>"; };
 		CB000000000000000000000C /* PromptCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptCopy.swift; sourceTree = "<group>"; };
 		CB000000000000000000000D /* LogScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogScreen.swift; sourceTree = "<group>"; };
@@ -204,11 +183,9 @@
 		B10000000000000000000001 /* OMRSheetCamApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OMRSheetCamApp.swift; sourceTree = "<group>"; };
 		B10000000000000000000002 /* Gate1RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gate1RootView.swift; sourceTree = "<group>"; };
 		B10000000000000000000003 /* SimpleMIDIPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleMIDIPlayer.swift; sourceTree = "<group>"; };
-		B10000000000000000000004 /* ModelWarmup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelWarmup.swift; sourceTree = "<group>"; };
 		B10000000000000000000005 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gate1StaffTokenMatchTests.swift; sourceTree = "<group>"; };
 		B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDIPlayerSmokeTests.swift; sourceTree = "<group>"; };
-		B1000000000000000000000A /* ModelWarmupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelWarmupTests.swift; sourceTree = "<group>"; };
 		B1000000000000000000000B /* Gate1Runner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gate1Runner.swift; sourceTree = "<group>"; };
 		B1000000000000000000000C /* Gate1RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gate1RunnerTests.swift; sourceTree = "<group>"; };
 		B10000000000000000000008 /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fixtures; sourceTree = "<group>"; };
@@ -216,23 +193,16 @@
 		B10000000000000000000011 /* OMRSheetCamTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OMRSheetCamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		149722DE288FA9C01620E0D8 /* MIDINoteExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDINoteExtractor.swift; sourceTree = "<group>"; };
 		C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackSmokeFixtureTests.swift; sourceTree = "<group>"; };
-		7B0000000000000000000001 /* Gray8Image.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gray8Image.swift; sourceTree = "<group>"; };
-		7B0000000000000000000002 /* MemoryStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryStats.swift; sourceTree = "<group>"; };
-		7B0000000000000000000003 /* PageRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageRecognitionService.swift; sourceTree = "<group>"; };
-		7B0000000000000000000004 /* Gray8ImageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gray8ImageTests.swift; sourceTree = "<group>"; };
-		7B0000000000000000000005 /* PageRecognitionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageRecognitionServiceTests.swift; sourceTree = "<group>"; };
 		6E0000000000000000000001 /* PlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackController.swift; sourceTree = "<group>"; };
 		6E0000000000000000000002 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		6E0000000000000000000003 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		6E0000000000000000000004 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		6E0000000000000000000005 /* ReadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingView.swift; sourceTree = "<group>"; };
 		6E0000000000000000000006 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; name = LICENSE; path = LICENSE; sourceTree = SOURCE_ROOT; };
 		6E0000000000000000000007 /* NOTICE */ = {isa = PBXFileReference; lastKnownFileType = text; name = NOTICE; path = NOTICE; sourceTree = SOURCE_ROOT; };
 		6E0000000000000000000008 /* ONNXRuntime-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ONNXRuntime-LICENSE.txt; sourceTree = "<group>"; };
 		6E0000000000000000000009 /* ONNXRuntime-ThirdPartyNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ONNXRuntime-ThirdPartyNotices.txt; sourceTree = "<group>"; };
 		6E000000000000000000000A /* RedesignTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedesignTests.swift; sourceTree = "<group>"; };
 		8B0000000000000000000001 /* SegNetSelfTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegNetSelfTest.swift; sourceTree = "<group>"; };
-		8B0000000000000000000002 /* CoreMLCacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMLCacheStore.swift; sourceTree = "<group>"; };
 		8B0000000000000000000003 /* Build6PrepTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Build6PrepTests.swift; sourceTree = "<group>"; };
 		FE0000000000000000000001 /* ReviewNotesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewNotesTests.swift; sourceTree = "<group>"; };
 		5C0000000000000000000001 /* StoreKitConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitConfigTests.swift; sourceTree = "<group>"; };
@@ -252,6 +222,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000008 /* OMRHomrIOS in Frameworks */,
+				A20000000000000000000001 /* OMRScanKit in Frameworks */,
+				A20000000000000000000003 /* OMRScanUI in Frameworks */,
 				5F0000000000000000000005 /* SF2Player in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -269,16 +241,8 @@
 		CC0000000000000000000001 /* Capture */ = {
 			isa = PBXGroup;
 			children = (
-				CB0000000000000000000001 /* CaptureStore.swift */,
-				PLI100000000000000000001 /* PhotoLibraryImport.swift */,
-				CB0000000000000000000002 /* RecognitionService.swift */,
-				7E0000000000000000000002 /* ScanFailure.swift */,
-				CB0000000000000000000003 /* CameraController.swift */,
-				CB0000000000000000000004 /* CameraPreviewView.swift */,
-				CB0000000000000000000005 /* CameraScreen.swift */,
 				CB0000000000000000000006 /* ResultScreen.swift */,
-				7B0000000000000000000001 /* Gray8Image.swift */,
-				6E0000000000000000000005 /* ReadingView.swift */,
+				CB00000000000000000000F1 /* AppServices.swift */,
 			);
 			path = Capture;
 			sourceTree = "<group>";
@@ -286,14 +250,12 @@
 		CC0000000000000000000003 /* Diagnostics */ = {
 			isa = PBXGroup;
 			children = (
-				CB000000000000000000000A /* DiagnosticsLog.swift */,
 				CB000000000000000000000B /* PromptBuilder.swift */,
 				CB000000000000000000000C /* PromptCopy.swift */,
 				CB000000000000000000000D /* LogScreen.swift */,
 				CB000000000000000000000E /* OMRFeedback.swift */,
 				CB000000000000000000000F /* OMRCompareView.swift */,
 				CB0000000000000000000010 /* Gate1CompareScreen.swift */,
-				7B0000000000000000000002 /* MemoryStats.swift */,
 			);
 			path = Diagnostics;
 			sourceTree = "<group>";
@@ -420,11 +382,8 @@
 		G10000000000000000000005 /* Inference */ = {
 			isa = PBXGroup;
 			children = (
-				B10000000000000000000004 /* ModelWarmup.swift */,
 				B1000000000000000000000B /* Gate1Runner.swift */,
-				7B0000000000000000000003 /* PageRecognitionService.swift */,
 				8B0000000000000000000001 /* SegNetSelfTest.swift */,
-				8B0000000000000000000002 /* CoreMLCacheStore.swift */,
 			);
 			path = Inference;
 			sourceTree = "<group>";
@@ -442,22 +401,19 @@
 				F80000000000000000000001 /* ShareNamingTests.swift */,
 				B10000000000000000000006 /* Gate1StaffTokenMatchTests.swift */,
 				B10000000000000000000007 /* MIDIPlayerSmokeTests.swift */,
-				B1000000000000000000000A /* ModelWarmupTests.swift */,
 				B1000000000000000000000C /* Gate1RunnerTests.swift */,
-				CB0000000000000000000009 /* CaptureHelpersTests.swift */,
 				CB0000000000000000000011 /* DiagnosticsTests.swift */,
 				C0FEF96A6B3524FD3718E9C2 /* PlaybackSmokeFixtureTests.swift */,
 				5E0000000000000000000004 /* SF2PlayerAppTests.swift */,
 				5E0000000000000000000008 /* PlaylistStoreTests.swift */,
 				7E0000000000000000000001 /* Build16Tests.swift */,
-				FB4500000000000000000A01 /* PhotoLibraryImportTests.swift */,
-				FB6800000000000000000A01 /* ScanCancelTests.swift */,
+				CB00000000000000000000F2 /* AppServicesTests.swift */,
+				CB00000000000000000000F4 /* Gray8ImageAppTests.swift */,
+				CB00000000000000000000F3 /* PageRecognitionAppTests.swift */,
 				FB0400000000000000000A01 /* ScanQuotaTests.swift */,
 				FB5500000000000000000A01 /* RetakeRouteTests.swift */,
 				FB4700000000000000000A01 /* SamplePictureTests.swift */,
 				FB1800000000000000000A01 /* ScanQuotaDayKeyTests.swift */,
-				7B0000000000000000000005 /* PageRecognitionServiceTests.swift */,
-				7B0000000000000000000004 /* Gray8ImageTests.swift */,
 				B10000000000000000000008 /* Fixtures */,
 				6E000000000000000000000A /* RedesignTests.swift */,
 				8B0000000000000000000003 /* Build6PrepTests.swift */,
@@ -525,6 +481,8 @@
 			name = OMRSheetCam;
 			packageProductDependencies = (
 				P10000000000000000000002 /* OMRHomrIOS */,
+				P20000000000000000000002 /* OMRScanKit */,
+				P20000000000000000000003 /* OMRScanUI */,
 				5D0000000000000000000002 /* SF2Player */,
 			);
 			productName = OMRSheetCam;
@@ -580,6 +538,7 @@
 			mainGroup = G10000000000000000000001;
 			packageReferences = (
 				P10000000000000000000001 /* XCLocalSwiftPackageReference "Packages/omr-homr-ios" */,
+				P20000000000000000000001 /* XCLocalSwiftPackageReference "." */,
 				5D0000000000000000000001 /* XCLocalSwiftPackageReference "Packages/SF2Player" */,
 			);
 			productRefGroup = G10000000000000000000007 /* Products */;
@@ -677,10 +636,7 @@
 				7F0000000000000000000005 /* ScanLayout.swift in Sources */,
 				5F0000000000000000000007 /* LibraryScreen.swift in Sources */,
 				5F0000000000000000000008 /* LevelMeterView.swift in Sources */,
-				A10000000000000000000004 /* ModelWarmup.swift in Sources */,
 				A1000000000000000000000B /* Gate1Runner.swift in Sources */,
-				CA0000000000000000000001 /* CaptureStore.swift in Sources */,
-				PLI200000000000000000001 /* PhotoLibraryImport.swift in Sources */,
 				FB0000000000000000000002 /* UserFacingError.swift in Sources */,
 				E20000000000000000000001 /* Analytics.swift in Sources */,
 				E20000000000000000000002 /* StoreKitManager.swift in Sources */,
@@ -699,16 +655,11 @@
 				A50000000000000000000007 /* PendingScan.swift in Sources */,
 				A50000000000000000000003 /* EntitlementLogic.swift in Sources */,
 				E20000000000000000000004 /* PaywallView.swift in Sources */,
-				CA0000000000000000000002 /* RecognitionService.swift in Sources */,
-				7F0000000000000000000003 /* ScanFailure.swift in Sources */,
-				CA0000000000000000000003 /* CameraController.swift in Sources */,
-				CA0000000000000000000004 /* CameraPreviewView.swift in Sources */,
-				CA0000000000000000000005 /* CameraScreen.swift in Sources */,
 				CA0000000000000000000006 /* ResultScreen.swift in Sources */,
+				CA00000000000000000000F1 /* AppServices.swift in Sources */,
 				CA0000000000000000000007 /* PlayerRoute.swift in Sources */,
 				CA0000000000000000000008 /* RootFlowView.swift in Sources */,
 				5F000000000000000000000A /* ScreenshotDemo.swift in Sources */,
-				CA000000000000000000000A /* DiagnosticsLog.swift in Sources */,
 				CA000000000000000000000B /* PromptBuilder.swift in Sources */,
 				CA000000000000000000000C /* PromptCopy.swift in Sources */,
 				CA000000000000000000000D /* LogScreen.swift in Sources */,
@@ -716,16 +667,11 @@
 				CA000000000000000000000F /* OMRCompareView.swift in Sources */,
 				CA0000000000000000000010 /* Gate1CompareScreen.swift in Sources */,
 				4F06444BBF09D87CE872BDB8 /* MIDINoteExtractor.swift in Sources */,
-				7A0000000000000000000003 /* PageRecognitionService.swift in Sources */,
-				7A0000000000000000000002 /* MemoryStats.swift in Sources */,
-				7A0000000000000000000001 /* Gray8Image.swift in Sources */,
 				6F0000000000000000000001 /* PlaybackController.swift in Sources */,
 				6F0000000000000000000002 /* Theme.swift in Sources */,
 				6F0000000000000000000003 /* AppSettings.swift in Sources */,
 				6F0000000000000000000004 /* SettingsView.swift in Sources */,
-				6F0000000000000000000005 /* ReadingView.swift in Sources */,
 				8A0000000000000000000001 /* SegNetSelfTest.swift in Sources */,
-				8A0000000000000000000002 /* CoreMLCacheStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -743,22 +689,19 @@
 				F80000000000000000000002 /* ShareNamingTests.swift in Sources */,
 				A10000000000000000000006 /* Gate1StaffTokenMatchTests.swift in Sources */,
 				A10000000000000000000007 /* MIDIPlayerSmokeTests.swift in Sources */,
-				A1000000000000000000000A /* ModelWarmupTests.swift in Sources */,
 				A1000000000000000000000C /* Gate1RunnerTests.swift in Sources */,
-				CA0000000000000000000009 /* CaptureHelpersTests.swift in Sources */,
 				CA0000000000000000000011 /* DiagnosticsTests.swift in Sources */,
 				21EBA7280EC15355707ED56C /* PlaybackSmokeFixtureTests.swift in Sources */,
 				5F0000000000000000000004 /* SF2PlayerAppTests.swift in Sources */,
 				5F0000000000000000000009 /* PlaylistStoreTests.swift in Sources */,
 				7F0000000000000000000002 /* Build16Tests.swift in Sources */,
-				FB4500000000000000000A02 /* PhotoLibraryImportTests.swift in Sources */,
-				FB6800000000000000000A02 /* ScanCancelTests.swift in Sources */,
+				CA00000000000000000000F2 /* AppServicesTests.swift in Sources */,
+				CA00000000000000000000F4 /* Gray8ImageAppTests.swift in Sources */,
+				CA00000000000000000000F3 /* PageRecognitionAppTests.swift in Sources */,
 				FB0400000000000000000A02 /* ScanQuotaTests.swift in Sources */,
 				FB5500000000000000000A02 /* RetakeRouteTests.swift in Sources */,
 				FB4700000000000000000A02 /* SamplePictureTests.swift in Sources */,
 				FB1800000000000000000A02 /* ScanQuotaDayKeyTests.swift in Sources */,
-				7A0000000000000000000005 /* PageRecognitionServiceTests.swift in Sources */,
-				7A0000000000000000000004 /* Gray8ImageTests.swift in Sources */,
 				6F000000000000000000000A /* RedesignTests.swift in Sources */,
 				8A0000000000000000000003 /* Build6PrepTests.swift in Sources */,
 				9C0000000000000000000001 /* PaywallScreenshotTests.swift in Sources */,
@@ -981,6 +924,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/SF2Player;
 		};
+		P20000000000000000000001 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -993,6 +940,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 5D0000000000000000000001 /* XCLocalSwiftPackageReference "Packages/SF2Player" */;
 			productName = SF2Player;
+		};
+		P20000000000000000000002 /* OMRScanKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P20000000000000000000001 /* XCLocalSwiftPackageReference "." */;
+			productName = OMRScanKit;
+		};
+		P20000000000000000000003 /* OMRScanUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P20000000000000000000001 /* XCLocalSwiftPackageReference "." */;
+			productName = OMRScanUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

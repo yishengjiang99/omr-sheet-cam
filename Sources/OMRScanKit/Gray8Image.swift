@@ -11,21 +11,21 @@ import UIKit
 /// `DeviceGray`; gray sources (scans, PNG fixtures) render in their own gray color space, so no
 /// color conversion happens and bytes match homr's `cv2.imread` + `BGR2GRAY`. Transparent areas
 /// composite over white (paper).
-struct Gray8Image: Equatable, Sendable {
-    var pixels: Data
-    var width: Int
-    var height: Int
+public struct Gray8Image: Equatable, Sendable {
+    public var pixels: Data
+    public var width: Int
+    public var height: Int
     /// EXIF orientation that was applied (1 = up).
-    var orientation: UInt32 = 1
+    public var orientation: UInt32 = 1
     /// Source pixel format, for diagnostics (e.g. "rgb 8bpc 4032x3024", "gray 8bpc 1654x2339").
-    var source: String = ""
+    public var source: String = ""
 
-    enum DecodeError: Error, Equatable, CustomStringConvertible {
+    public enum DecodeError: Error, Equatable, CustomStringConvertible {
         case undecodable(String)
         case emptyImage
         case contextFailed(Int, Int)
 
-        var description: String {
+        public var description: String {
             switch self {
             case let .undecodable(m): return "image not decodable: \(m)"
             case .emptyImage: return "image has zero width or height"
@@ -35,7 +35,7 @@ struct Gray8Image: Equatable, Sendable {
     }
 
     /// Encoded bytes (JPEG / HEIC / PNG / …) → upright gray8, using the file's EXIF orientation.
-    static func decode(imageData: Data) throws -> Gray8Image {
+    public static func decode(imageData: Data) throws -> Gray8Image {
         guard !imageData.isEmpty else { throw DecodeError.undecodable("0 bytes") }
         let opts = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let src = CGImageSourceCreateWithData(imageData as CFData, opts), CGImageSourceGetCount(src) > 0 else {
@@ -50,7 +50,7 @@ struct Gray8Image: Equatable, Sendable {
     }
 
     /// `UIImage` (camera / picker) → upright gray8 using `imageOrientation`.
-    static func from(_ image: UIImage) throws -> Gray8Image {
+    public static func from(_ image: UIImage) throws -> Gray8Image {
         guard let cg = image.cgImage else {
             // CIImage-backed: render through UIKit first (already upright).
             let up = CaptureStore.normalizedUpright(image)
@@ -61,7 +61,7 @@ struct Gray8Image: Equatable, Sendable {
     }
 
     /// Raw `CGImage` pixels + EXIF orientation → upright gray8.
-    static func from(cgImage cg: CGImage, orientation: CGImagePropertyOrientation) throws -> Gray8Image {
+    public static func from(cgImage cg: CGImage, orientation: CGImagePropertyOrientation) throws -> Gray8Image {
         let rawW = cg.width, rawH = cg.height
         guard rawW > 0, rawH > 0 else { throw DecodeError.emptyImage }
         let swaps: Bool
@@ -107,7 +107,7 @@ struct Gray8Image: Equatable, Sendable {
 
     /// CTM mapping raw image space (drawn at `(0, 0, rawW, rawH)`) onto the upright `width x height`
     /// canvas (CG coordinates, origin bottom-left).
-    static func orientationTransform(_ o: CGImagePropertyOrientation, width W: CGFloat, height H: CGFloat) -> CGAffineTransform {
+    public static func orientationTransform(_ o: CGImagePropertyOrientation, width W: CGFloat, height H: CGFloat) -> CGAffineTransform {
         var t = CGAffineTransform.identity
         switch o {
         case .down, .downMirrored: t = t.translatedBy(x: W, y: H).rotated(by: .pi)
@@ -130,17 +130,17 @@ struct Gray8Image: Equatable, Sendable {
 /// Upright color page for `PageInferenceSession.parsePage(rgbx:...)`: 4 bytes per pixel in R, G, B, X
 /// order, `bytesPerRow == 4 * width`, EXIF orientation applied. RGB sources render in their own color
 /// space (no color management, like homr's `cv2.imread`), others in DeviceRGB; transparency over white.
-struct RGBXImage: Equatable, Sendable {
-    var pixels: Data
-    var width: Int
-    var height: Int
-    var orientation: UInt32 = 1
-    var source: String = ""
-    var bytesPerRow: Int { width * 4 }
+public struct RGBXImage: Equatable, Sendable {
+    public var pixels: Data
+    public var width: Int
+    public var height: Int
+    public var orientation: UInt32 = 1
+    public var source: String = ""
+    public var bytesPerRow: Int { width * 4 }
 
     /// Upright page as homr would read it: gray sources stay gray8 (byte-identical to the fixture path),
     /// color sources become RGBX so preprocessing can autocrop / resize in color first.
-    enum Page: Sendable {
+    public enum Page: Sendable {
         case gray(Gray8Image)
         case color(RGBXImage)
 
@@ -151,7 +151,7 @@ struct RGBXImage: Equatable, Sendable {
         var mode: String { switch self { case .gray: return "gray"; case .color: return "color" } }
     }
 
-    static func decodePage(imageData: Data) throws -> Page {
+    public static func decodePage(imageData: Data) throws -> Page {
         guard !imageData.isEmpty else { throw Gray8Image.DecodeError.undecodable("0 bytes") }
         let opts = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let src = CGImageSourceCreateWithData(imageData as CFData, opts), CGImageSourceGetCount(src) > 0 else {
@@ -167,7 +167,7 @@ struct RGBXImage: Equatable, Sendable {
         return .color(try from(cgImage: cg, orientation: o))
     }
 
-    static func from(cgImage cg: CGImage, orientation: CGImagePropertyOrientation) throws -> RGBXImage {
+    public static func from(cgImage cg: CGImage, orientation: CGImagePropertyOrientation) throws -> RGBXImage {
         let rawW = cg.width, rawH = cg.height
         guard rawW > 0, rawH > 0 else { throw Gray8Image.DecodeError.emptyImage }
         let swaps: Bool
@@ -205,7 +205,7 @@ struct RGBXImage: Equatable, Sendable {
     }
 
     /// OpenCV BGR2GRAY of every pixel (fakes / fallbacks that only take gray8).
-    func gray8() -> Data {
+    public func gray8() -> Data {
         var out = Data(count: width * height)
         pixels.withUnsafeBytes { src in
             out.withUnsafeMutableBytes { dst in
@@ -221,7 +221,7 @@ struct RGBXImage: Equatable, Sendable {
     }
 }
 
-extension CGImagePropertyOrientation {
+public extension CGImagePropertyOrientation {
     init(_ o: UIImage.Orientation) {
         switch o {
         case .up: self = .up

@@ -3,8 +3,8 @@ import Foundation
 import os
 
 /// `task_info(TASK_VM_INFO)` memory facts (what jetsam counts).
-enum MemoryStats {
-    struct Snapshot: Equatable, Sendable {
+public enum MemoryStats {
+    public struct Snapshot: Equatable, Sendable {
         /// `phys_footprint` bytes.
         var footprint: UInt64
         /// `ledger_phys_footprint_peak` (process lifetime peak), when the kernel reports rev3+.
@@ -13,9 +13,9 @@ enum MemoryStats {
         var available: UInt64?
     }
 
-    static func mb(_ bytes: UInt64) -> Double { Double(bytes) / 1_048_576 }
+    public static func mb(_ bytes: UInt64) -> Double { Double(bytes) / 1_048_576 }
 
-    static func snapshot() -> Snapshot? {
+    public static func snapshot() -> Snapshot? {
         var info = task_vm_info_data_t()
         let full = MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size
         var count = mach_msg_type_number_t(full)
@@ -37,17 +37,17 @@ enum MemoryStats {
 }
 
 /// Samples `phys_footprint` every `interval` on a private utility queue and keeps the max.
-final class MemorySampler: @unchecked Sendable {
-    let interval: TimeInterval
+public final class MemorySampler: @unchecked Sendable {
+    public let interval: TimeInterval
     private let queue = DispatchQueue(label: "com.ragnus.vp.memory-sampler", qos: .utility)
     private let lock = NSLock()
     private var timer: DispatchSourceTimer?
     private var peak: UInt64 = 0
     private var count = 0
 
-    init(interval: TimeInterval = 0.1) { self.interval = interval }
+    public init(interval: TimeInterval = 0.1) { self.interval = interval }
 
-    func start() {
+    public func start() {
         sample()
         let t = DispatchSource.makeTimerSource(queue: queue)
         let ms = max(1, Int(interval * 1000))
@@ -59,7 +59,7 @@ final class MemorySampler: @unchecked Sendable {
 
     /// Stops sampling (takes one last sample). Returns the max footprint and the sample count.
     @discardableResult
-    func stop() -> (peak: UInt64, samples: Int) {
+    public func stop() -> (peak: UInt64, samples: Int) {
         lock.lock(); let t = timer; timer = nil; lock.unlock()
         t?.cancel()
         sample()

@@ -1,5 +1,6 @@
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// Settings → About → "Source code & license" (AGPL-3.0) and its bundled texts.
 final class RedesignTests: XCTestCase {

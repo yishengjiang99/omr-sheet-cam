@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import SF2Player
+import OMRScanKit
 
 /// Where each recognized note sits on the scan photo, saved next to the scan's MIDI as
 /// `<stem>.layout.json` (PlaylistStore). The Player's Sheet mode draws `notes[].box` over the

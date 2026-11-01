@@ -1,6 +1,7 @@
 import Combine
 import Foundation
 import SF2Player
+import OMRScanKit
 
 /// One playable item: a saved scan (`Application Support/playlist/<name>.mid`) or a bundled sample.
 struct PlaylistEntry: Codable, Hashable, Identifiable, Sendable {

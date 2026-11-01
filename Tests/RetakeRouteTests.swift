@@ -1,6 +1,7 @@
 import UIKit
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// F5.5: "Retake" on the Result screen lands on the live Camera for camera photos (Library for
 /// Photos / sample picks), instead of always popping to the Library.

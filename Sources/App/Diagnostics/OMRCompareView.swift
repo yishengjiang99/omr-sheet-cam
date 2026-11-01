@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import OMRScanKit
 
 /// Visual OMR comparison + accuracy feedback (List sections; embed in a `List`).
 ///

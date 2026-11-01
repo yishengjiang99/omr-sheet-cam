@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// App warmup against `OMR_MODELS_DIR` (ios-sim CI: `TEST_RUNNER_OMR_MODELS_DIR`), else the
 /// models bundled in the host app. Must reach `.ready` with non-zero timings, off the main thread.

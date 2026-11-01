@@ -2,6 +2,7 @@ import OMRHomrIOS
 import UIKit
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// Build 6 prep: recognition always on, CoreML cache folder, SegNet self-test + its prompt section.
 final class Build6PrepTests: XCTestCase {

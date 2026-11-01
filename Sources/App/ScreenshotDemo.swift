@@ -2,6 +2,7 @@
 import OMRHomrIOS
 import SwiftUI
 import UIKit
+import OMRScanKit
 
 /// Debug-only launch hook for the ios-screenshots workflow:
 /// `simctl launch <sim> com.ragnus.vp -OMRScreenshot result|player|library|settings`.

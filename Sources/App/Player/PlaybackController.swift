@@ -3,6 +3,7 @@ import Foundation
 import MediaPlayer
 import SF2Player
 import UIKit
+import OMRScanKit
 
 /// App-wide playback: one `SF2MIDIPlayer`, the current item, prev/next through the Library.
 /// Keeps playing when you leave the Player (Library shows a mini-player). Applies the persisted

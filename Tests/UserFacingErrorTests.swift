@@ -1,6 +1,7 @@
 import SF2Player
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// F10.3: users see short plain-language errors; raw Swift/NSError text stays in the diagnostics log.
 @MainActor

@@ -1,4 +1,6 @@
 import SwiftUI
+import OMRScanKit
+import OMRScanUI
 
 /// Root flow: Library (playlist) is home with how-it-works art, Camera, and Photos import.
 /// Camera is pushed on demand. Scan → Reading/Result → Player. Settings is a sheet.
@@ -40,7 +42,8 @@ struct RootFlowView: View {
                     CameraScreen(
                         onSettings: { showSettings = true },
                         onLibrary: { path.removeAll { $0 == .camera } },
-                        onOpenPlayer: { openNowPlaying() },
+                        accessory: AnyView(MiniPlayerSlot(onOpen: { openNowPlaying() })),
+                        topStatus: AnyView(ScansLeftLabel(style: .capsule)),
                         onPhoto: { handlePhoto($0) }
                     )
                     .toolbar(.hidden, for: .navigationBar)
@@ -155,5 +158,21 @@ struct RootFlowView: View {
         if ScreenshotDemo.route == "result" { return ScreenshotDemo.Recognition() }
         #endif
         return AppServices.recognition
+    }
+}
+
+
+/// The app-wide mini-player shown above the camera controls while something is loaded.
+private struct MiniPlayerSlot: View {
+    @EnvironmentObject private var playback: PlaybackController
+    var onOpen: () -> Void
+
+    var body: some View {
+        if playback.current != nil {
+            MiniPlayer(controller: playback, onOpen: onOpen)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
+                .environment(\.colorScheme, .light)
+        }
     }
 }

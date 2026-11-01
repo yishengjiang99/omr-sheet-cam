@@ -5,7 +5,7 @@ import UIKit
 /// Why a page scan failed, in user terms, derived from `RecognitionOutcome.failed`'s message
 /// (`PageStaffDetectionError`, `PageRecognitionService.outcome(for:ms:)`, `Gray8Image.DecodeError`,
 /// model loading). The raw message stays available under "Details".
-enum ScanFailure: Equatable, Sendable {
+public enum ScanFailure: Equatable, Sendable {
     /// SegNet found no noteheads at all (not sheet music, or far too small / blurry / dark).
     case noMusicFound
     /// Notes-like marks but no five-line staff could be traced.
@@ -18,7 +18,7 @@ enum ScanFailure: Equatable, Sendable {
     case readerUnavailable
     case other
 
-    static func classify(_ message: String) -> ScanFailure {
+    public static func classify(_ message: String) -> ScanFailure {
         let m = message.lowercased()
         if m.contains("no noteheads") { return .noMusicFound }
         if m.contains("no staffs found") || m.contains("no music staff") || m.contains("staffcount 0") { return .noStaffFound }
@@ -34,7 +34,7 @@ enum ScanFailure: Equatable, Sendable {
         return .other
     }
 
-    var title: String {
+    public var title: String {
         switch self {
         case .noMusicFound: return "No printed notes found"
         case .noStaffFound: return "No music staff found"
@@ -45,7 +45,7 @@ enum ScanFailure: Equatable, Sendable {
         }
     }
 
-    var explanation: String {
+    public var explanation: String {
         switch self {
         case .noMusicFound:
             return "We couldn't find any notes in this photo. It works with printed sheet music, one page at a time."
@@ -64,26 +64,26 @@ enum ScanFailure: Equatable, Sendable {
     }
 
     /// Whether retaking / re-framing the photo is the fix (vs. retrying the same photo).
-    var isPhotoProblem: Bool { self != .readerUnavailable }
+    public var isPhotoProblem: Bool { self != .readerUnavailable }
 
-    struct Tip: Equatable, Identifiable, Sendable {
-        var symbol: String
-        var text: String
-        var id: String { text }
+    public struct Tip: Equatable, Identifiable, Sendable {
+        public var symbol: String
+        public var text: String
+        public var id: String { text }
 
-        static let fitPage = Tip(symbol: "viewfinder", text: "Fit the whole page in the frame with a little margin around it.")
-        static let flat = Tip(symbol: "rectangle.portrait", text: "Lay the page flat and hold the phone straight above it, not at an angle.")
-        static let light = Tip(symbol: "lightbulb", text: "Use bright, even light. Avoid shadows from your hand or phone, and glare on glossy paper.")
-        static let steady = Tip(symbol: "hand.raised", text: "Hold still and tap the page to focus so the notes are sharp.")
-        static let closer = Tip(symbol: "plus.magnifyingglass", text: "Move closer: one page at a time, filling most of the frame.")
-        static let printed = Tip(symbol: "printer", text: "Printed sheet music works best. Handwritten music may not read.")
-        static let dark = Tip(symbol: "flashlight.on.fill", text: "This photo looks dark. Turn on more light or the torch.")
-        static let washedOut = Tip(symbol: "sun.max", text: "This photo looks washed out. Avoid glare and direct light on the page.")
-        static let small = Tip(symbol: "arrow.up.left.and.arrow.down.right", text: "This photo is small. Use the camera or a larger image.")
+        public static let fitPage = Tip(symbol: "viewfinder", text: "Fit the whole page in the frame with a little margin around it.")
+        public static let flat = Tip(symbol: "rectangle.portrait", text: "Lay the page flat and hold the phone straight above it, not at an angle.")
+        public static let light = Tip(symbol: "lightbulb", text: "Use bright, even light. Avoid shadows from your hand or phone, and glare on glossy paper.")
+        public static let steady = Tip(symbol: "hand.raised", text: "Hold still and tap the page to focus so the notes are sharp.")
+        public static let closer = Tip(symbol: "plus.magnifyingglass", text: "Move closer: one page at a time, filling most of the frame.")
+        public static let printed = Tip(symbol: "printer", text: "Printed sheet music works best. Handwritten music may not read.")
+        public static let dark = Tip(symbol: "flashlight.on.fill", text: "This photo looks dark. Turn on more light or the torch.")
+        public static let washedOut = Tip(symbol: "sun.max", text: "This photo looks washed out. Avoid glare and direct light on the page.")
+        public static let small = Tip(symbol: "arrow.up.left.and.arrow.down.right", text: "This photo is small. Use the camera or a larger image.")
     }
 
     /// Framing / lighting tips for this failure; photo-specific ones (dark, washed out, small) first.
-    func tips(quality: PhotoQuality? = nil) -> [Tip] {
+    public func tips(quality: PhotoQuality? = nil) -> [Tip] {
         var out: [Tip] = []
         if isPhotoProblem, let q = quality {
             if q.isDark { out.append(.dark) }
@@ -110,17 +110,17 @@ enum ScanFailure: Equatable, Sendable {
 }
 
 /// Cheap photo statistics for failure tips: mean and spread of luma on a 64×64 thumbnail, and size.
-struct PhotoQuality: Equatable, Sendable {
-    var meanLuma: Double // 0...255
-    var lumaStdDev: Double
-    var pixelWidth: Int
-    var pixelHeight: Int
+public struct PhotoQuality: Equatable, Sendable {
+    public var meanLuma: Double // 0...255
+    public var lumaStdDev: Double
+    public var pixelWidth: Int
+    public var pixelHeight: Int
 
-    var isDark: Bool { meanLuma < 80 }
-    var isLowContrast: Bool { lumaStdDev < 22 }
-    var isSmall: Bool { max(pixelWidth, pixelHeight) < 1000 }
+    public var isDark: Bool { meanLuma < 80 }
+    public var isLowContrast: Bool { lumaStdDev < 22 }
+    public var isSmall: Bool { max(pixelWidth, pixelHeight) < 1000 }
 
-    static func measure(_ image: UIImage) -> PhotoQuality? {
+    public static func measure(_ image: UIImage) -> PhotoQuality? {
         guard let cg = image.cgImage ?? CaptureStore.normalizedUpright(image).cgImage else { return nil }
         let n = 64
         var buf = [UInt8](repeating: 0, count: n * n)
@@ -135,11 +135,11 @@ struct PhotoQuality: Equatable, Sendable {
         return PhotoQuality(luma: buf, width: cg.width, height: cg.height)
     }
 
-    init(meanLuma: Double, lumaStdDev: Double, pixelWidth: Int, pixelHeight: Int) {
+    public init(meanLuma: Double, lumaStdDev: Double, pixelWidth: Int, pixelHeight: Int) {
         self.meanLuma = meanLuma; self.lumaStdDev = lumaStdDev; self.pixelWidth = pixelWidth; self.pixelHeight = pixelHeight
     }
 
-    init(luma: [UInt8], width: Int, height: Int) {
+    public init(luma: [UInt8], width: Int, height: Int) {
         let c = Double(max(1, luma.count))
         let mean = luma.reduce(0.0) { $0 + Double($1) } / c
         let v = luma.reduce(0.0) { $0 + (Double($1) - mean) * (Double($1) - mean) } / c

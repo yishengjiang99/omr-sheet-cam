@@ -1,6 +1,6 @@
 import UIKit
 import XCTest
-@testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// Capture helpers only (no camera hardware): EXIF orientation normalization, JPEG saving,
 /// the RecognitionService stub and the bundled Play-sample MIDI.
@@ -59,18 +59,6 @@ final class CaptureHelpersTests: XCTestCase {
         let dir = try CaptureStore.defaultDirectory()
         XCTAssertEqual(dir.lastPathComponent, "captures")
         XCTAssertEqual(dir.deletingLastPathComponent().lastPathComponent, "Documents")
-    }
-
-    func testStubRecognitionReturnsComingSoon() async {
-        let outcome = await StubRecognitionService().recognize(imageData: Data([0xFF, 0xD8]))
-        XCTAssertEqual(outcome, .comingSoon)
-        XCTAssertTrue(AppServices.recognition is PageRecognitionService)
-    }
-
-    func testSampleMIDIIsValidSMF() throws {
-        let midi = try SampleMIDI.cMajorScale()
-        XCTAssertEqual(Array(midi.prefix(4)), Array("MThd".utf8))
-        XCTAssertGreaterThan(midi.count, 14)
     }
 
     private func pixelIsRed(_ cg: CGImage, x: Int, y: Int) throws -> Bool {

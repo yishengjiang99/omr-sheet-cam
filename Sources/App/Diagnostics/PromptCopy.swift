@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import OMRScanKit
 
 /// "Copy as prompt" button: builds the Markdown summary, copies it to `UIPasteboard`, shows a toast.
 struct CopyPromptButton: View {

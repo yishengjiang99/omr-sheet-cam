@@ -12,17 +12,17 @@ import OMRHomrIOS
 ///   mid-compile) is deleted before the next create, since ORT would reuse the half entry and fail;
 /// - entries whose key is not a model in use are deleted (stale after a model bump).
 /// Callers serialize creation per model (warmup creates sessions one after another).
-struct CoreMLCacheStore: Sendable {
-    let root: URL
+public struct CoreMLCacheStore: Sendable {
+    public let root: URL
 
     /// `<Application Support>/coreml-cache/`.
-    static func defaultRoot() throws -> URL {
+    public static func defaultRoot() throws -> URL {
         try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
             .appendingPathComponent("coreml-cache", isDirectory: true)
     }
 
     /// Creates `root` if needed and marks it excluded from backup.
-    static func prepare(root: URL? = nil) throws -> CoreMLCacheStore {
+    public static func prepare(root: URL? = nil) throws -> CoreMLCacheStore {
         let url = try root ?? defaultRoot()
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         var values = URLResourceValues()
@@ -32,20 +32,20 @@ struct CoreMLCacheStore: Sendable {
         return CoreMLCacheStore(root: url)
     }
 
-    static func isExcludedFromBackup(_ url: URL) -> Bool {
+    public static func isExcludedFromBackup(_ url: URL) -> Bool {
         var u = url
         u.removeAllCachedResourceValues()
         return (try? u.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup) == true
     }
 
-    func entry(_ key: String) -> URL { root.appendingPathComponent(key, isDirectory: true) }
-    func marker(_ key: String) -> URL { root.appendingPathComponent("\(key).complete") }
+    public func entry(_ key: String) -> URL { root.appendingPathComponent(key, isDirectory: true) }
+    public func marker(_ key: String) -> URL { root.appendingPathComponent("\(key).complete") }
 
-    enum State: String { case hit, miss, incomplete }
+    public enum State: String { case hit, miss, incomplete }
 
     /// `hit` = complete entry present; `incomplete` = folder without marker (deleted here → cold compile);
     /// `miss` = nothing cached.
-    func prepareEntry(_ key: String) -> State {
+    public func prepareEntry(_ key: String) -> State {
         let fm = FileManager.default
         let hasEntry = fm.fileExists(atPath: entry(key).path)
         let hasMarker = fm.fileExists(atPath: marker(key).path)
@@ -61,19 +61,19 @@ struct CoreMLCacheStore: Sendable {
         }
     }
 
-    func markComplete(_ key: String) {
+    public func markComplete(_ key: String) {
         FileManager.default.createFile(atPath: marker(key).path, contents: Data())
     }
 
     /// Deletes the entry and its marker (after a failed create on a cached entry).
-    func remove(_ key: String) {
+    public func remove(_ key: String) {
         try? FileManager.default.removeItem(at: entry(key))
         try? FileManager.default.removeItem(at: marker(key))
     }
 
     /// Deletes entries / markers whose key is not in `keep`. Returns the removed names.
     @discardableResult
-    func removeStale(keeping keep: Set<String>) -> [String] {
+    public func removeStale(keeping keep: Set<String>) -> [String] {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? []
         var removed: [String] = []
         for n in names {

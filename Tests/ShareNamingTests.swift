@@ -1,5 +1,6 @@
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// F7.7: sharing from Result must produce `<Title>.mid` like Library/Player (MIDIExport), not the
 /// capture-timestamp file name of the playlist file.

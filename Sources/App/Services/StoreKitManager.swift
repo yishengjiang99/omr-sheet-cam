@@ -1,5 +1,6 @@
 import Foundation
 import StoreKit
+import OMRScanKit
 
 /// Product IDs — must match App Store Connect exactly.
 enum IAPProductID {

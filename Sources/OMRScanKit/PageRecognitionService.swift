@@ -100,10 +100,10 @@ extension PageInferenceSession: PageParser {
 /// - One parse at a time (FIFO); decode and parse run in detached tasks, never on the main thread.
 /// - Every parse writes a `recognition` / `page_parse` event to `DiagnosticsLog` (duration, image
 ///   size, staffCount, warnings, `phys_footprint` before / after / peak).
-final class PageRecognitionService: RecognitionService, @unchecked Sendable {
+public final class PageRecognitionService: RecognitionService, @unchecked Sendable {
     typealias SessionFactory = @Sendable () async throws -> any PageParser
 
-    static let shared = PageRecognitionService()
+    public static let shared = PageRecognitionService()
 
     /// App default: a `PageInferenceSession` over the warmup's already created ORT sessions.
     static let warmedSession: SessionFactory = {
@@ -138,13 +138,13 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
         if let observer { center.removeObserver(observer) }
     }
 
-    func recognize(imageData: Data) async -> RecognitionOutcome {
+    public func recognize(imageData: Data) async -> RecognitionOutcome {
         await engine.recognize(imageData: imageData, progress: nil)
     }
 
     /// `progress` gets the page pipeline's fraction (0...1, never decreasing, 1.0 on success) from a
     /// background thread; hop to the main actor before touching UI (`RecognitionProgress`).
-    func recognize(imageData: Data, progress: @escaping RecognitionProgressHandler) async -> RecognitionOutcome {
+    public func recognize(imageData: Data, progress: @escaping RecognitionProgressHandler) async -> RecognitionOutcome {
         await engine.recognize(imageData: imageData, progress: progress)
     }
 
@@ -308,6 +308,10 @@ final class PageRecognitionService: RecognitionService, @unchecked Sendable {
                     }.joined(separator: " ")
                 }
                 outcome = PageRecognitionService.outcome(for: r, ms: parseMs)
+                if case var .recognized(d) = outcome {
+                    d.diagnostics = PageDiagnostics(out)
+                    outcome = .recognized(d)
+                }
             } catch is CancellationError {
                 outcome = .failed("cancelled")
                 p["cancelled"] = "1"

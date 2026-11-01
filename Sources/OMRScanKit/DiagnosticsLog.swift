@@ -5,21 +5,21 @@ import OMRHomrIOS
 import os
 
 /// One in-app diagnostics event (also mirrored to os_log).
-struct DiagnosticsEvent: Codable, Hashable, Identifiable, Sendable {
-    enum Level: String, Codable, CaseIterable, Sendable { case info, warn, error }
-    enum Category: String, Codable, CaseIterable, Sendable {
+public struct DiagnosticsEvent: Codable, Hashable, Identifiable, Sendable {
+    public enum Level: String, Codable, CaseIterable, Sendable { case info, warn, error }
+    public enum Category: String, Codable, CaseIterable, Sendable {
         case app, warmup, gate1, capture, recognition, playback, feedback
     }
 
-    var id = UUID()
-    var date: Date
-    var level: Level
-    var category: Category
-    var message: String
+    public var id = UUID()
+    public var date: Date
+    public var level: Level
+    public var category: Category
+    public var message: String
     /// Optional structured fields (flat string map; stable keys per category, see call sites).
-    var payload: [String: String]?
+    public var payload: [String: String]?
 
-    init(date: Date = Date(), level: Level, category: Category, message: String, payload: [String: String]? = nil) {
+    public init(date: Date = Date(), level: Level, category: Category, message: String, payload: [String: String]? = nil) {
         self.date = date
         self.level = level
         self.category = category
@@ -34,12 +34,12 @@ struct DiagnosticsEvent: Codable, Hashable, Identifiable, Sendable {
 /// `maxEntries`; the file is compacted back to the newest `maxEntries` (and under `maxBytes`)
 /// once it grows past 125% of the entry cap or past `maxBytes`. File I/O runs on a private
 /// serial queue. UI observers get `objectWillChange` on the main thread.
-final class DiagnosticsLog: ObservableObject, @unchecked Sendable {
-    static let shared = DiagnosticsLog(directory: DiagnosticsLog.defaultDirectory())
+public final class DiagnosticsLog: ObservableObject, @unchecked Sendable {
+    public static let shared = DiagnosticsLog(directory: DiagnosticsLog.defaultDirectory())
 
-    let fileURL: URL?
-    let maxEntries: Int
-    let maxBytes: Int
+    public let fileURL: URL?
+    public let maxEntries: Int
+    public let maxBytes: Int
     private let mirrorToOSLog: Bool
     private let lock = NSLock()
     private var entries: [DiagnosticsEvent] = []
@@ -49,7 +49,7 @@ final class DiagnosticsLog: ObservableObject, @unchecked Sendable {
     private static let subsystem = Bundle.main.bundleIdentifier ?? "com.ragnus.vp"
 
     /// `directory == nil` → memory only.
-    init(directory: URL?, maxEntries: Int = 2000, maxBytes: Int = 5 * 1024 * 1024, mirrorToOSLog: Bool = true) {
+    public init(directory: URL?, maxEntries: Int = 2000, maxBytes: Int = 5 * 1024 * 1024, mirrorToOSLog: Bool = true) {
         self.maxEntries = maxEntries
         self.maxBytes = maxBytes
         self.mirrorToOSLog = mirrorToOSLog
@@ -62,14 +62,14 @@ final class DiagnosticsLog: ObservableObject, @unchecked Sendable {
         load()
     }
 
-    static func defaultDirectory() -> URL? {
+    public static func defaultDirectory() -> URL? {
         try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
             .appendingPathComponent("diagnostics", isDirectory: true)
     }
 
     // MARK: - Recording
 
-    func record(_ event: DiagnosticsEvent) {
+    public func record(_ event: DiagnosticsEvent) {
         lock.lock()
         entries.append(event)
         if entries.count > maxEntries { entries.removeFirst(entries.count - maxEntries) }
@@ -79,7 +79,7 @@ final class DiagnosticsLog: ObservableObject, @unchecked Sendable {
         notify()
     }
 
-    func record(
+    public func record(
         _ level: DiagnosticsEvent.Level, _ category: DiagnosticsEvent.Category, _ message: String,
         payload: [String: String]? = nil
     ) {
@@ -87,7 +87,7 @@ final class DiagnosticsLog: ObservableObject, @unchecked Sendable {
     }
 
     /// An error that reached a UI boundary: full `String(describing:)`, localized text and type.
-    func record(error: Error, category: DiagnosticsEvent.Category, context: String, payload: [String: String] = [:]) {
+    public func record(error: Error, category: DiagnosticsEvent.Category, context: String, payload: [String: String] = [:]) {
         var p = payload
         p["error"] = String(describing: error)
         p["localized"] = error.localizedDescription
@@ -96,12 +96,12 @@ final class DiagnosticsLog: ObservableObject, @unchecked Sendable {
     }
 
     /// Newest last.
-    var events: [DiagnosticsEvent] {
+    public var events: [DiagnosticsEvent] {
         lock.lock(); defer { lock.unlock() }
         return entries
     }
 
-    func clear() {
+    public func clear() {
         lock.lock()
         entries.removeAll()
         lock.unlock()
@@ -115,10 +115,10 @@ final class DiagnosticsLog: ObservableObject, @unchecked Sendable {
     }
 
     /// Waits for pending file writes (tests, crash handler).
-    func flush() { io.sync {} }
+    public func flush() { io.sync {} }
 
     /// Records uncaught Objective-C exceptions (flushed synchronously before the crash).
-    static func installUncaughtExceptionHandler() {
+    public static func installUncaughtExceptionHandler() {
         NSSetUncaughtExceptionHandler { exception in
             DiagnosticsLog.shared.record(
                 .error, .app, "uncaught exception \(exception.name.rawValue): \(exception.reason ?? "")",
@@ -182,14 +182,14 @@ final class DiagnosticsLog: ObservableObject, @unchecked Sendable {
         }
     }
 
-    static let encoder: JSONEncoder = {
+    public static let encoder: JSONEncoder = {
         let e = JSONEncoder()
         e.dateEncodingStrategy = .iso8601
         e.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         return e
     }()
 
-    static let decoder: JSONDecoder = {
+    public static let decoder: JSONDecoder = {
         let d = JSONDecoder()
         d.dateDecodingStrategy = .iso8601
         return d
@@ -207,14 +207,14 @@ final class DiagnosticsLog: ObservableObject, @unchecked Sendable {
 }
 
 /// Device / build facts for the log header and the prompt.
-struct DeviceInfo: Codable, Equatable, Sendable {
-    var model: String
-    var os: String
-    var appVersion: String
-    var build: String
-    var ortVersion: String
+public struct DeviceInfo: Codable, Equatable, Sendable {
+    public var model: String
+    public var os: String
+    public var appVersion: String
+    public var build: String
+    public var ortVersion: String
 
-    static let current: DeviceInfo = {
+    public static let current: DeviceInfo = {
         let v = ProcessInfo.processInfo.operatingSystemVersion
         let info = Bundle.main.infoDictionary ?? [:]
         return DeviceInfo(
@@ -227,7 +227,7 @@ struct DeviceInfo: Codable, Equatable, Sendable {
     }()
 
     /// `utsname.machine` (e.g. `iPhone16,1`); on the simulator the simulated model + " (Simulator)".
-    static func machineIdentifier() -> String {
+    public static func machineIdentifier() -> String {
         if let sim = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] { return "\(sim) (Simulator)" }
         var u = utsname()
         uname(&u)
@@ -236,9 +236,9 @@ struct DeviceInfo: Codable, Equatable, Sendable {
         }
     }
 
-    var payload: [String: String] {
+    public var payload: [String: String] {
         ["model": model, "os": os, "app": appVersion, "build": build, "ort": ortVersion]
     }
 
-    var headerLine: String { "\(model) · \(os) · v\(appVersion) (\(build)) · ORT \(ortVersion)" }
+    public var headerLine: String { "\(model) · \(os) · v\(appVersion) (\(build)) · ORT \(ortVersion)" }
 }

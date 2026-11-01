@@ -1,6 +1,7 @@
 import SF2Player
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// Playlist store: save, index reload, delete, bundled samples always present.
 final class PlaylistStoreTests: XCTestCase {

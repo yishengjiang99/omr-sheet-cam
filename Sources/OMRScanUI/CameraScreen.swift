@@ -1,3 +1,4 @@
+import OMRScanKit
 import AVFoundation
 import PhotosUI
 import SwiftUI
@@ -5,13 +6,27 @@ import SwiftUI
 /// Scan (home, redesign 01-scan): live camera (when available + authorized), tap-to-focus,
 /// Settings (gear) and torch on top, Photos · shutter · Library at the bottom, with a
 /// "Try sample picture" button (bundled Ode to Joy page) just above them. Hands an upright
-/// `CapturedPhoto` to `onPhoto`. The app-wide mini-player shows above the controls while
-/// something is loaded.
-struct CameraScreen: View {
-    var onSettings: () -> Void = {}
-    var onLibrary: () -> Void = {}
-    var onOpenPlayer: () -> Void = {}
+/// `CapturedPhoto` to `onPhoto`. `accessory` (host-supplied, e.g. a mini-player) shows above the
+/// controls; `topStatus` shows in the top bar when there is no camera message (e.g. scans left);
+/// `onSettings` / `onLibrary` nil hides that button.
+public struct CameraScreen: View {
+    var onSettings: (() -> Void)?
+    var onLibrary: (() -> Void)?
     var onPhoto: (CapturedPhoto) -> Void
+    var accessory: AnyView
+    var topStatus: AnyView
+
+    public init(
+        onSettings: (() -> Void)? = nil, onLibrary: (() -> Void)? = nil,
+        accessory: AnyView = AnyView(EmptyView()), topStatus: AnyView = AnyView(EmptyView()),
+        onPhoto: @escaping (CapturedPhoto) -> Void
+    ) {
+        self.onSettings = onSettings
+        self.onLibrary = onLibrary
+        self.accessory = accessory
+        self.topStatus = topStatus
+        self.onPhoto = onPhoto
+    }
 
     @StateObject private var camera = CameraController()
     @State private var rotation = PreviewRotation()
@@ -22,9 +37,8 @@ struct CameraScreen: View {
     @State private var error: String?
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
-    @EnvironmentObject private var playback: PlaybackController
 
-    var body: some View {
+    public var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             content
@@ -39,12 +53,7 @@ struct CameraScreen: View {
                         .background(.black.opacity(0.35), in: Capsule())
                         .padding(.bottom, 12)
                 }
-                if playback.current != nil {
-                    MiniPlayer(controller: playback, onOpen: onOpenPlayer)
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, 8)
-                        .environment(\.colorScheme, .light)
-                }
+                accessory
                 sampleButton
                     .padding(.bottom, 12)
                 controls
@@ -115,8 +124,10 @@ struct CameraScreen: View {
 
     private var topBar: some View {
         HStack {
-            circleButton("gearshape", label: "Settings", action: onSettings)
-                .accessibilityIdentifier("scan.settings")
+            if let onSettings {
+                circleButton("gearshape", label: "Settings", action: onSettings)
+                    .accessibilityIdentifier("scan.settings")
+            }
             Spacer()
             if let msg = camera.statusMessage ?? error {
                 Text(msg)
@@ -126,7 +137,7 @@ struct CameraScreen: View {
                     .padding(.horizontal, 12).padding(.vertical, 7)
                     .background(.black.opacity(0.4), in: Capsule())
             } else {
-                ScansLeftLabel(style: .capsule)
+                topStatus
             }
             Spacer()
             if cameraLive && camera.torchAvailable {
@@ -183,10 +194,12 @@ struct CameraScreen: View {
             .opacity(cameraLive ? 1 : 0.35)
             .accessibilityLabel("Shutter")
             Spacer()
-            Button(action: onLibrary) {
-                bottomItem(icon: "music.note.list", title: "Library")
+            if let onLibrary {
+                Button(action: onLibrary) {
+                    bottomItem(icon: "music.note.list", title: "Library")
+                }
+                .accessibilityIdentifier("scan.library")
             }
-            .accessibilityIdentifier("scan.library")
         }
         .padding(.horizontal, 28)
         .padding(.bottom, 20)
@@ -221,7 +234,7 @@ struct CameraScreen: View {
             switch result {
             case let .success(image): onPhoto(CapturedPhoto(image: image, source: .camera))
             case let .failure(e):
-                error = UserFacingError.message(for: e, action: .capture)
+                error = "Couldn't take the photo. Please try again."
                 DiagnosticsLog.shared.record(error: e, category: .capture, context: "photo capture")
             }
         }
@@ -258,3 +271,4 @@ struct CameraScreen: View {
         }
     }
 }
+

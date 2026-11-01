@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import OMRScanKit
 
 /// General MIDI instruments offered in Settings / Player (bank 0 programs in GeneralUser GS).
 struct Instrument: Hashable, Identifiable, Sendable {

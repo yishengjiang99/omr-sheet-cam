@@ -3,11 +3,12 @@ import OMRHomrIOS
 import UIKit
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
+@testable import OMRScanUI
 
-/// `PageRecognitionService`: error paths, outcome mapping, session reuse / serialization, memory
-/// warning drop, `page_parse` diagnostics + prompt section, and (when models are available) a real
-/// full-page parse of the C-scale fixture page.
-final class PageRecognitionServiceTests: XCTestCase {
+/// App-coupled page recognition checks: diagnostics prompt section, bundled sample, oracle pages,
+/// SegNet backend parity (models required where noted).
+final class PageRecognitionAppTests: XCTestCase {
     private struct Boom: Error, CustomStringConvertible { var description: String { "boom: models unavailable" } }
 
     /// Fake page session: fixed result or error, counts calls and the max concurrent parses.
@@ -89,8 +90,11 @@ final class PageRecognitionServiceTests: XCTestCase {
     }
 
     private func makeService(
+
         factory: @escaping PageRecognitionService.SessionFactory, log: DiagnosticsLog,
+
         center: NotificationCenter = NotificationCenter(), released: Counter = Counter()
+
     ) -> PageRecognitionService {
         PageRecognitionService(
             factory: factory, releaseShared: { released.bump() }, log: log, notificationCenter: center, sampleInterval: 0.01
@@ -103,171 +107,13 @@ final class PageRecognitionServiceTests: XCTestCase {
 
     // MARK: - Error paths
 
-    func testSessionFactoryErrorGivesFailedOutcomeAndLogsError() async throws {
-        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
-        let service = makeService(factory: { throw Boom() }, log: log)
-        let outcome = await service.recognize(imageData: Self.pngData())
-        guard case let .failed(msg) = outcome else { return XCTFail("expected .failed, got \(outcome)") }
-        XCTAssertTrue(msg.contains("boom"), msg)
-        let e = try XCTUnwrap(pageEvents(log).last)
-        XCTAssertEqual(e.level, .error)
-        XCTAssertEqual(e.payload?["outcome"], "failed")
-        XCTAssertEqual(e.payload?["error"], "boom: models unavailable")
-        XCTAssertEqual(e.payload?["image"], "31x17", "image decoded before the session is needed")
-        XCTAssertNotNil(e.payload?["footprint_before_mb"])
-        XCTAssertNotNil(e.payload?["peak_mb"])
-        let built = await service.engine.buildCount
-        XCTAssertEqual(built, 0)
-    }
-
-    func testUndecodableImageFailsWithoutBuildingSession() async throws {
-        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
-        let fake = FakeParser(result: Self.goodResult())
-        let service = makeService(factory: { fake }, log: log)
-        let outcome = await service.recognize(imageData: Data([0xFF, 0xD8, 0x00]))
-        guard case .failed = outcome else { return XCTFail("expected .failed, got \(outcome)") }
-        let built = await service.engine.buildCount
-        XCTAssertEqual(built, 0)
-        XCTAssertEqual(fake.calls, 0)
-        XCTAssertNotNil(pageEvents(log).last?.payload?["error_type"])
-    }
-
-    func testParserErrorGivesFailed() async {
-        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
-        let fake = FakeParser(result: nil)
-        let outcome = await makeService(factory: { fake }, log: log).recognize(imageData: Self.pngData())
-        XCTAssertEqual(outcome, .failed("boom: models unavailable"))
-        XCTAssertEqual(pageEvents(log).last?.level, .error)
-    }
-
-    func testOutcomeMapping() {
-        guard case .failed = PageRecognitionService.outcome(for: Self.goodResult(staffCount: 0), ms: 1) else {
-            return XCTFail("staffCount 0 must fail")
-        }
-        guard case .failed = PageRecognitionService.outcome(for: Self.goodResult(notes: 0), ms: 1) else {
-            return XCTFail("no notes must fail")
-        }
-        var empty = Self.goodResult()
-        empty.midi = Data()
-        guard case .failed = PageRecognitionService.outcome(for: empty, ms: 1) else { return XCTFail("empty MIDI must fail") }
-        guard case let .recognized(d) = PageRecognitionService.outcome(for: Self.goodResult(), ms: 42) else {
-            return XCTFail("good result must be recognized")
-        }
-        XCTAssertEqual(d.staffCount, 1)
-        XCTAssertEqual(d.notes.count, 2)
-        XCTAssertEqual(d.ms, 42)
-        XCTAssertFalse(d.hasBoxes, "null pageRect → no highlight boxes")
-        XCTAssertTrue(d.notes.allSatisfy { $0.rect == nil })
-    }
-
     // MARK: - Session reuse, serialization, memory warning
 
-    func testSessionBuiltOnceReusedAndParsesSerialized() async throws {
-        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
-        let fake = FakeParser(result: Self.goodResult(), delay: 0.05)
-        let builds = Counter()
-        let service = makeService(factory: { builds.bump(); return fake }, log: log)
-        let png = Self.pngData()
-        let outcomes = await withTaskGroup(of: RecognitionOutcome.self) { group -> [RecognitionOutcome] in
-            for _ in 0..<3 { group.addTask { await service.recognize(imageData: png) } }
-            var all: [RecognitionOutcome] = []
-            for await o in group { all.append(o) }
-            return all
-        }
-        XCTAssertEqual(outcomes.map(\.name), ["recognized", "recognized", "recognized"])
-        XCTAssertEqual(builds.value, 1, "session must be created once and reused")
-        XCTAssertEqual(fake.calls, 3)
-        XCTAssertEqual(fake.maxActive, 1, "parses must run one at a time")
-        XCTAssertEqual(fake.lastSize.map { [$0.0, $0.1, $0.2] }, [31 * 17, 31, 17])
-        XCTAssertEqual(pageEvents(log).compactMap { $0.payload?["session"] }, ["built", "reused", "reused"])
-    }
-
-    func testCancelledQueuedRecognizeSkipsParse() async throws {
-        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
-        let fake = FakeParser(result: Self.goodResult(), delay: 0.3)
-        let service = makeService(factory: { fake }, log: log)
-        let png = Self.pngData()
-        let t1 = Task { await service.recognize(imageData: png) }
-        // Wait until t1 is inside the parse (it holds the mutex for `delay`).
-        for _ in 0..<200 where fake.calls == 0 {
-            try await Task.sleep(nanoseconds: 10_000_000)
-        }
-        XCTAssertEqual(fake.calls, 1, "t1 must be inside the parse before t2 starts")
-        let t2 = Task { await service.recognize(imageData: png) }
-        try await Task.sleep(nanoseconds: 50_000_000) // t2 queues in acquire() behind t1
-        t2.cancel()
-        let o1 = await t1.value
-        let o2 = await t2.value
-        XCTAssertEqual(o1.name, "recognized")
-        XCTAssertEqual(o2, .failed("cancelled"))
-        XCTAssertEqual(fake.calls, 1, "cancelled queued task must not run a parse")
-    }
-
-    /// F6.8: Cancel during the (non-abortable) parse must discard the late result, and the next scan
-    /// only waits for the remaining parse time (no extra queueing behind a zombie).
-    func testCancelDuringParseDiscardsResultAndNextScanRuns() async throws {
-        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
-        let fake = FakeParser(result: Self.goodResult(), delay: 0.3)
-        let service = makeService(factory: { fake }, log: log)
-        let png = Self.pngData()
-        let t1 = Task { await service.recognize(imageData: png) }
-        for _ in 0..<200 where fake.calls == 0 {
-            try await Task.sleep(nanoseconds: 10_000_000)
-        }
-        XCTAssertEqual(fake.calls, 1, "t1 must be inside the parse")
-        t1.cancel()
-        let started = Date()
-        let t2 = Task { await service.recognize(imageData: png) }
-        let o1 = await t1.value
-        let o2 = await t2.value
-        XCTAssertEqual(o1, .failed("cancelled"), "a result that arrives after Cancel must be discarded")
-        XCTAssertEqual(o2.name, "recognized", "the next scan is not blocked forever / poisoned by the cancelled one")
-        XCTAssertLessThan(Date().timeIntervalSince(started), 0.3 + 0.3 + 0.5, "next scan waits at most for the in-flight parse + its own")
-        XCTAssertEqual(fake.calls, 2)
-    }
-
-    /// F6.8: Cancel while the session is still being built / warmed up must not start the parse.
-    func testCancelBeforeParseStartsSkipsParse() async throws {
-        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
-        let fake = FakeParser(result: Self.goodResult(), delay: 0.05)
-        let service = makeService(factory: { try? await Task.sleep(nanoseconds: 300_000_000); return fake }, log: log)
-        let t1 = Task { await service.recognize(imageData: Self.pngData()) }
-        try await Task.sleep(nanoseconds: 80_000_000) // t1 is inside the (slow) session build
-        t1.cancel()
-        let o1 = await t1.value
-        XCTAssertEqual(o1, .failed("cancelled"))
-        XCTAssertEqual(fake.calls, 0, "cancelled before the parse: no parse may run")
-        let e = try XCTUnwrap(pageEvents(log).last)
-        XCTAssertEqual(e.payload?["cancelled"], "1")
-        XCTAssertEqual(e.level, .info, "a user cancel is not an error")
-    }
-
-    func testMemoryWarningDropsSessionAndNextParseRebuilds() async throws {
-        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
-        let center = NotificationCenter()
-        let released = Counter()
-        let fake = FakeParser(result: Self.goodResult())
-        let builds = Counter()
-        let service = makeService(factory: { builds.bump(); return fake }, log: log, center: center, released: released)
-        _ = await service.recognize(imageData: Self.pngData())
-        var has = await service.engine.hasSession
-        XCTAssertTrue(has)
-
-        center.post(name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
-        for _ in 0..<200 where has {
-            try await Task.sleep(nanoseconds: 10_000_000)
-            has = await service.engine.hasSession
-        }
-        XCTAssertFalse(has, "memory warning must drop the session")
-        XCTAssertEqual(released.value, 1, "warm sessions released too")
-        XCTAssertTrue(log.events.contains { $0.payload?["kind"] == "page_session_drop" })
-
-        _ = await service.recognize(imageData: Self.pngData())
-        XCTAssertEqual(builds.value, 2)
-        XCTAssertEqual(pageEvents(log).last?.payload?["session"], "rebuilt after memory warning")
-    }
-
     // MARK: - Diagnostics
+
+    // MARK: - Real models (simulator CI): app path vs homr oracle pages
+
+    // MARK: - Progress ("Reading music… 42%")
 
     func testPageParseDiagnosticsFieldsAndPromptSection() async throws {
         let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
@@ -318,8 +164,6 @@ final class PageRecognitionServiceTests: XCTestCase {
         XCTAssertEqual(photo.image.imageOrientation, .up)
         XCTAssertGreaterThanOrEqual(photo.image.size.width * photo.image.scale, 1200, "LilyPond render ~1530 px wide")
     }
-
-    // MARK: - Real models (simulator CI): app path vs homr oracle pages
 
     /// `fixtures/oracle.pages/<id>/stages.json` (homr 7d97c3c): input image, staffs, voices.
     struct OraclePage {
@@ -416,116 +260,6 @@ final class PageRecognitionServiceTests: XCTestCase {
         print("PageParse mono.c_major_scale tokens: staffs \(r.layout.staffs.count), staff0 \(matched)/\(expected.count) tokens (got \(got.count)) | \(timings)")
         XCTAssertEqual(r.layout.staffs.count, 1)
         XCTAssertNil(Gate1Oracle.firstMismatch(got, expected), "staff 0 tokens \(matched)/\(expected.count) vs homr")
-    }
-
-    // MARK: - Progress ("Reading music… 42%")
-
-    /// Service-level progress from the pipeline's stage reports: strictly increasing, ends at exactly 1.0,
-    /// stale lower reports dropped.
-    func testRecognitionProgressOnlyGoesUpAndEndsAt100() async throws {
-        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
-        let parser = ProgressParser(result: Self.goodResult())
-        let service = makeService(factory: { parser }, log: log)
-        let got = Fractions()
-        let outcome = await service.recognize(imageData: Self.pngData()) { got.add($0.fraction) }
-        guard case .recognized = outcome else { return XCTFail("expected recognized, got \(outcome)") }
-        let f = got.values
-        XCTAssertGreaterThanOrEqual(f.count, 11, "preprocess + 6 tiles + staffs + 3 staffs: \(f)")
-        for (a, b) in zip(f, f.dropFirst()) { XCTAssertLessThan(a, b, "progress went down or repeated: \(f)") }
-        XCTAssertEqual(f.last, 1.0)
-        XCTAssertTrue(f.allSatisfy { $0 >= 0 && $0 <= 1 })
-    }
-
-    /// Phase change resets the bar: "Warming up… 90%" → "Reading music… 10%", never down within a phase.
-    @MainActor
-    func testRecognitionProgressPhaseChangeResets() {
-        let m = RecognitionProgress()
-        m.report(ScanProgress(warmingUp: true, fraction: 0.9))
-        XCTAssertTrue(m.warmingUp)
-        XCTAssertEqual(m.percent, 90)
-        XCTAssertEqual(ReadingView.title(fraction: m.fraction, warmingUp: m.warmingUp), "Warming up… 90%")
-        m.report(ScanProgress(warmingUp: false, fraction: 0.1))
-        XCTAssertFalse(m.warmingUp)
-        XCTAssertEqual(m.percent, 10, "phase change must reset the bar for the new phase")
-        m.report(ScanProgress(warmingUp: false, fraction: 0.05))
-        XCTAssertEqual(m.percent, 10, "never goes down within a phase")
-        m.reset()
-        XCTAssertEqual(m.percent, 0)
-        XCTAssertFalse(m.warmingUp)
-    }
-
-    /// Warmup ETA: forwarded through the progress chain and cleared on phase change / reset.
-    @MainActor
-    func testRecognitionProgressForwardsWarmupETA() {
-        let m = RecognitionProgress()
-        m.report(ScanProgress(warmingUp: true, fraction: 0.2, etaSeconds: 30))
-        XCTAssertTrue(m.warmingUp)
-        XCTAssertEqual(m.etaSeconds, 30)
-        XCTAssertEqual(
-            ReadingView.subtitle(warmingUp: m.warmingUp, etaSeconds: m.etaSeconds),
-            "About 30 seconds left · one-time setup")
-        m.report(ScanProgress(warmingUp: true, fraction: 0.5, etaSeconds: 12))
-        XCTAssertEqual(m.etaSeconds, 12, "ETA ticks down")
-        m.report(ScanProgress(warmingUp: false, fraction: 0.1))
-        XCTAssertNil(m.etaSeconds, "ETA cleared when the parse phase starts")
-        m.reset()
-        XCTAssertNil(m.etaSeconds)
-    }
-
-    /// Warmup subtitle falls back gracefully when no ETA is known yet.
-    func testReadingViewSubtitleFallback() {
-        XCTAssertEqual(
-            ReadingView.subtitle(warmingUp: true, etaSeconds: nil),
-            "One-time setup — loading the music models on your iPhone")
-        XCTAssertEqual(
-            ReadingView.subtitle(warmingUp: true, etaSeconds: 0.5),
-            "One-time setup — loading the music models on your iPhone")
-        XCTAssertEqual(
-            ReadingView.subtitle(warmingUp: false, etaSeconds: 30),
-            "This usually takes a few seconds")
-    }
-
-    /// Monotonic gate: phase change resets the high-water mark so the parse phase restarts at 0.
-    func testMonotonicProgressResetsOnPhaseChange() {
-        var got: [ScanProgress] = []
-        let gate = MonotonicProgress { got.append($0) }
-        gate.report(ScanProgress(warmingUp: true, fraction: 0.5))
-        gate.report(ScanProgress(warmingUp: true, fraction: 0.4))
-        gate.report(ScanProgress(warmingUp: false, fraction: 0.1))
-        XCTAssertEqual(got.map(\.fraction), [0.5, 0.1])
-        XCTAssertEqual(got.map(\.warmingUp), [true, false])
-    }
-
-    /// Failed parse: progress never claims 100%.
-    func testFailedRecognitionDoesNotReport100() async {
-        let log = DiagnosticsLog(directory: nil, mirrorToOSLog: false)
-        let service = makeService(factory: { FakeParser(result: nil) }, log: log)
-        let got = Fractions()
-        let outcome = await service.recognize(imageData: Self.pngData()) { got.add($0.fraction) }
-        XCTAssertEqual(outcome.name, "failed")
-        XCTAssertFalse(got.values.contains(1.0))
-    }
-
-    /// Main-actor model behind the Reading screen: never decreases, clamps to 0...1, label "Reading music… 42%".
-    @MainActor
-    func testRecognitionProgressModelAndLabel() async {
-        let m = RecognitionProgress()
-        XCTAssertEqual(m.percent, 0)
-        m.report(ScanProgress(warmingUp: false, fraction: 0.42))
-        XCTAssertEqual(m.percent, 42)
-        XCTAssertEqual(ReadingView.title(fraction: m.fraction), "Reading music… 42%")
-        m.report(ScanProgress(warmingUp: false, fraction: 0.3))
-        XCTAssertEqual(m.fraction, 0.42, "never goes down")
-        m.report(ScanProgress(warmingUp: false, fraction: 1.5))
-        XCTAssertEqual(m.fraction, 1)
-        XCTAssertEqual(ReadingView.title(fraction: m.fraction), "Reading music… 100%")
-        m.reset()
-        XCTAssertEqual(m.fraction, 0)
-        // Background reports hop to the main actor.
-        let h = m.handler
-        await Task.detached { h(ScanProgress(warmingUp: false, fraction: 0.25)) }.value
-        for _ in 0..<50 where m.fraction == 0 { await Task.yield() }
-        XCTAssertEqual(m.fraction, 0.25)
     }
 
     /// "Try sample picture" end to end: the bundled Ode to Joy page through the same
@@ -637,4 +371,5 @@ final class PageRecognitionServiceTests: XCTestCase {
         XCTAssertEqual(models.segnet.coreMLModelFormat ?? "cpu", "NeuralNetwork", "warmed SegNet format")
         XCTAssertEqual(coreMLCounts, cpuCounts, "SegNet CoreML EP class counts vs CPU EP")
     }
+
 }

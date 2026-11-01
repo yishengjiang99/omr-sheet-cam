@@ -2,9 +2,9 @@ import Foundation
 import UIKit
 
 /// Pure helpers for captured / picked images (unit-tested; no camera hardware).
-enum CaptureStore {
+public enum CaptureStore {
     /// Redraws `image` so its pixels are upright and `imageOrientation == .up` (EXIF baked in).
-    static func normalizedUpright(_ image: UIImage) -> UIImage {
+    public static func normalizedUpright(_ image: UIImage) -> UIImage {
         guard image.imageOrientation != .up else { return image }
         let format = UIGraphicsImageRendererFormat.default()
         format.scale = image.scale
@@ -15,34 +15,34 @@ enum CaptureStore {
     }
 
     /// `<Documents>/captures`.
-    static func defaultDirectory() throws -> URL {
+    public static func defaultDirectory() throws -> URL {
         try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
             .appendingPathComponent("captures", isDirectory: true)
     }
 
     /// `yyyyMMdd-HHmmss-SSS` in the device time zone.
-    static func timestamp(_ date: Date) -> String {
+    public static func timestamp(_ date: Date) -> String {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyyMMdd-HHmmss-SSS"
         return f.string(from: date)
     }
 
-    enum SaveError: Error, CustomStringConvertible {
+    public enum SaveError: Error, CustomStringConvertible {
         case encodeFailed
-        var description: String { "could not JPEG-encode the image" }
+        public var description: String { "could not JPEG-encode the image" }
     }
 
     /// Deletes a capture that nothing references (e.g. the scan was cancelled before it produced a
     /// Library entry). Best effort; a missing file is fine.
-    static func discard(_ url: URL?) {
+    public static func discard(_ url: URL?) {
         guard let url else { return }
         try? FileManager.default.removeItem(at: url)
     }
 
     /// Saves an upright JPEG to `<directory>/<timestamp>.jpg` (default Documents/captures).
     @discardableResult
-    static func save(
+    public static func save(
         _ image: UIImage, date: Date = Date(), directory: URL? = nil, quality: CGFloat = 0.9
     ) throws -> URL {
         let dir = try directory ?? defaultDirectory()
@@ -62,14 +62,16 @@ enum CaptureStore {
 }
 
 /// A captured or picked photo, already upright. Identity-based so it can be a navigation value.
-struct CapturedPhoto: Hashable, Identifiable {
-    enum Source: String { case camera, library, sample }
-    let id = UUID()
-    let image: UIImage
-    let source: Source
+public struct CapturedPhoto: Hashable, Identifiable {
+    public enum Source: String { case camera, library, sample }
+    public let id = UUID()
+    public let image: UIImage
+    public let source: Source
 
-    static func == (a: CapturedPhoto, b: CapturedPhoto) -> Bool { a.id == b.id }
-    func hash(into h: inout Hasher) { h.combine(id) }
+    public init(image: UIImage, source: Source) { self.image = image; self.source = source }
+
+    public static func == (a: CapturedPhoto, b: CapturedPhoto) -> Bool { a.id == b.id }
+    public func hash(into h: inout Hasher) { h.combine(id) }
 }
 
 /// "Try sample picture": a bundled engraving of Beethoven's "Ode to Joy" melody (public domain;
@@ -77,14 +79,14 @@ struct CapturedPhoto: Hashable, Identifiable {
 /// `ode-to-joy.jpg`). Loaded exactly like a
 /// Photos pick (decode + `normalizedUpright`) and handed to the same `onPhoto` → `ResultScreen`
 /// recognition flow, so the result lands in the Library like any other scan.
-enum SamplePicture {
-    static let buttonTitle = "Try sample picture"
-    static let resourceName = "ode-to-joy"
-    static let resourceExtension = "jpg"
+public enum SamplePicture {
+    public static let buttonTitle = "Try sample picture"
+    public static let resourceName = "ode-to-joy"
+    public static let resourceExtension = "jpg"
 
-    enum LoadError: Error, CustomStringConvertible {
+    public enum LoadError: Error, CustomStringConvertible {
         case missing, unreadable
-        var description: String {
+        public var description: String {
             switch self {
             case .missing: return "sample picture ode-to-joy.jpg is not bundled"
             case .unreadable: return "sample picture ode-to-joy.jpg could not be decoded"
@@ -93,7 +95,7 @@ enum SamplePicture {
     }
 
     /// Encoded JPEG bytes of the bundled sample picture.
-    static func data(bundle: Bundle = .main) throws -> Data {
+    public static func data(bundle: Bundle = .main) throws -> Data {
         guard let url = bundle.url(forResource: resourceName, withExtension: resourceExtension) else {
             throw LoadError.missing
         }
@@ -101,12 +103,12 @@ enum SamplePicture {
     }
 
     /// User-visible text when the sample can't be loaded (Camera and Library show the same message).
-    static let loadFailedMessage = "Could not load the sample picture"
+    public static let loadFailedMessage = "Could not load the sample picture"
 
     /// Loads the sample for either entry point (Library or Camera "Try sample picture"): the photo on
     /// success, else the message to show the user (the error is also written to the diagnostics log).
     @MainActor
-    static func loadForUser(
+    public static func loadForUser(
         context: String,
         loader: () async throws -> CapturedPhoto = { try await SamplePicture.photo() },
         log: DiagnosticsLog = .shared
@@ -122,7 +124,7 @@ enum SamplePicture {
     }
 
     /// The sample as an upright `CapturedPhoto` (decoded off the main thread, like a Photos pick).
-    static func photo(bundle: Bundle = .main) async throws -> CapturedPhoto {
+    public static func photo(bundle: Bundle = .main) async throws -> CapturedPhoto {
         let data = try data(bundle: bundle)
         let image = await Task.detached(priority: .userInitiated) { () -> UIImage? in
             UIImage(data: data).map(CaptureStore.normalizedUpright)

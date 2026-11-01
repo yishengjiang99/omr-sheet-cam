@@ -1,6 +1,7 @@
 import Foundation
 import OMRHomrIOS
 import os
+import OMRScanKit
 
 /// Gate-1 oracle comparison shared by the app runner and `Gate1StaffTokenMatchTests`.
 enum Gate1Oracle {

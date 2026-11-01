@@ -1,3 +1,4 @@
+import OMRScanKit
 import AVFoundation
 import SwiftUI
 import UIKit

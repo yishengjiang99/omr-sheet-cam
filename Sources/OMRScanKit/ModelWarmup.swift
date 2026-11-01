@@ -21,12 +21,12 @@ import os
 /// The payload carries a simple ETA (seconds remaining, estimated from the previous warmup's
 /// total; nil when unknown). A plain estimate is fine — what matters is that the bar keeps
 /// moving and the ETA ticks down during the long steps.
-struct WarmupProgress: Sendable, Equatable {
-    var fraction: Double
-    var etaSeconds: Double?
+public struct WarmupProgress: Sendable, Equatable {
+    public var fraction: Double
+    public var etaSeconds: Double?
 }
 /// Called from a background thread; the call site hops to the main actor as needed.
-typealias WarmupProgressHandler = @Sendable (WarmupProgress) -> Void
+public typealias WarmupProgressHandler = @Sendable (WarmupProgress) -> Void
 
 /// Thread-safe multicast for warmup progress: the launch warmup starts without a watcher, and a
 /// scan that arrives mid-warmup attaches its handler to the in-flight run.
@@ -59,33 +59,33 @@ private let warmupProgressBus = WarmupProgressBus()
 
 /// Models dir: explicit argument, else `OMR_MODELS_DIR` (tests / CI), else the app bundle.
 @MainActor
-final class ModelWarmup: ObservableObject {
-    enum State: Equatable {
+public final class ModelWarmup: ObservableObject {
+    public enum State: Equatable {
         case idle, warming, ready
         case failed(String)
     }
 
-    static let shared = ModelWarmup()
+    public static let shared = ModelWarmup()
 
-    @Published private(set) var state: State = .idle
-    @Published private(set) var report: WarmupReport?
+    @Published public private(set) var state: State = .idle
+    @Published public private(set) var report: WarmupReport?
     /// Warm sessions, reused by `PageRecognitionService` and Gate-1.
-    private(set) var models: WarmedModels?
+    public private(set) var models: WarmedModels?
     private var task: Task<WarmupReport?, Never>?
     /// ms the last `readyModels()` call spent inside (0 when already warm). Diagnostic only:
     /// lets the parse log split "session built" into warmup-wait vs actual build.
-    private(set) var lastReadyWaitMs: Double = 0
+    public private(set) var lastReadyWaitMs: Double = 0
 
-    init() {}
+    public init() {}
 
     /// True once any warmup has completed. Tells a post-memory-warning re-warm apart from a
     /// first-ever warmup (launch owns that; tests with fake factories must never auto-start one).
-    private(set) var hasWarmedOnce = false
+    public private(set) var hasWarmedOnce = false
 
     /// If a warmup is in-flight, failed (retry), or due for re-warm after a memory warning, attach
     /// `progress` to it — starting it when needed — and return true. Returns false when already
     /// warm, so the caller proceeds with no warmup phase. Never starts a first-ever warmup.
-    func attachProgressIfNeeded(_ progress: @escaping WarmupProgressHandler) -> Bool {
+    public func attachProgressIfNeeded(_ progress: @escaping WarmupProgressHandler) -> Bool {
         switch state {
         case .ready:
             return false
@@ -103,7 +103,7 @@ final class ModelWarmup: ObservableObject {
     /// `progress`, when given, is attached to the in-flight run (even one started earlier without a
     /// watcher, e.g. at app launch) and receives weighted 0...1 step fractions from the worker thread.
     @discardableResult
-    func start(modelsDir: URL? = nil, progress: WarmupProgressHandler? = nil) -> Task<WarmupReport?, Never> {
+    public func start(modelsDir: URL? = nil, progress: WarmupProgressHandler? = nil) -> Task<WarmupReport?, Never> {
         if let task, state != .idle, !isFailed {
             // Attach to the in-flight run: the bus replays the current fraction immediately.
             if let progress { warmupProgressBus.add(progress) }
@@ -144,7 +144,7 @@ final class ModelWarmup: ObservableObject {
     }
 
     /// Warm sessions, starting the warmup if needed; suspends (never blocks) until ready.
-    func readyModels(modelsDir: URL? = nil) async throws -> WarmedModels {
+    public func readyModels(modelsDir: URL? = nil) async throws -> WarmedModels {
         let t0 = DispatchTime.now()
         defer { lastReadyWaitMs = ModelWarmup.ms(since: t0) }
         if let models, state == .ready { return models }
@@ -155,7 +155,7 @@ final class ModelWarmup: ObservableObject {
 
     /// Memory warning: forget the warm sessions so ORT / CoreML memory is freed once nothing else
     /// holds them; the next `readyModels()` warms up again. No-op while a warmup is running.
-    func releaseModels() {
+    public func releaseModels() {
         guard state != .warming else { return }
         let had = models != nil
         models = nil
@@ -173,7 +173,7 @@ final class ModelWarmup: ObservableObject {
     }
 
     /// One-line status for TestFlight testers (no console needed).
-    var debugLine: String {
+    public var debugLine: String {
         switch state {
         case .idle: return "warmup: idle"
         case .warming: return "warmup: warming…"
@@ -186,11 +186,11 @@ final class ModelWarmup: ObservableObject {
 
     // MARK: - Worker (off the main thread)
 
-    enum WarmupError: Error, CustomStringConvertible {
+    public enum WarmupError: Error, CustomStringConvertible {
         case modelsMissing(String)
         case badModel(String)
         case notReady(String)
-        var description: String {
+        public var description: String {
             switch self {
             case let .notReady(m): return "warmup not ready (\(m))"
             case let .modelsMissing(m): return "models missing: \(m)"
@@ -199,7 +199,7 @@ final class ModelWarmup: ObservableObject {
         }
     }
 
-    nonisolated static let log = Logger(
+    public nonisolated static let log = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "com.ragnus.vp", category: "warmup"
     )
 
@@ -207,7 +207,7 @@ final class ModelWarmup: ObservableObject {
     /// encoder CoreML session create dominates (~32 s of ~40 s). The encoder-create step is
     /// additionally interpolated by a 0.5 s ticker so the bar moves monotonically through the
     /// long step instead of stalling at a step boundary.
-    nonisolated static let warmupProgressWeights: [Double] = [
+    public nonisolated static let warmupProgressWeights: [Double] = [
         0.015, // segnet create
         0.04,  // segnet first run
         0.90,  // encoder create (compiled-model cache load + CoreML init)
@@ -217,7 +217,7 @@ final class ModelWarmup: ObservableObject {
         0.02,  // decoder first run
     ]
 
-    nonisolated static func run(modelsDir: URL?, progress: WarmupProgressHandler? = nil) throws -> WarmedModels {
+    public nonisolated static func run(modelsDir: URL?, progress: WarmupProgressHandler? = nil) throws -> WarmedModels {
         let log = Self.log
         let onMain = Thread.isMainThread
         let t0 = DispatchTime.now()
@@ -373,7 +373,7 @@ final class ModelWarmup: ObservableObject {
     }
 
     /// How the encoder session used the CoreML cache (warmup diagnostics).
-    struct EncoderCacheInfo: Sendable {
+    public struct EncoderCacheInfo: Sendable {
         /// hit / miss / incomplete (half entry deleted, cold compile) / off / failed.
         var state = "off"
         var key: String?
@@ -405,13 +405,13 @@ final class ModelWarmup: ObservableObject {
     }
 
     /// `OMR_COREML_CACHE=0` disables the cache (plain CoreML EP, compiled into a temp dir every launch).
-    nonisolated static var coreMLCacheEnabled: Bool {
+    public nonisolated static var coreMLCacheEnabled: Bool {
         ProcessInfo.processInfo.environment["OMR_COREML_CACHE"] != "0"
     }
 
     /// Encoder `.coreML` session through `CoreMLCacheStore`. A failed create on a cached entry deletes it and
     /// retries uncached, so a bad entry can never break the warmup. Never used for the decoder.
-    nonisolated static func openCachedEncoder(_ url: URL, info: inout EncoderCacheInfo, root: URL? = nil) throws -> ORTCSession {
+    public nonisolated static func openCachedEncoder(_ url: URL, info: inout EncoderCacheInfo, root: URL? = nil) throws -> ORTCSession {
         guard coreMLCacheEnabled else { return try ORTCSession(modelURL: url, provider: .coreML) }
         let store: CoreMLCacheStore
         let key: String
@@ -443,7 +443,7 @@ final class ModelWarmup: ObservableObject {
         }
     }
 
-    nonisolated static func resolveModelsDir(_ explicit: URL?) throws -> URL {
+    public nonisolated static func resolveModelsDir(_ explicit: URL?) throws -> URL {
         if let explicit { return explicit }
         if let env = ProcessInfo.processInfo.environment["OMR_MODELS_DIR"], !env.isEmpty {
             return URL(fileURLWithPath: env, isDirectory: true)
@@ -452,7 +452,7 @@ final class ModelWarmup: ObservableObject {
         throw WarmupError.modelsMissing("no models/ in the app bundle and OMR_MODELS_DIR unset")
     }
 
-    nonisolated static func modelFile(_ prefix: String, in dir: URL) throws -> URL {
+    public nonisolated static func modelFile(_ prefix: String, in dir: URL) throws -> URL {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
         guard let name = names.filter({ $0.hasPrefix(prefix) && $0.hasSuffix(".onnx") }).sorted().first else {
             throw WarmupError.modelsMissing("\(prefix)*.onnx not in \(dir.path)")
@@ -460,18 +460,18 @@ final class ModelWarmup: ObservableObject {
         return dir.appendingPathComponent(name)
     }
 
-    nonisolated static func timed<T>(_ body: () throws -> T) rethrows -> (T, Double) {
+    public nonisolated static func timed<T>(_ body: () throws -> T) rethrows -> (T, Double) {
         let t = DispatchTime.now()
         let v = try body()
         return (v, ms(since: t))
     }
 
-    nonisolated static func ms(since t: DispatchTime) -> Double {
+    public nonisolated static func ms(since t: DispatchTime) -> Double {
         Double(DispatchTime.now().uptimeNanoseconds - t.uptimeNanoseconds) / 1_000_000
     }
 
     /// `task_info(TASK_VM_INFO).phys_footprint` in MB (what Xcode / jetsam count); -1 on error.
-    nonisolated static func physFootprintMB() -> Double {
+    public nonisolated static func physFootprintMB() -> Double {
         var info = task_vm_info_data_t()
         var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
         let kr = withUnsafeMutablePointer(to: &info) {
@@ -483,8 +483,8 @@ final class ModelWarmup: ObservableObject {
     }
 }
 
-struct WarmupReport: Sendable {
-    struct Session: Sendable {
+public struct WarmupReport: Sendable {
+    public struct Session: Sendable {
         var name: String
         var provider: String
         var createMs: Double
@@ -494,15 +494,15 @@ struct WarmupReport: Sendable {
         var coreMLCache: String? = nil
     }
 
-    var sessions: [Session]
-    var totalMs: Double
-    var startMB: Double
-    var endMB: Double
-    var peakMB: Double
-    var ranOnMainThread: Bool
-    var modelsDir: URL
+    public var sessions: [Session]
+    public var totalMs: Double
+    public var startMB: Double
+    public var endMB: Double
+    public var peakMB: Double
+    public var ranOnMainThread: Bool
+    public var modelsDir: URL
 
-    var lines: [String] {
+    public var lines: [String] {
         sessions.map {
             String(format: "%@ %@: create %.0f ms, first run %.0f ms, %.0f MB",
                    $0.name, $0.provider, $0.createMs, $0.firstRunMs, $0.footprintMB)
@@ -512,17 +512,17 @@ struct WarmupReport: Sendable {
 }
 
 /// Sessions created by the warmup (ORT sessions are not thread-confined; used serially).
-final class WarmedModels: @unchecked Sendable {
-    let segnet: ORTCSession
+public final class WarmedModels: @unchecked Sendable {
+    public let segnet: ORTCSession
     /// Encoder fp16 on the CoreML EP (`.coreML`), decoder fp32 on the CPU EP (`.cpu`).
-    let encoderBackend: ORTCSession
-    let decoderBackend: ORTCSession
-    let encoder: EncoderSession
-    let decoder: DecoderSession
-    let vocabulary: HomrVocabulary
-    let report: WarmupReport
+    public let encoderBackend: ORTCSession
+    public let decoderBackend: ORTCSession
+    public let encoder: EncoderSession
+    public let decoder: DecoderSession
+    public let vocabulary: HomrVocabulary
+    public let report: WarmupReport
 
-    init(
+    public init(
         segnet: ORTCSession, encoderBackend: ORTCSession, decoderBackend: ORTCSession,
         encoder: EncoderSession, decoder: DecoderSession, vocabulary: HomrVocabulary, report: WarmupReport
     ) {
@@ -533,5 +533,25 @@ final class WarmedModels: @unchecked Sendable {
         self.decoder = decoder
         self.vocabulary = vocabulary
         self.report = report
+    }
+}
+
+/// App-lifecycle entry points for hosts: one call wires the warmup AND the memory-warning release
+/// (the release observer lives in `PageRecognitionService`, so it must exist before the first scan).
+@MainActor
+public enum ScanKit {
+    /// Launch: starts the background model warmup (never on the main thread) and installs the
+    /// memory-warning observer. A scan arriving mid-warmup attaches to it.
+    public static func warmUp() {
+        _ = PageRecognitionService.shared
+        ModelWarmup.shared.start()
+    }
+
+    /// Foreground: no-op when ready or already warming; (re)starts after a failure or a
+    /// memory-warning release, so a later scan does not pay the cold load.
+    public static func warmUpOnForeground() {
+        let state = ModelWarmup.shared.state
+        guard state != .ready, state != .warming else { return }
+        warmUp()
     }
 }

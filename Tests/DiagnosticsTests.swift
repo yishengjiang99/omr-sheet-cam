@@ -1,6 +1,7 @@
 import OMRHomrIOS
 import XCTest
 @testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// DiagnosticsLog persistence + cap, PromptBuilder ("Copy as prompt"), OMRFeedback round-trip.
 final class DiagnosticsTests: XCTestCase {

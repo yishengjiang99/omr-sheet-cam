@@ -1,11 +1,12 @@
+import OMRScanKit
 import Photos
 import PhotosUI
 import SwiftUI
 import UIKit
 
 /// Shared photo-library → upright `UIImage` path used by Library (home) and Camera.
-enum PhotoLibraryImport {
-    enum LoadError: Error, LocalizedError {
+public enum PhotoLibraryImport {
+    public enum LoadError: Error, LocalizedError {
         case noData
         /// The picker's transferable failed (typically an iCloud-only photo) and the PHAsset download
         /// fallback is unavailable because the app has no Photos authorization (F4.5).
@@ -14,7 +15,7 @@ enum PhotoLibraryImport {
         case cancelled
         case underlying(Error)
 
-        var errorDescription: String? {
+        public var errorDescription: String? {
             switch self {
             case .noData: return "Could not load that photo"
             case .notDownloaded: return "Could not load that photo. If it is stored in iCloud, open it in Photos to download it, then try again."
@@ -26,7 +27,7 @@ enum PhotoLibraryImport {
     }
 
     /// Decode an upright image from a `PhotosPickerItem` (transferable, else PHAsset + iCloud).
-    static func uprightImage(from item: PhotosPickerItem) async throws -> UIImage {
+    public static func uprightImage(from item: PhotosPickerItem) async throws -> UIImage {
         guard let data = try await loadData(item) else { throw LoadError.noData }
         let image = await Task.detached(priority: .userInitiated) { () -> UIImage? in
             UIImage(data: data).map(CaptureStore.normalizedUpright)

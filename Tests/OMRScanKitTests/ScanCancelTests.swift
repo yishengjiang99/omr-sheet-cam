@@ -1,6 +1,6 @@
 import UIKit
 import XCTest
-@testable import OMRSheetCam
+@testable import OMRScanKit
 
 /// F6.8: Cancel on the Reading screen discards the recognition result (no late Library entry / quota
 /// charge) and removes the capture JPEG that was saved before recognition.
@@ -21,7 +21,7 @@ final class ScanCancelTests: XCTestCase {
 
     func testCancelledRecognitionIsDiscardedEvenIfParseFinishesLater() async {
         let service = SlowService(delay: 200_000_000, outcome: Self.recognized())
-        let task = Task { await ResultScreen.recognizeUnlessCancelled(service: service, imageData: Data(), progress: { _ in }) }
+        let task = Task { await service.recognizeUnlessCancelled(imageData: Data(), progress: { _ in }) }
         try? await Task.sleep(nanoseconds: 30_000_000)
         task.cancel()
         let result = await task.value
@@ -30,7 +30,7 @@ final class ScanCancelTests: XCTestCase {
 
     func testUncancelledRecognitionIsReturned() async {
         let service = SlowService(delay: 10_000_000, outcome: Self.recognized())
-        let result = await ResultScreen.recognizeUnlessCancelled(service: service, imageData: Data(), progress: { _ in })
+        let result = await service.recognizeUnlessCancelled(imageData: Data(), progress: { _ in })
         XCTAssertEqual(result?.name, "recognized")
     }
 

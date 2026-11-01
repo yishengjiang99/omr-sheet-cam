@@ -1,6 +1,6 @@
 import Photos
 import XCTest
-@testable import OMRSheetCam
+@testable import OMRScanUI
 
 /// F4.5: the iCloud PHAsset fallback is only attempted with Photos access the user already granted
 /// (the app never requests it); otherwise the user gets an actionable message.
