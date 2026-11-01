@@ -33,6 +33,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] Add the original 22-token C-scale image from `~/workspace/homr-research` as a second oracle fixture (needs the Mac) — User
 
 ## Done (recent)
+- [x] CI: ios-sim runs root-package tests (`OMRScan-Package`: OMRScanKitTests + OMRScanUITests) on the simulator; dead app `-only-testing` filters for moved scan tests dropped — PR #74 scan-kit-extract (2026-11-01)
 - [x] F2.9: unreadable `index.json` is kept as `index.json.corrupt-<ts>`, Library rebuilt from saved `.mid` files (rebuilt index persisted) and a dismissible notice shown on the Library; regression `PlaylistStoreTests.testCorruptIndexIsBackedUpAndRebuiltFromMIDIFiles` — Fixer C — PR fix/f2-9-corrupt-index-recovery (2026-10-17)
 - [x] P11.1: App Review notes (`docs/asc/metadata/review_information/notes.txt`) now match the app: Library "Try sample picture" only while the Library is empty; repeat scans via Library → Camera → "Try sample picture" (or Photos); regression `ReviewNotesTests`. Notes file edited only (NOT uploaded; user/ASC upload still pending) — Fixer C — PR fix/p11-1-review-notes-sample-path (2026-10-17)
 - [x] P11.3: `OMRSheetCam.storekit` attached to shared scheme Run action + project file ref (products load in Xcode runs); `StoreKitConfigTests` + `PaywallScreenshotTests` added to ios-sim `-only-testing` allowlist — Fixer C — PR fix/p11-3-attach-storekit-config (2026-10-17)
