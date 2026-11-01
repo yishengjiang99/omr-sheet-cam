@@ -537,7 +537,6 @@
 			);
 			mainGroup = G10000000000000000000001;
 			packageReferences = (
-				P10000000000000000000001 /* XCLocalSwiftPackageReference "Packages/omr-homr-ios" */,
 				P20000000000000000000001 /* XCLocalSwiftPackageReference "." */,
 				5D0000000000000000000001 /* XCLocalSwiftPackageReference "Packages/SF2Player" */,
 			);
@@ -916,10 +915,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		P10000000000000000000001 /* XCLocalSwiftPackageReference "Packages/omr-homr-ios" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/omr-homr-ios;
-		};
 		5D0000000000000000000001 /* XCLocalSwiftPackageReference "Packages/SF2Player" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/SF2Player;
@@ -933,7 +928,7 @@
 /* Begin XCSwiftPackageProductDependency section */
 		P10000000000000000000002 /* OMRHomrIOS */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = P10000000000000000000001 /* XCLocalSwiftPackageReference "Packages/omr-homr-ios" */;
+			package = P20000000000000000000001 /* XCLocalSwiftPackageReference "." */;
 			productName = OMRHomrIOS;
 		};
 		5D0000000000000000000002 /* SF2Player */ = {

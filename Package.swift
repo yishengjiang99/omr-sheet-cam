@@ -11,16 +11,46 @@ let package = Package(
     defaultLocalization: "en",
     platforms: [.iOS(.v17)],
     products: [
+        .library(name: "OMRHomrIOS", targets: ["OMRHomrIOS"]),
         .library(name: "OMRScanKit", targets: ["OMRScanKit"]),
         .library(name: "OMRScanUI", targets: ["OMRScanUI"]),
     ],
     dependencies: [
-        .package(path: "Packages/omr-homr-ios"),
+        // Exact pin shared with Packages/omr-homr-ios (iOS 1.24.2; Linux uses 1.30.0 via ort.lock).
+        .package(url: "https://github.com/microsoft/onnxruntime-swift-package-manager", exact: "1.24.2"),
     ],
     targets: [
+        // The homr port. Sources stay in Packages/omr-homr-ios (its own package keeps the tests and the
+        // omr-test runner); a remote package cannot depend on a local sub-package, so this manifest
+        // builds the same sources directly. Keep the two manifests' target settings in sync.
+        .target(
+            name: "OMRHomrIOS",
+            dependencies: [
+                "OMRPNG",
+                .product(name: "onnxruntime", package: "onnxruntime-swift-package-manager"),
+                "CONNXRuntimeApple",
+            ],
+            path: "Packages/omr-homr-ios/Sources/OMRHomrIOS",
+            exclude: ["Resources/README.md"],
+            resources: [
+                .copy("Resources/Tokenizers"),
+                .copy("Resources/Vocab"),
+            ]
+        ),
+        .target(name: "OMRPNG", path: "Packages/omr-homr-ios/Sources/OMRPNG"),
+        .target(
+            name: "CONNXRuntimeApple",
+            dependencies: [.product(name: "onnxruntime", package: "onnxruntime-swift-package-manager")],
+            path: "Packages/omr-homr-ios/Sources/CONNXRuntimeApple",
+            linkerSettings: [
+                .linkedFramework("CoreML"),
+                .linkedFramework("Foundation"),
+                .linkedLibrary("c++"),
+            ]
+        ),
         .target(
             name: "OMRScanKit",
-            dependencies: [.product(name: "OMRHomrIOS", package: "omr-homr-ios")],
+            dependencies: ["OMRHomrIOS"],
             path: "Sources/OMRScanKit"
         ),
         .target(
