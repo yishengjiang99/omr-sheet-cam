@@ -27,7 +27,7 @@ These apply to every agent working App Store, TestFlight, or listing work in thi
 5. **Keep `TODO.md` accurate** in the same commit as the work (shared task list).
 6. **Do not edit `docs/agents/*.md` role files** unless the user explicitly requires it.
 7. **Do not cancel/pull an in-review build** unless the user explicitly asks.
-8. Identity locked: name `AI Camera - Music Reader`, bundle `com.ragnus.vp`, SKU `Ai-cam-omr`, en-US.
+8. Identity locked: name `Sheet Music Reader`, bundle `com.ragnus.vp`, SKU `Ai-cam-omr`, en-US.
 
 ## Blog posts
 

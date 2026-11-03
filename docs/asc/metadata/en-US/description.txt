@@ -1,4 +1,4 @@
-Point your camera at printed sheet music and hear it played. AI Camera - Music Reader reads the notes on your iPhone or iPad, then plays the page back so you can listen, learn, and practice.
+Point your camera at printed sheet music and hear it played. Sheet Music Reader reads the notes on your iPhone or iPad, then plays the page back so you can listen, learn, and practice.
 
 HOW IT WORKS
 1. Take a photo of a page, or pick one from your photo library.

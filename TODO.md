@@ -1,4 +1,4 @@
-# TODO — AI Camera - Music Reader
+# TODO — Sheet Music Reader
 _Last updated: 2026-10-17 10:10 AM PT by OMR iOS (audit Stream A fixer)_
 
 Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). v1.0 **build 24** WAITING_FOR_REVIEW with GPU/on-device listing + screenshots.
@@ -10,7 +10,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - Apple ORT SPM pinned `exact: "1.24.2"`
 
 ## Now (in progress)
-- [ ] 2026-11-02 (user directive): 4.3(a) resubmission — cancel dead submission e76dec16 (build 31, REJECTED / UNRESOLVED_ISSUES), resubmit latest TestFlight build 35 with uniqueness-led review notes (docs/asc/metadata/review_information/notes.txt) and the demo video attached to the App Review details (docs/asc/review-video.mp4, scripts/asc/attach_review_video.py, workflow asc-attach-review-video) — Muse
+- [ ] 2026-11-02 (user directive): 4.3(a) resubmission — cancel dead submission e76dec16 (build 31, REJECTED / UNRESOLVED_ISSUES), resubmit latest TestFlight build 35. RENAMED 2026-11-02 at user direction: store name is now "Sheet Music Reader" (was "AI Camera - Music Reader"; AI branding scrubbed from name/description) — the 19:51 PT resubmission (530fa2e9) is cancelled and redone so the new name rides this review; home-screen name stays SheetCam with uniqueness-led review notes (docs/asc/metadata/review_information/notes.txt) and the demo video attached to the App Review details (docs/asc/review-video.mp4, scripts/asc/attach_review_video.py, workflow asc-attach-review-video) — Muse
 - [ ] IAP audit Stream A (PR per bug, branch `fix/p*`): P1.12 single StoreKitManager (PR #6) → P7.4+P7.6 entitlement refresh (PR #56) → P3.7 keep photo after paywall (PR open) → P5.1/P4.2/P10.2 purchase results → P2.5/P6.3 paywall retry + restore feedback → P6.1/P1.10 Settings Pro/Restore/Manage — OMR iOS
 - [ ] IAP audit Stream D (enhancements, stacked on Stream A; PR per issue): P2.1 shared upgrade-prompt policy (#45) → P1.6 scans-left nudge (#44, PR open) → P2.2 post-scan card (#46, PR open) → P2.9 return banner (#47, PR open) → P9.4 Library Pro entry (#49, PR open) → P9.1 locked-feature prompt, Transpose, always on (#48, PR open) — OMR iOS
 - [ ] Full-page OMR perf later: Core ML encoder offline experiment + fixed-batch-8 SegNet (commits 5–6); optional page locator / stateful decoder (7–8) — OMR iOS
