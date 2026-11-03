@@ -10,6 +10,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - Apple ORT SPM pinned `exact: "1.24.2"`
 
 ## Now (in progress)
+- [ ] 2026-11-02 (user directive): 4.3(a) resubmission — cancel dead submission e76dec16 (build 31, REJECTED / UNRESOLVED_ISSUES), resubmit latest TestFlight build 35 with uniqueness-led review notes (docs/asc/metadata/review_information/notes.txt) and the demo video attached to the App Review details (docs/asc/review-video.mp4, scripts/asc/attach_review_video.py, workflow asc-attach-review-video) — Muse
 - [ ] IAP audit Stream A (PR per bug, branch `fix/p*`): P1.12 single StoreKitManager (PR #6) → P7.4+P7.6 entitlement refresh (PR #56) → P3.7 keep photo after paywall (PR open) → P5.1/P4.2/P10.2 purchase results → P2.5/P6.3 paywall retry + restore feedback → P6.1/P1.10 Settings Pro/Restore/Manage — OMR iOS
 - [ ] IAP audit Stream D (enhancements, stacked on Stream A; PR per issue): P2.1 shared upgrade-prompt policy (#45) → P1.6 scans-left nudge (#44, PR open) → P2.2 post-scan card (#46, PR open) → P2.9 return banner (#47, PR open) → P9.4 Library Pro entry (#49, PR open) → P9.1 locked-feature prompt, Transpose, always on (#48, PR open) — OMR iOS
 - [ ] Full-page OMR perf later: Core ML encoder offline experiment + fixed-batch-8 SegNet (commits 5–6); optional page locator / stateful decoder (7–8) — OMR iOS

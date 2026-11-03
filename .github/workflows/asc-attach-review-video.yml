@@ -1,0 +1,31 @@
+name: ASC attach review video
+
+# Attaches docs/asc/review-video.mp4 to the App Review details (App Store
+# Review Attachments) for AI Camera - Music Reader. Never submits anything.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: asc-music-reader-upload
+  cancel-in-progress: false
+
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Attach review demo video
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+          BUNDLE_ID: com.ragnus.vp
+          VERSION_STRING: "1.0"
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set -euo pipefail
+          pip install -q PyJWT cryptography requests
+          python3 scripts/asc/attach_review_video.py

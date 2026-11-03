@@ -1,18 +1,24 @@
-In-app purchase: this version adds an optional auto-renewable subscription, Music Reader Pro (group "Music Reader Pro"): com.ragnus.vp.pro.monthly ($4.99/month) and com.ragnus.vp.pro.yearly ($29.99/year). No account or login is required.
+REGARDING GUIDELINE 4.3(a) - WHY THIS APP IS A UNIQUE PRODUCT
 
-What is free and what is Pro (matches the in-app paywall):
-- Free: 5 page scans per day, plus everything else: on-device recognition, the player, all instruments, tempo, A-B loop, hand mute/solo, Library, Share MIDI.
-- Pro: unlimited page scans, and Transpose (shift a piece up or down 12 semitones). Saved scans, playback and sharing are never locked.
+AI Camera - Music Reader (home-screen name: SheetCam) is an original, single-purpose app built around a specialized on-device optical music recognition (OMR) pipeline. It is not a template, a reskin, or a repackaging of any other app, and it does not duplicate any other app we publish.
 
-How to reach the paywall (no camera, photo or sheet music needed): the 6th scan of the day opens the "Music Reader Pro" paywall with the Yearly and Monthly plans, Subscribe buttons, Restore purchases, and Terms of Use / Privacy Policy links.
-1. Fresh install, Library home screen: tap "Try sample picture". This button is shown on the Library home only while the Library is empty, so it is there for the first scan only.
-2. For every further scan: go back (top-left) to the Library home screen, tap "Camera", then tap "Try sample picture" at the bottom of the Camera screen (it scans a bundled sample page, no photo is taken). Repeat. Alternatively tap "Photos" on the Library home screen and import any image.
-3. The 6th scan of the day shows the paywall.
+What it does that is different: point the camera at a printed page of sheet music and the app reads the notation itself. A segmentation model (SegNet) locates the staff regions, the page geometry is corrected and dewarped, and a transformer encoder-decoder transcribes the notation staff by staff, including multi-system grand-staff pages. The output is structured music data (a MIDI file), played back with note-by-note highlighting synchronized on the original page image. A demo video is attached to these review notes: a scanned score playing back while each recognized note highlights in time.
 
-Other ways to reach the paywall: Library home toolbar "Go Pro" (free users); Settings (gear icon, top of Library) > "Upgrade to Pro"; and the Transpose control in the Player: open any saved scan, tap the key chip (lock icon, labeled "Key 0") and choose a key; for a free user this opens the paywall instead of changing the key.
+Original technology and code: all recognition runs on the device (ONNX Runtime with Core ML acceleration); score photos are never uploaded for recognition. The models are adapted from homr, an open-source research project, credited in the app's licenses. Everything else - camera capture, page processing, decoding orchestration, MIDI generation, playback, and the interface - is an original native Swift codebase written only for this product.
 
-How to test purchases and Restore: use a sandbox Apple ID (Settings > App Store > Sandbox Account on the test device). On the paywall tap Subscribe on Yearly or Monthly and confirm; the paywall closes, scans become unlimited and Transpose unlocks (Settings > Music Reader Pro shows "Music Reader Pro: active"). To test Restore: delete and reinstall the app (or use a second device with the same sandbox Apple ID), then tap "Restore purchases" on the paywall or in Settings > Music Reader Pro; Pro is restored and a "Pro restored" confirmation appears. If no active subscription exists for that Apple ID the app says "No active subscription found for this Apple ID". Manage subscription is in Settings for Pro users.
+Not a duplicate of our other apps: our audio transcription app (AI Music Radar) does the opposite job - it turns recorded sound into notation. Music Reader starts from a printed page; Radar starts from audio. They share no recognition code, no models, and no workflow, and neither can perform the other's function. Generic document scanner apps do not read music notation at all.
 
-Background audio (UIBackgroundModes: audio): the app plays the recognized sheet music as audio (a built-in SoundFont synthesizer). Music keeps playing when the user locks the device or switches apps, and the app shows Now Playing info and lock-screen / Control Center controls (play, pause, previous, next, seek), the same as a music player, so a musician can practice or listen away from the screen. The mode is used only while playback is active; the app records no audio and uses no microphone. To test: open any scan (or the sample), tap Play, lock the device or go to the Home screen: audio continues and the lock screen shows the title with play/pause and scrub controls.
+HOW TO REVIEW
+No account or login is required. On the Library home screen (shown while the Library is empty) tap "Try sample picture" to scan a bundled sample page - no camera or printed music needed. For further scans: back to Library, tap "Camera", then "Try sample picture" at the bottom, or tap "Photos" and import any image of sheet music. Open a saved scan to play it; tap any highlighted note to play from there.
 
-All music recognition runs on the device; photos and scores are never uploaded. The app sends only anonymous usage events (no photos, MIDI, email or location) and no data is used for tracking; see the Privacy Policy.
+IN-APP PURCHASE
+Optional auto-renewable subscription Music Reader Pro (group "Music Reader Pro"): com.ragnus.vp.pro.monthly ($4.99/month) and com.ragnus.vp.pro.yearly ($29.99/year).
+- Free: 5 page scans per day. Recognition, the player, all instruments, tempo, A-B loop, hand mute/solo, Library, and MIDI sharing are all included free.
+- Pro: unlimited page scans, plus Transpose (shift a piece up or down 12 semitones). Saved scans, playback, and sharing are never locked.
+The 6th scan of a day opens the paywall. It is also reachable from the Library toolbar "Go Pro", Settings > "Upgrade to Pro", and the Transpose (Key) chip in the Player. Test purchases with a sandbox Apple ID (Settings > App Store > Sandbox Account). After subscribing, Settings > Music Reader Pro shows "Music Reader Pro: active". To test Restore: reinstall the app or use a second device with the same sandbox ID, then tap "Restore purchases" on the paywall or in Settings > Music Reader Pro.
+
+BACKGROUND AUDIO
+UIBackgroundModes: audio is used only so playback of a recognized score continues on the lock screen and in the background, with Now Playing controls (play, pause, previous, next, seek) like a music player. The mode is active only during playback. The app records no audio and uses no microphone.
+
+PRIVACY
+All recognition is on-device; photos and scores are never uploaded. The app sends only anonymous usage events (no photos, MIDI, email, or location), and no data is used for tracking. See the Privacy Policy.
