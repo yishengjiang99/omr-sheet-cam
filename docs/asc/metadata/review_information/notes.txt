@@ -1,6 +1,6 @@
 REGARDING GUIDELINE 4.3(a) - WHY THIS APP IS A UNIQUE PRODUCT
 
-Sheet Music Player (home-screen name: SheetCam) is an original, single-purpose app built around a specialized on-device optical music recognition (OMR) pipeline. It is not a template, a reskin, or a repackaging of any other app, and it does not duplicate any other app we publish.
+Sheet Music Reader by SheetCam (home-screen name: SheetCam) is an original, single-purpose app built around a specialized on-device optical music recognition (OMR) pipeline. It is not a template, a reskin, or a repackaging of any other app, and it does not duplicate any other app we publish.
 
 What it does that is different: point the camera at a printed page of sheet music and the app reads the notation itself. A segmentation model (SegNet) locates the staff regions, the page geometry is corrected and dewarped, and a transformer encoder-decoder transcribes the notation staff by staff, including multi-system grand-staff pages. The output is structured music data (a MIDI file), played back with note-by-note highlighting synchronized on the original page image. A demo video is attached to these review notes: a scanned score playing back while each recognized note highlights in time.
 
