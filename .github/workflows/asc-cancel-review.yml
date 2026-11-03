@@ -59,8 +59,6 @@ jobs:
           vid = ver["id"]
           vstate = ver["attributes"].get("appStoreState")
           print("APP", app_id, "VERSION", vid, ver_str, vstate, ver["attributes"].get("appVersionState"))
-          if vstate in ("PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED", "INVALID_BINARY"):
-            print("RESULT version already editable:", vstate); sys.exit(0)
           if vstate in ("PENDING_DEVELOPER_RELEASE", "PENDING_APPLE_RELEASE", "READY_FOR_SALE", "READY_FOR_DISTRIBUTION", "PROCESSING_FOR_APP_STORE"):
             raise SystemExit(f"RESULT version is {vstate} (approved/released); cannot pull from review")
           # Submissions come back in no guaranteed order and the list is capped: page through all of them
@@ -75,6 +73,8 @@ jobs:
             print("SUBMISSION", s["id"], a.get("state"), "submitted=", a.get("submittedDate"))
           open_ = [s for s in subs if s["attributes"].get("state") in ("WAITING_FOR_REVIEW", "UNRESOLVED_ISSUES", "IN_REVIEW", "CANCELING")]
           if not open_:
+            if vstate in ("PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED", "INVALID_BINARY"):
+              print("RESULT version already editable and no open submission:", vstate); sys.exit(0)
             raise SystemExit(f"RESULT no open review submission found, version is {vstate}")
           for s in open_:
             st = s["attributes"]["state"]
@@ -94,7 +94,7 @@ jobs:
               sst.append("GONE(404)" if code == 404 else resp["data"]["attributes"].get("state"))
             vstate = api("GET", f"/v1/appStoreVersions/{vid}")[1]["data"]["attributes"].get("appStoreState")
             print(f"poll {i+1}: submissions={sst} version={vstate}")
-            if vstate in ("DEVELOPER_REJECTED", "PREPARE_FOR_SUBMISSION") and all(x not in ("CANCELING", "WAITING_FOR_REVIEW", "IN_REVIEW") for x in sst):
+            if vstate in ("DEVELOPER_REJECTED", "PREPARE_FOR_SUBMISSION", "REJECTED", "METADATA_REJECTED") and all(x not in ("CANCELING", "WAITING_FOR_REVIEW", "IN_REVIEW", "UNRESOLVED_ISSUES") for x in sst):
               print("RESULT pulled from review; version now", vstate); sys.exit(0)
           raise SystemExit(f"RESULT timed out; version={vstate} submissions={sst}")
           PY
