@@ -1,5 +1,5 @@
 # TODO — Sheet Music Reader
-_Last updated: 2026-10-17 10:10 AM PT by OMR iOS (audit Stream A fixer)_
+_Last updated: 2026-11-19 1:30 PM PT by OMR Core (ORT xcframework vendored as binaryTarget)_
 
 Shared task list: whoever pushes to `main` updates it in the same commit as the work. Details go in commit messages or `docs/`. Tip (see latest main). v1.0 **build 24** WAITING_FOR_REVIEW with GPU/on-device listing + screenshots.
 
@@ -7,7 +7,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - Decoder fp32 on ORT CPU EP; encoder + SegNet fp16 on CoreML EP with CPU fallback
 - MIDI: SMF format 1, 480 TPQ
 - AGPL package `Packages/omr-homr-ios` stays isolated from the app
-- Apple ORT SPM pinned `exact: "1.24.2"`
+- Apple ORT 1.24.2 xcframework as a SwiftPM `binaryTarget` (release `ort-1.24.2`, checksum-pinned)
 
 ## Now (in progress)
 - [ ] 2026-11-02 (user directive): 4.3(a) resubmission — cancel dead submission e76dec16 (build 31, REJECTED / UNRESOLVED_ISSUES), resubmit latest TestFlight build 35. RENAMED 2026-11-02 at user direction: store name is now "Sheet Music Reader by SheetCam" ("Sheet Music Reader" and "Sheet Music Player" were both tried and rejected by Apple — already used on a different account; final name chosen by user 2026-11-02; originally "AI Camera - Music Reader", AI branding scrubbed from name/description) — the 19:51 PT resubmission (530fa2e9) is cancelled and redone so the new name rides this review; home-screen name stays SheetCam with uniqueness-led review notes (docs/asc/metadata/review_information/notes.txt) and the demo video attached to the App Review details (docs/asc/review-video.mp4, scripts/asc/attach_review_video.py, workflow asc-attach-review-video) — Muse
@@ -25,7 +25,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 - [ ] ASC console App Privacy: publish answers in `docs/asc/app-privacy.md` (not "Data Not Collected") before next IAP binary submit — User
 - [ ] Redeploy `docs/asc/web/privacy.html` + `support.html` to grepawk.com/music-reader/ (live pages still claim no analytics/no IAP) — User / web
 - [ ] Real-device CoreML cache numbers (encoder/SegNet cold vs warm) — OMR iOS + User
-- [ ] Bump Apple ORT to `exact: "1.30.0"` once upstream tags it — OMR Core — blocked upstream
+- [ ] Bump Apple ORT to 1.30.0: mirror the official 1.30.0 pod zip on an `ort-1.30.0` release, swap URL + checksum in both manifests (docs/ORT-LINUX.md) — OMR Core
 
 ## Blocked / waiting on user
 - [ ] App Review outcome for build 15 — User

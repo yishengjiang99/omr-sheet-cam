@@ -27,24 +27,23 @@ Manual equivalent for another package that reuses the modulemap: `scripts/fetch-
 
 ## iOS version gap (SwiftPM)
 
-`Packages/omr-homr-ios/Package.swift` pins `onnxruntime-swift-package-manager` to `exact: "1.24.2"`.
-That is the newest tag published there (`git ls-remote --tags https://github.com/microsoft/onnxruntime-swift-package-manager`
-on 2026-09-26: `v1.15.0` … `v1.19.2`, `1.20.0`, `1.24.1`, `1.24.2`; no `1.24.3`, no `1.30.0`).
-The 1.30.0 bump exists only as open PR microsoft/onnxruntime-swift-package-manager#46 (branch
-`edgchen1/update_to_ort_1.30`, untagged), which points at
-`https://download.onnxruntime.ai/pod-archive-onnxruntime-c-1.30.0.zip`
-(SHA-256 `e6f1670c14406fd9f082bb400ab197a9b0a9646058ca6366e440642e2b54a2ea`; the archive is live, HTTP 200).
+`Package.swift` and `Packages/omr-homr-ios/Package.swift` link ORT **1.24.2** as a SwiftPM `.binaryTarget`
+(`onnxruntime`): the official `pod-archive-onnxruntime-c-1.24.2.zip`, SHA-256
+`f7100a992d2a8135168c8afd831e6a58b465349101982aa58b3e11d36e600b54`, mirrored unmodified on this repo's
+`ort-1.24.2` release. microsoft/onnxruntime-swift-package-manager, which used to supply it, returns 404 since
+2026-11-19; the checksum is the one its 1.24.2 manifest declared, and the zip on download.onnxruntime.ai matches it.
+A 1.30.0 archive exists: `https://download.onnxruntime.ai/pod-archive-onnxruntime-c-1.30.0.zip`
+(SHA-256 `e6f1670c14406fd9f082bb400ab197a9b0a9646058ca6366e440642e2b54a2ea`, from that repo's PR #46).
 
 Gap: iOS runs ORT **1.24.2**, Linux and the Python oracle run **1.30.0**. On Linux, 1.24.2 gave an fp16
-encoder context that differed from 1.30.0 / Python homr by up to 0.0039. Once a `1.30.0` tag is published,
-switch to `exact: "1.30.0"`. Don't pin to the PR branch or a revision; it isn't a release.
+encoder context that differed from 1.30.0 / Python homr by up to 0.0039. Closing it is now a URL + checksum
+swap in both manifests (mirror the 1.30.0 zip on an `ort-1.30.0` release first), plus a full simulator run.
 
 ## Apple (C API)
 
 - Module: `CONNXRuntimeApple` (a C target in `Packages/omr-homr-ios/Sources/CONNXRuntimeApple`) includes
   `<onnxruntime/onnxruntime_c_api.h>` and `<onnxruntime/coreml_provider_factory.h>` from the
-  `onnxruntime.xcframework` binary target of onnxruntime-swift-package-manager (pulled in by its
-  `onnxruntime` product). The framework has no module map, so the C target re-exports it.
+  `onnxruntime.xcframework` in the `onnxruntime` binaryTarget. The framework has no module map, so the C target re-exports it.
 - `.cpu` means the default CPU EP. `.coreML` calls `OrtSessionOptionsAppendExecutionProvider_CoreML(options, 0x010 | 0x020)`
   (MLProgram, CPU+GPU), and the CPU EP stays registered as fallback. Use it for encoder and SegNet only;
   `DecoderSession` rejects any backend that reports a non-CPU provider.
