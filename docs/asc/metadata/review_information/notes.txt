@@ -9,7 +9,7 @@ Original technology and code: all recognition runs on the device (ONNX Runtime w
 Not a duplicate of our other apps: our audio transcription app (AI Music Radar) does the opposite job - it turns recorded sound into notation. Music Reader starts from a printed page; Radar starts from audio. They share no recognition code, no models, and no workflow, and neither can perform the other's function. Generic document scanner apps do not read music notation at all.
 
 HOW TO REVIEW
-No account or login is required. On the Library home screen (shown while the Library is empty) tap "Try sample picture" to scan a bundled sample page - no camera or printed music needed. For further scans: back to Library, tap "Camera", then "Try sample picture" at the bottom, or tap "Photos" and import any image of sheet music. Open a saved scan to play it; tap any highlighted note to play from there.
+No account or login is required. On the Library home screen (shown while the Library is empty) tap "Try sample picture" to scan a bundled sample page - no camera or printed music needed. For further scans: back to Library, tap "Camera", then "Try sample picture" at the bottom of the Camera screen, or tap "Photos" and import any image of sheet music. Open a saved scan to play it; tap any highlighted note to play from there.
 
 IN-APP PURCHASE
 Optional auto-renewable subscription Music Reader Pro (group "Music Reader Pro"): com.ragnus.vp.pro.monthly ($4.99/month) and com.ragnus.vp.pro.yearly ($29.99/year).

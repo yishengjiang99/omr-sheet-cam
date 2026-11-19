@@ -116,12 +116,14 @@ Third-party components
 
 6. ONNX Runtime
    https://github.com/microsoft/onnxruntime
-   https://github.com/microsoft/onnxruntime-swift-package-manager (SPM, exact 1.24.2)
    License: MIT
-   iOS links onnxruntime.xcframework from the Swift package above; the Linux
-   test build uses the official ONNX Runtime 1.30.0 release (ort.lock). ONNX
-   Runtime's own third-party notices:
-   https://github.com/microsoft/onnxruntime/blob/v1.24.2/ThirdPartyNotices.txt
+   iOS links the official ONNX Runtime 1.24.2 onnxruntime.xcframework
+   (https://download.onnxruntime.ai/pod-archive-onnxruntime-c-1.24.2.zip, SHA-256
+   f7100a992d2a8135168c8afd831e6a58b465349101982aa58b3e11d36e600b54) as a
+   SwiftPM binaryTarget, mirrored unmodified with its LICENSE and
+   ThirdPartyNotices.txt at
+   https://github.com/yishengjiang99/omr-sheet-cam/releases/tag/ort-1.24.2
+   The Linux test build uses the official ONNX Runtime 1.30.0 release (ort.lock).
 
    MIT License
 

@@ -5,43 +5,32 @@ import PackageDescription
 /// Product / module name: `OMRHomrIOS` (import OMRHomrIOS).
 ///
 /// ONNX Runtime on iOS / macOS: the ORT **C API** (`ORTCSession`, same wrapper as Linux) from the
-/// `onnxruntime.xcframework` that microsoft/onnxruntime-swift-package-manager ships
-/// (pod-archive-onnxruntime-c-<ver>.zip; headers include `onnxruntime_c_api.h` and
-/// `coreml_provider_factory.h`). The package's only product (`onnxruntime`, the objc bindings)
-/// is what pulls that binary target in (its ObjC bindings are not used; the product is kept only
-/// because it is the sole way to link the xcframework); the local `CONNXRuntimeApple` C target
-/// re-exports the C headers to Swift. The old onnxruntime-objc `ORTObjCSession` was removed
-/// (no Float16 element type, so it could not feed the pinned fp16 encoder / SegNet).
+/// official ONNX Runtime 1.24.2 `onnxruntime.xcframework` (pod-archive-onnxruntime-c-1.24.2.zip;
+/// headers include `onnxruntime_c_api.h` and `coreml_provider_factory.h`), linked as a SwiftPM
+/// `binaryTarget`. The local `CONNXRuntimeApple` C target re-exports the C headers to Swift.
 /// Declared only when the manifest is evaluated on an Apple host (Apple-only binary xcframework,
 /// so Linux resolution never fetches it). On Linux the backend is `ORTCSession` over the
 /// `CONNXRuntime` system library (see the block at the end of this file).
 ///
-/// Version pin: `exact: "1.24.2"` is the newest tag published on onnxruntime-swift-package-manager
-/// (checked 2026-09-26 with `git ls-remote --tags`). Linux `ort.lock` is 1.30.0; the SPM repo's
-/// 1.30.0 bump is still an open PR (microsoft/onnxruntime-swift-package-manager#46, untagged), so
-/// iOS and Linux differ by 1.24.2 vs 1.30.0 until it is tagged. See docs/ORT-LINUX.md "iOS version gap".
+/// Artifact: microsoft/onnxruntime-swift-package-manager now returns 404 (2026-11-19), so the exact zip
+/// it pointed at (https://download.onnxruntime.ai/pod-archive-onnxruntime-c-1.24.2.zip) is mirrored
+/// unmodified on this repo's `ort-1.24.2` release. The checksum is the one that package's 1.24.2
+/// manifest declared; SwiftPM verifies it on download. MIT, see NOTICE. Linux `ort.lock` is 1.30.0.
 #if canImport(Darwin)
-let ortPackages: [Package.Dependency] = [
-    .package(url: "https://github.com/microsoft/onnxruntime-swift-package-manager", exact: "1.24.2"),
-]
 let ortTargetDeps: [Target.Dependency] = [
-    .product(
-        name: "onnxruntime",
-        package: "onnxruntime-swift-package-manager",
-        condition: .when(platforms: [.iOS, .macOS])
-    ),
+    .target(name: "onnxruntime", condition: .when(platforms: [.iOS, .macOS])),
     .target(name: "CONNXRuntimeApple", condition: .when(platforms: [.iOS, .macOS])),
 ]
 let ortExtraTargets: [Target] = [
-    // UNVERIFIED on this Linux host: needs a macOS / Xcode build (pending CI).
+    .binaryTarget(
+        name: "onnxruntime",
+        url: "https://github.com/yishengjiang99/omr-sheet-cam/releases/download/ort-1.24.2/pod-archive-onnxruntime-c-1.24.2.zip",
+        checksum: "f7100a992d2a8135168c8afd831e6a58b465349101982aa58b3e11d36e600b54"
+    ),
     .target(
         name: "CONNXRuntimeApple",
         dependencies: [
-            .product(
-                name: "onnxruntime",
-                package: "onnxruntime-swift-package-manager",
-                condition: .when(platforms: [.iOS, .macOS])
-            ),
+            .target(name: "onnxruntime", condition: .when(platforms: [.iOS, .macOS])),
         ],
         path: "Sources/CONNXRuntimeApple",
         linkerSettings: [
@@ -52,7 +41,6 @@ let ortExtraTargets: [Target] = [
     ),
 ]
 #else
-let ortPackages: [Package.Dependency] = []
 let ortTargetDeps: [Target.Dependency] = []
 let ortExtraTargets: [Target] = []
 #endif
@@ -71,7 +59,6 @@ let package = Package(
         // Non-interactive fixture runner (repo root: scripts/omr-test).
         .executable(name: "omr-test", targets: ["omr-test"]),
     ],
-    dependencies: ortPackages,
     targets: [
         .target(
             name: "OMRHomrIOS",
@@ -112,7 +99,7 @@ let package = Package(
 //
 // Adds the `CONNXRuntime` system library (Sources/CONNXRuntime: module.modulemap + shim.h) and
 // links `OMRHomrIOS` against the official libonnxruntime fetched by `scripts/fetch-ort` into
-// <repo>/third_party/onnxruntime. Linux only; Apple platforms keep onnxruntime-objc + CoreML and
+// <repo>/third_party/onnxruntime. Linux only; Apple platforms keep the ORT xcframework + CoreML and
 // never see these settings. Enabled automatically when the fetched header exists, so
 // `swift build` / `swift test` stay green (ORTCSession compiled out) before fetch-ort runs.
 //   OMR_ORT_C=0            force off     OMR_ORT_C=1  force on (error if headers missing)

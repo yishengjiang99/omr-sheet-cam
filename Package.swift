@@ -15,11 +15,14 @@ let package = Package(
         .library(name: "OMRScanKit", targets: ["OMRScanKit"]),
         .library(name: "OMRScanUI", targets: ["OMRScanUI"]),
     ],
-    dependencies: [
-        // Exact pin shared with Packages/omr-homr-ios (iOS 1.24.2; Linux uses 1.30.0 via ort.lock).
-        .package(url: "https://github.com/microsoft/onnxruntime-swift-package-manager", exact: "1.24.2"),
-    ],
     targets: [
+        // ONNX Runtime 1.24.2 xcframework, same artifact + checksum as Packages/omr-homr-ios (see the
+        // comment there; Linux uses 1.30.0 via ort.lock).
+        .binaryTarget(
+            name: "onnxruntime",
+            url: "https://github.com/yishengjiang99/omr-sheet-cam/releases/download/ort-1.24.2/pod-archive-onnxruntime-c-1.24.2.zip",
+            checksum: "f7100a992d2a8135168c8afd831e6a58b465349101982aa58b3e11d36e600b54"
+        ),
         // The homr port. Sources stay in Packages/omr-homr-ios (its own package keeps the tests and the
         // omr-test runner); a remote package cannot depend on a local sub-package, so this manifest
         // builds the same sources directly. Keep the two manifests' target settings in sync.
@@ -27,7 +30,7 @@ let package = Package(
             name: "OMRHomrIOS",
             dependencies: [
                 "OMRPNG",
-                .product(name: "onnxruntime", package: "onnxruntime-swift-package-manager"),
+                "onnxruntime",
                 "CONNXRuntimeApple",
             ],
             path: "Packages/omr-homr-ios/Sources/OMRHomrIOS",
@@ -40,7 +43,7 @@ let package = Package(
         .target(name: "OMRPNG", path: "Packages/omr-homr-ios/Sources/OMRPNG"),
         .target(
             name: "CONNXRuntimeApple",
-            dependencies: [.product(name: "onnxruntime", package: "onnxruntime-swift-package-manager")],
+            dependencies: ["onnxruntime"],
             path: "Packages/omr-homr-ios/Sources/CONNXRuntimeApple",
             linkerSettings: [
                 .linkedFramework("CoreML"),

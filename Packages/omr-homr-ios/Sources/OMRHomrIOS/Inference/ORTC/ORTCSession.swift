@@ -42,7 +42,7 @@ import Foundation
 // - Linux: `CONNXRuntime` system library over the official libonnxruntime fetched by
 //   scripts/fetch-ort (ort.lock, 1.30.0). CPU execution provider ONLY; `.coreML` throws.
 // - iOS / macOS: `CONNXRuntimeApple` (C headers of the onnxruntime.xcframework shipped by
-//   microsoft/onnxruntime-swift-package-manager, pinned in Package.swift). `.cpu` = default CPU EP;
+//   the `onnxruntime` binaryTarget, ORT 1.24.2, pinned by checksum in Package.swift). `.cpu` = default CPU EP;
 //   `.coreML` = `OrtSessionOptionsAppendExecutionProvider_CoreML` (MLProgram, CPU+GPU) with the CPU
 //   EP still registered as fallback; with a `cacheDirectory`, the provider-options API with the same
 //   format / compute units + `ModelCacheDirectory`, model loaded from bytes with `COREML_CACHE_KEY`
