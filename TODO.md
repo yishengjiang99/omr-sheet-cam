@@ -23,6 +23,7 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 
 ## Next
 - [ ] ASC console App Privacy: publish answers in `docs/asc/app-privacy.md` (not "Data Not Collected") before next IAP binary submit — User
+- [ ] Upload review notes to ASC: `notes.txt` again says the sample button is "at the bottom of the Camera screen" (lost in 0286397; fixes red `ReviewNotesTests`) — User / ASC
 - [ ] Redeploy `docs/asc/web/privacy.html` + `support.html` to grepawk.com/music-reader/ (live pages still claim no analytics/no IAP) — User / web
 - [ ] Real-device CoreML cache numbers (encoder/SegNet cold vs warm) — OMR iOS + User
 - [ ] Bump Apple ORT to 1.30.0: mirror the official 1.30.0 pod zip on an `ort-1.30.0` release, swap URL + checksum in both manifests (docs/ORT-LINUX.md) — OMR Core
