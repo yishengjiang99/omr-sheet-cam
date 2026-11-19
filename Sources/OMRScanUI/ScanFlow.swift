@@ -48,29 +48,47 @@ public final class ScanFlowModel: ObservableObject {
     public func scan(_ images: [UIImage], source: ScanSource) {
         guard !images.isEmpty else { return }
         firstPage = images.first
-        status = ScanStatus(phase: .reading, fraction: 0, pageCount: images.count)
-        phase = .working
-        let runner = runner, host = host
-        let post: @Sendable (ScanStatus) -> Void = { [weak self] status in
-            Task { @MainActor in self?.apply(status) }
-        }
+        begin(pageCount: images.count)
         task?.cancel()
         task = Task { [weak self] in
             // Encoding runs off the main thread; the runner then decodes (gray or color) itself.
             let pages = await Task.detached(priority: .userInitiated) { images.compactMap { $0.jpegData(compressionQuality: 0.92) } }.value
             guard !Task.isCancelled else { return }
-            do {
-                let result = try await runner.run(pages: pages, source: source, host: host, onStatus: post)
-                guard !Task.isCancelled else { return }
-                self?.phase = .done(tracks: result.trackCount, notes: result.noteCount)
-                try? await Task.sleep(nanoseconds: 700_000_000)
-                if case .done = self?.phase { self?.onClose(result) }
-            } catch let e as ScanError {
-                guard e.kind != .cancelled, !Task.isCancelled else { return }
-                self?.phase = .error(e)
-            } catch {
-                self?.phase = .error(ScanError(kind: .failed, message: error.localizedDescription, reasonCode: "parse_error"))
-            }
+            await self?.run(pages: pages, source: source)
+        }
+    }
+
+    /// Scan from pages already encoded as image data. File imports encode incrementally in
+    /// `ScanPages.pageData`, so no full-size page images are ever retained on this path.
+    public func scan(pageData pages: [Data], source: ScanSource) {
+        guard !pages.isEmpty else { return }
+        firstPage = pages.first.flatMap { UIImage(data: $0) }
+        begin(pageCount: pages.count)
+        task?.cancel()
+        task = Task { [weak self] in await self?.run(pages: pages, source: source) }
+    }
+
+    private func begin(pageCount: Int) {
+        status = ScanStatus(phase: .reading, fraction: 0, pageCount: pageCount)
+        phase = .working
+    }
+
+    private func run(pages: [Data], source: ScanSource) async {
+        let runner = runner, host = host
+        let post: @Sendable (ScanStatus) -> Void = { [weak self] status in
+            Task { @MainActor in self?.apply(status) }
+        }
+        do {
+            let result = try await runner.run(pages: pages, source: source, host: host, onStatus: post)
+            guard !Task.isCancelled else { return }
+            phase = .done(tracks: result.trackCount, notes: result.noteCount)
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            if case .done = phase { onClose(result) }
+        } catch let e as ScanError {
+            guard e.kind != .cancelled, !Task.isCancelled else { return }
+            phase = .error(e)
+        } catch {
+            phase = .error(ScanError(kind: .failed, message: error.localizedDescription, reasonCode: "parse_error"))
         }
     }
 
@@ -134,9 +152,12 @@ public struct OMRScanFlow: View {
         .fileImporter(isPresented: $showFile, allowedContentTypes: [.pdf, .image]) { result in
             switch result {
             case let .success(url):
-                let pages = ScanPages.images(fromFile: url)
-                if pages.isEmpty { model.fail(.unreadableInput, "the file has no readable pages", code: "invalid_input") }
-                else { model.scan(pages, source: .file) }
+                Task {
+                    // Rasterizing + encoding run on a background task, one page at a time.
+                    let pages = await ScanPages.pageData(fromFile: url)
+                    if pages.isEmpty { model.fail(.unreadableInput, "the file has no readable pages", code: "invalid_input") }
+                    else { model.scan(pageData: pages, source: .file) }
+                }
             case let .failure(e): model.fail(.unreadableInput, e.localizedDescription, code: "invalid_input")
             }
         }
@@ -261,19 +282,49 @@ public struct OMRScanFlow: View {
 
 /// Page rasterizing for file imports.
 public enum ScanPages {
-    /// Rasterizes up to `maxPages` of a PDF at ~200 dpi on white.
+    /// Longest edge, in pixels, of a rendered or imported page. Recognition resizes every page
+    /// to the model's 1280×256 input, and a letter/A4 page at 200 dpi is ~1700×2200 px, so
+    /// 2560 keeps ordinary pages at full quality while capping oversize ones: a 36×48 in page
+    /// at 200 dpi would otherwise rasterize to ~69 MP per page.
+    public static let maxLongEdge: CGFloat = 2560
+
+    /// Rasterizes one PDF page at ~200 dpi on white, clamped to `maxLongEdge`.
+    /// Returns nil for a missing page or degenerate page bounds.
+    public static func renderPage(_ doc: PDFDocument, at index: Int, dpi: CGFloat = 200) -> UIImage? {
+        guard let page = doc.page(at: index) else { return nil }
+        let box = page.bounds(for: .mediaBox)
+        guard box.width > 0, box.height > 0 else { return nil }
+        var scale = dpi / 72
+        let longEdge = max(box.width, box.height) * scale
+        if longEdge > maxLongEdge { scale *= maxLongEdge / longEdge }
+        let size = CGSize(width: (box.width * scale).rounded(), height: (box.height * scale).rounded())
+        guard size.width >= 1, size.height >= 1 else { return nil }
+        let fmt = UIGraphicsImageRendererFormat(); fmt.scale = 1
+        return UIGraphicsImageRenderer(size: size, format: fmt).image { ctx in
+            UIColor.white.setFill(); ctx.fill(CGRect(origin: .zero, size: size))
+            ctx.cgContext.translateBy(x: 0, y: size.height); ctx.cgContext.scaleBy(x: scale, y: -scale)
+            page.draw(with: .mediaBox, to: ctx.cgContext)
+        }
+    }
+
+    /// Rasterizes up to `maxPages` of a PDF at ~200 dpi on white, each page clamped to
+    /// `maxLongEdge`. Prefer `pageData(fromFile:)` for imports: it encodes each page before
+    /// rendering the next, so no more than one full-size page image is alive at a time.
     public static func render(_ doc: PDFDocument, maxPages: Int = 10, dpi: CGFloat = 200) -> [UIImage] {
-        (0..<min(doc.pageCount, maxPages)).compactMap { i in
-            guard let page = doc.page(at: i) else { return nil }
-            let box = page.bounds(for: .mediaBox)
-            let scale = dpi / 72
-            let size = CGSize(width: box.width * scale, height: box.height * scale)
-            let fmt = UIGraphicsImageRendererFormat(); fmt.scale = 1
-            return UIGraphicsImageRenderer(size: size, format: fmt).image { ctx in
-                UIColor.white.setFill(); ctx.fill(CGRect(origin: .zero, size: size))
-                ctx.cgContext.translateBy(x: 0, y: size.height); ctx.cgContext.scaleBy(x: scale, y: -scale)
-                page.draw(with: .mediaBox, to: ctx.cgContext)
-            }
+        (0..<min(doc.pageCount, maxPages)).compactMap { renderPage(doc, at: $0, dpi: dpi) }
+    }
+
+    /// Downscales an imported image whose long edge exceeds `maxLongEdge`; unchanged otherwise.
+    static func clamped(_ image: UIImage) -> UIImage {
+        let px = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
+        let longEdge = max(px.width, px.height)
+        guard longEdge > maxLongEdge else { return image }
+        let f = maxLongEdge / longEdge
+        let size = CGSize(width: (px.width * f).rounded(), height: (px.height * f).rounded())
+        guard size.width >= 1, size.height >= 1 else { return image }
+        let fmt = UIGraphicsImageRendererFormat(); fmt.scale = 1
+        return UIGraphicsImageRenderer(size: size, format: fmt).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
         }
     }
 
@@ -282,8 +333,27 @@ public enum ScanPages {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         if let doc = PDFDocument(url: url) { return render(doc) }
-        if let data = try? Data(contentsOf: url), let img = UIImage(data: data) { return [img] }
+        if let data = try? Data(contentsOf: url), let img = UIImage(data: data) { return [clamped(img)] }
         return []
+    }
+
+    /// JPEG pages of a picked PDF or image file, rendered and encoded one page at a time on a
+    /// background task, so importing never blocks the main thread and never holds more than one
+    /// full-size page image. Empty when the file has no readable pages.
+    public static func pageData(fromFile url: URL, maxPages: Int = 10) async -> [Data] {
+        await Task.detached(priority: .userInitiated) {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            if let doc = PDFDocument(url: url) {
+                return (0..<min(doc.pageCount, maxPages)).compactMap { i in
+                    autoreleasepool { renderPage(doc, at: i)?.jpegData(compressionQuality: 0.92) }
+                }
+            }
+            if let data = try? Data(contentsOf: url), let img = UIImage(data: data) {
+                return [clamped(img).jpegData(compressionQuality: 0.92)].compactMap { $0 }
+            }
+            return []
+        }.value
     }
 }
 
