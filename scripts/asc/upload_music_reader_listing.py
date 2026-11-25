@@ -327,7 +327,14 @@ def verify(app_id, app, vid, info_id, L, copyright_, cat1, R, shots, warnings) -
           and rd.get("contactPhone") == R["phone_number"] and rd.get("contactEmail") == R["email_address"],
           f"{rd.get('contactFirstName')} {rd.get('contactLastName')} {rd.get('contactPhone')} {rd.get('contactEmail')} demo={rd.get('demoAccountRequired')}")
     if R["notes"]:
-        check("App Review notes", (rd.get("notes") or "").strip() == R["notes"], f"{len(rd.get('notes') or '')} chars")
+        live_notes = (rd.get("notes") or "").strip()
+        check("App Review notes", live_notes == R["notes"], f"{len(live_notes)} chars")
+        if live_notes != R["notes"]:
+            print("---- LIVE NOTES ----")
+            print(live_notes)
+            print("---- REPO NOTES ----")
+            print(R["notes"])
+            print("---- END NOTES ----")
     if vloc:
         sets = api("GET", f"/v1/appStoreVersionLocalizations/{vloc['id']}/appScreenshotSets?limit=50")["data"]
         seen = {}
