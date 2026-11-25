@@ -23,7 +23,8 @@ Shared task list: whoever pushes to `main` updates it in the same commit as the 
 
 ## Next
 - [ ] ASC console App Privacy: publish answers in `docs/asc/app-privacy.md` (not "Data Not Collected") before next IAP binary submit — User
-- [ ] Upload review notes to ASC: `notes.txt` again says the sample button is "at the bottom of the Camera screen" (lost in 0286397; fixes red `ReviewNotesTests`) — User / ASC
+- [x] Review notes phrase fix: `notes.txt` matches live ASC again ("Try sample picture" at the bottom — the "of the Camera screen" regression from 0286397 removed 2026-11-24) + a Guideline 3.1.2 subscription-information section appended; uploads with the next listing upload — Muse — 2026-11-24
+- [ ] 2026-11-24: v1.0 build 35 REJECTED (Guideline 3.1.2(c) subscription metadata + 2.3.3 screenshots, UNRESOLVED_ISSUES). Metadata already verifies OK in ASC (description carries EULA + Privacy links; paywall shows title/length/price + Terms/Privacy links). Remaining: replace peach marketing-frame screenshots with real simulator captures (ios-screenshots workflow), run listing upload, reply in Resolution Center, resubmit build 35 — Muse (fix) / User (resubmit)
 - [ ] Redeploy `docs/asc/web/privacy.html` + `support.html` to grepawk.com/music-reader/ (live pages still claim no analytics/no IAP) — User / web
 - [ ] Real-device CoreML cache numbers (encoder/SegNet cold vs warm) — OMR iOS + User
 - [ ] Bump Apple ORT to 1.30.0: mirror the official 1.30.0 pod zip on an `ort-1.30.0` release, swap URL + checksum in both manifests (docs/ORT-LINUX.md) — OMR Core

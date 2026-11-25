@@ -9,7 +9,7 @@ Original technology and code: all recognition runs on the device (ONNX Runtime w
 Not a duplicate of our other apps: our audio transcription app (AI Music Radar) does the opposite job - it turns recorded sound into notation. Music Reader starts from a printed page; Radar starts from audio. They share no recognition code, no models, and no workflow, and neither can perform the other's function. Generic document scanner apps do not read music notation at all.
 
 HOW TO REVIEW
-No account or login is required. On the Library home screen (shown while the Library is empty) tap "Try sample picture" to scan a bundled sample page - no camera or printed music needed. For further scans: back to Library, tap "Camera", then "Try sample picture" at the bottom of the Camera screen, or tap "Photos" and import any image of sheet music. Open a saved scan to play it; tap any highlighted note to play from there.
+No account or login is required. On the Library home screen (shown while the Library is empty) tap "Try sample picture" to scan a bundled sample page - no camera or printed music needed. For further scans: back to Library, tap "Camera", then "Try sample picture" at the bottom, or tap "Photos" and import any image of sheet music. Open a saved scan to play it; tap any highlighted note to play from there.
 
 IN-APP PURCHASE
 Optional auto-renewable subscription Music Reader Pro (group "Music Reader Pro"): com.ragnus.vp.pro.monthly ($4.99/month) and com.ragnus.vp.pro.yearly ($29.99/year).
@@ -22,3 +22,6 @@ UIBackgroundModes: audio is used only so playback of a recognized score continue
 
 PRIVACY
 All recognition is on-device; photos and scores are never uploaded. The app sends only anonymous usage events (no photos, MIDI, email, or location), and no data is used for tracking. See the Privacy Policy.
+
+SUBSCRIPTION INFORMATION (Guideline 3.1.2)
+The paywall shows each subscription's title (Music Reader Pro), length (Monthly / Yearly) and price ($4.99 / $29.99), the renewal terms, and functional links to the Terms of Use (EULA) and Privacy Policy at the bottom of the paywall. The App Store description also includes the Terms of Use (EULA) link and the Privacy Policy link, and the Privacy Policy URL is set in App Store Connect.
