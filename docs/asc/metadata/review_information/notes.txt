@@ -24,4 +24,4 @@ PRIVACY
 All recognition is on-device; photos and scores are never uploaded. The app sends only anonymous usage events (no photos, MIDI, email, or location), and no data is used for tracking. See the Privacy Policy.
 
 SUBSCRIPTION INFORMATION (Guideline 3.1.2)
-The paywall shows each subscription's title (Music Reader Pro), length (Monthly / Yearly) and price ($4.99 / $29.99), the renewal terms, and functional links to the Terms of Use (EULA) and Privacy Policy at the bottom of the paywall. The App Store description also includes the Terms of Use (EULA) link and the Privacy Policy link, and the Privacy Policy URL is set in App Store Connect.
+The paywall shows the subscription title (Music Reader Pro), length (Monthly / Yearly), price ($4.99 / $29.99), renewal terms, and working Terms of Use (EULA) and Privacy Policy links; both links are also in the App Store description.
